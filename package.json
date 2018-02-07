@@ -17,5 +17,8 @@
     "format"
   ],
   "author": "James Speirs <james.speirs@gmail.com>",
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "dependencies": {
+    "openapi-enforcer": "0.0.2"
+  }
 }
