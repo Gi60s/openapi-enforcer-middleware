@@ -1,0 +1,114 @@
+openapi: 3.0.0
+info:
+  title: A pet store
+  version: v1
+paths:
+  /pets:
+    get:
+      description: Get a list of all pets
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+      responses:
+        200:
+          $ref: '#/components/responses/Pets'
+    post:
+      description: Add a pet
+      requestBody:
+        $ref: '#/components/requestBodies/Pet'
+      responses:
+        200:
+          $ref: '#/components/responses/Pet'
+  /pets/{id}:
+    get:
+      description: Get the pet with the specified ID
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+      responses:
+        200:
+          $ref: '#/components/responses/Pet'
+    put:
+      description: Update the pet with the specified ID
+      requestBody:
+        $ref: '#/components/requestBodies/Pet'
+      responses:
+        200:
+          $ref: '#/components/responses/Pet'
+components:
+  requestBodies:
+    Pet:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Pet'
+  responses:
+    Pet:
+      description: A single pet
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Pet'
+    Pets:
+      description: A list of pets
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Pet'
+  schemas:
+    Pet:
+      type: object
+      allOf:
+      - type: object
+        discriminator:
+          propertyName: petType
+        properties:
+          name:
+            type: string
+          petType:
+            type: string
+        required:
+        - name
+        - petType
+      - type: object
+        oneOf:
+          - $ref: '#/components/schemas/Cat'
+          - $ref: '#/components/schemas/Dog'
+        discriminator:
+          propertyName: petType
+    Cat:  ## "Cat" will be used as the discriminator value
+      description: A representation of a cat
+      allOf:
+      - $ref: '#/components/schemas/Pet'
+      - type: object
+        properties:
+          huntingSkill:
+            type: string
+            description: The measured skill for hunting
+            enum:
+            - clueless
+            - lazy
+            - adventurous
+            - aggressive
+        required:
+        - huntingSkill
+    Dog:  ## "Dog" will be used as the discriminator value
+      description: A representation of a dog
+      allOf:
+      - $ref: '#/components/schemas/Pet'
+      - type: object
+        properties:
+          packSize:
+            type: integer
+            format: int32
+            description: the size of the pack the dog is from
+            default: 0
+            minimum: 0
+        required:
+        - packSize
