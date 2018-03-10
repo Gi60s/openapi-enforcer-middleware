@@ -15,32 +15,4 @@
  *    limitations under the License.
  **/
 'use strict';
-const Enforcer = require('../openapi-enforcer/index');  // require('openapi-enforcer');
-
-module.exports = function(schema, options) {
-    if (!options) options = {};
-    if (!options.hasOwnProperty('development')) options.development = true;
-    if (!options.hasOwnProperty('reqProperty')) options.reqProperty = 'openapi';
-    if (!options.schema) throw Error('Missing required option: schema');
-
-    const enforcer = new Enforcer(schema, options.enforcerOptions || {});
-    const name = options.reqProperty;
-    return function(req, res, next) {
-        const path = enforcer.path(req.path);
-        if (!path) return next();
-
-        if (!req[name]) req[name] = {};
-
-        const method = req.method.toLowerCase();
-        if (path.schema[method]) {
-            req.params = path.params;
-            // TODO: parse body, headers, query string
-
-            req[name].path = {
-                params: path.params,
-                schema: path.schema[method]
-            };
-        }
-
-    };
-};
+module.exports = require('./bin/middleware');
