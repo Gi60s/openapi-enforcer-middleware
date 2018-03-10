@@ -23,6 +23,50 @@ describe('v3', () => {
     let api;
 
     before(() => {
-        return server(path, {});
-    })
+        return server(path, {})
+            .then(instance => api = instance);
+    });
+
+    after(() => {
+        api.stop();
+    });
+
+    it('invalid path', () => {
+        return api.request({ uri: '/dne' })
+            .then(data => expect(data.statusCode).to.equal(404))
+    });
+
+    it('simple get, no parameters', () => {
+        return api.request({ uri: '/people' })
+            .then(res => {
+                expect(res.statusCode).to.equal(200);
+                expect(res.body.params).to.deep.equal({});
+            });
+    });
+
+    it('GET with no parameters', () => {
+        return api.request({ uri: '/people' })
+            .then(res => {
+                expect(res.statusCode).to.equal(200);
+                expect(res.body.params).to.deep.equal({});
+            });
+    });
+
+    it('GET with string query parameter', () => {
+        return api.request({ uri: '/people/?id=Bob' })
+            .then(res => {
+                expect(res.statusCode).to.equal(200);
+                expect(res.body.query).to.deep.equal({ id: 'Bob' });
+            })
+    });
+
+    it('GET with failed enum query parameter', () => {
+        return api.request({ uri: '/people/?classification=mouse' })
+            .then(res => {
+                expect(res.statusCode).to.equal(400);
+                expect(res.body).to.match(/did not meet enum requirements/);
+            });
+    });
+
+
 });

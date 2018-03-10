@@ -16,44 +16,74 @@
  **/
 'use strict';
 const express       = require('express');
-const fs            = require('fs');
-const middleware    = require('../../index');
-const refParser     = require('json-schema-ref-parser');
+const OpenAPI       = require('../../index');
 const request       = require('request-promise-native');
 
-module.exports = function(specFilePath, options) {
+module.exports = function(schema, options) {
     return new Promise((resolve, reject) => {
 
-        fs.readFile(specFilePath, 'utf8', (err, yaml) => {
-            if (err) return reject(err);
+        const app = express();
+        const openapi = OpenAPI(schema);
 
-            refParser.dereference(yaml, function(err, schema) {
-                if (err) return reject(err);
+        //app.use(middleware(schema, options));
 
-                const app = express();
+        //app.use(openapi.request());
 
-                app.use(middleware(schema, options));
+        app.use(openapi.controllers({
+            controllers: './controllers',
+            mocks: './mocks',
+            mockRequest: req => {
+                return req.headers['x-openapi-enforcer'] === 'mock';
+            }
+        }));
 
-                const listener = app.listen(err => {
-                    if (err) return reject(err);
+        app.use(openapi.mock({
+            automatic: true,
+            controllers: './mocks',
+            examples: true
+        }));
 
-                    const result = {
-                        port: listener.address().port,
 
-                        request: function(options) {
-                            return request(Object.assign({ baseUrl: 'http://localhost:' + result.port }, options));
-                        },
 
-                        stop: () => new Promise((resolve, reject) => {
-                            listener.close(err => {
-                                if (err) return reject(err);
-                                resolve();
-                            });
-                        })
-                    };
-                    resolve(result);
-                });
+        app.use((req, res) => {
+            res.json({
+                body: req.body,
+                cookies: req.cookies,
+                headers: req.headers,
+                params: req.params,
+                query: req.query
             });
         });
+
+        const listener = app.listen(err => {
+            if (err) return reject(err);
+
+            const result = {
+                port: listener.address().port,
+
+                request: function(options) {
+                    const defaults = {
+                        baseUrl: 'http://localhost:' + result.port,
+                        resolveWithFullResponse: true,
+                        simple: false,
+                        json: true
+                    };
+                    const config = Object.assign(defaults, options);
+                    console.log('Request: ' + JSON.stringify(config));
+                    return request(config);
+                },
+
+                stop: () => new Promise((resolve, reject) => {
+                    listener.close(err => {
+                        if (err) return reject(err);
+                        resolve();
+                    });
+                })
+            };
+
+            console.log('Test server started on port ' + result.port);
+            resolve(result);
+        });
+
     });
 };
