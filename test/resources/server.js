@@ -16,34 +16,17 @@
  **/
 'use strict';
 const express       = require('express');
-const OpenAPI       = require('../../index');
+const openapi       = require('../../index');
 const request       = require('request-promise-native');
 
-module.exports = function(schema, options) {
+module.exports = server;
+
+function server(schema, options) {
     return new Promise((resolve, reject) => {
 
         const app = express();
-        const openapi = OpenAPI(schema);
 
-        //app.use(middleware(schema, options));
-
-        //app.use(openapi.request());
-
-        app.use(openapi.controllers({
-            controllers: './controllers',
-            mocks: './mocks',
-            mockRequest: req => {
-                return req.headers['x-openapi-enforcer'] === 'mock';
-            }
-        }));
-
-        app.use(openapi.mock({
-            automatic: true,
-            controllers: './mocks',
-            examples: true
-        }));
-
-
+        app.use(openapi(schema, options));
 
         app.use((req, res) => {
             res.json({
@@ -86,4 +69,20 @@ module.exports = function(schema, options) {
         });
 
     });
+}
+
+// start a server, make a request, end the server
+server.one = function(request, schema, options) {
+    let _api;
+    let _data;
+    return server(schema, options)
+        .then(api => {
+            _api = api;
+            return api.request(request);
+        })
+        .then(data => {
+            _data = data;
+            return _api.stop();
+        })
+        .then(() => _data);
 };
