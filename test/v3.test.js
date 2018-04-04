@@ -28,7 +28,7 @@ describe('v3', () => {
     });
 
     after(() => {
-        api.stop();
+        return api.stop();
     });
 
     it('invalid path', () => {
@@ -36,19 +36,11 @@ describe('v3', () => {
             .then(data => expect(data.statusCode).to.equal(404))
     });
 
-    it('simple get, no parameters', () => {
-        return api.request({ uri: '/people' })
-            .then(res => {
-                expect(res.statusCode).to.equal(200);
-                expect(res.body.params).to.deep.equal({});
-            });
-    });
-
     it('GET with no parameters', () => {
         return api.request({ uri: '/people' })
             .then(res => {
                 expect(res.statusCode).to.equal(200);
-                expect(res.body.params).to.deep.equal({});
+                expect(res.body).to.be.an.instanceOf(Array);
             });
     });
 

@@ -16,7 +16,64 @@
  **/
 'use strict';
 const expect        = require('chai').expect;
+const server        = require('./resources/server');
 
-describe('v2', () => {
+describe.only('v2', () => {
+    const schema = __dirname + '/resources/v2.yaml';
+    let api;
+
+    before(() => {
+        return server(schema, {})
+            .then(instance => api = instance);
+    });
+
+    after(() => {
+        return api.stop();
+    });
+
+    describe('request invalid', () => {
+
+        it('default path not found returns 404', () => {
+            return api.request({ uri: '/dne' })
+                .then(data => expect(data.statusCode).to.equal(404))
+        });
+
+        it('invalid request parameter value returns 400', () => {
+            return api.request({ uri: '/people?classification=dne' })
+                .then(data => expect(data.statusCode).to.equal(400))
+        });
+
+        it('invalid method returns 405', () => {
+            return api.request({ uri: '/people', method: 'PUT' })
+                .then(data => expect(data.statusCode).to.equal(405))
+        });
+
+        it('custom invalid function', () => {
+            function invalid(err, req, res, next) {
+                res.status(err.statusCode).send('Nope');
+            }
+            return server.one({ uri: '/dne' }, schema, { invalid })
+                .then(data => {
+                    expect(data.statusCode).to.equal(404);
+                    expect(data.body).to.equal('Nope');
+                });
+        });
+
+    });
+
+    describe('request valid', () => {
+
+
+        it('custom valid function', () => {
+            function valid(req, res, next) {
+                res.send('Yep');
+            }
+            return server.one({ uri: '/people' }, schema, { valid })
+                .then(data => {
+                    expect(data.body).to.equal('Yep');
+                });
+        });
+
+    });
 
 });
