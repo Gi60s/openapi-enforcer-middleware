@@ -35,7 +35,7 @@ const sMock = Symbol('mock');
 
 
 
-module.exports = OpenApiMiddleware;
+module.exports = EnforcerMiddleware;
 
 /**
  * Create an openapi middleware instance.
@@ -52,9 +52,9 @@ module.exports = OpenApiMiddleware;
  * @param {string} [options.valid] A middleware function to run if the request was valid but no controller exists to handle the request.
  * @param {string} [options.xController='x-controller'] The name of the property within the OpenAPI definition that describes which controller to use.
  * @param {string} [options.xOperation='x-operation'] The name of the operation within the OpenAPI definition that describes the method name within the controller to use. First "operation" will be used, then this value.
- * @constructor
+ * @returns {function}
  */
-function OpenApiMiddleware(schema, options) {
+function EnforcerMiddleware(schema, options) {
 
     // set option defaults
     if (!options) options = {};
@@ -80,6 +80,7 @@ function OpenApiMiddleware(schema, options) {
     if (typeof options.xOperation !== 'string') throw Error('Configuration option "xOperation" must be a string. Received: ' + options.xOperation);
 
     const controllers = {};
+    const middlewares = [];
     const promise = options.dereference(schema)
         .then(schema => {
             const valid = validateExamples(schema) && mapControllers(controllers, schema, options);
@@ -90,8 +91,8 @@ function OpenApiMiddleware(schema, options) {
             };
         });
 
-    // return middleware function
-    return (req, res, next) => {
+    // the initialization function
+    function enforcerMiddleware(req, res, next) {
 
         // overwrite res.send
         const send = res.send;
@@ -106,6 +107,24 @@ function OpenApiMiddleware(schema, options) {
             res.send = send;
             _next(err);
         };
+
+        const mws = middlewares.slice(0);
+        function runMiddlewares(err, req, res, next) {
+
+            // TODO: working here
+
+            if (!mws.length) next(err);
+
+            let middleware;
+            if (err) {
+                middleware = mws.shift();
+                if ()
+            } else if (!err) {
+
+            } else {
+
+            }
+        }
 
         promise
             .then(data => {
@@ -168,13 +187,13 @@ function OpenApiMiddleware(schema, options) {
                     if (controller.mock) return controller.mock(req, res, next);
 
                     // if no response codes then nothing to mock
-                    if (!codes.length) return notImplemented(options.invalid, req, res, next);
+                    if (!codes.length) return runMiddlewares(notImplemented(), req, res);
 
                     // get the mock response code
                     const code = (mock && mock.code) || codes[0];
 
                     // handle case where mock not available
-                    if (!code || !openapi.responses || !openapi.responses[code]) return notImplemented(options.invalid, req, res, next);
+                    if (!code || !openapi.responses || !openapi.responses[code]) return runMiddlewares(notImplemented(), req, res);
 
                     // mock from example
                     const contentType = req.headers.accepts || '*/*';
@@ -182,11 +201,21 @@ function OpenApiMiddleware(schema, options) {
                     return res.status(code).send(example);
                 }
 
-                return notImplemented(options.invalid, req, res, next);
+                return runMiddlewares(notImplemented(), req, res);
             })
             .catch(next);
+    }
+
+    enforcerMiddleware.use = function(middleware) {
+        if (typeof middleware !== 'function') throw Error('Invalid input parameter. Expected a function received: ' + middleware);
+        middlewares.push(middleware);
     };
+
+
+    // return middleware function
+    return enforcerMiddleware;
 }
+
 
 Object.defineProperty(OpenApiMiddleware, 'ERROR', {
     value: Symbol('OpenAPI Middleware Error')
@@ -250,9 +279,9 @@ function deepFreeze(value) {
     return value;
 }
 
-function notImplemented(invalid, req, res, next) {
+function notImplemented() {
     const err = Error('Not implemented');
     err.statusCode = 501;
     err.code = OpenApiMiddleware.ERROR;
-    invalid(err, req, res, next);
+    return err;
 }
