@@ -198,15 +198,14 @@ app.use(
 
 const enforcer = Enforcer(schema, config);
 
-enforcer.use((req, res, next) => {
+enforcer.use((req, res, next) => {});
 
-});
+enforcer.use(enforcer.controllers({});
 
-enforcer.use((err, req, res, next) => {
+enforcer.use((err, req, res, next) => {});
 
-});
+
 
 const app = express();
-
 app.use(enforcer);
 ```
