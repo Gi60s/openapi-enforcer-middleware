@@ -99,9 +99,35 @@ module.exports = function(schema, options) {
 
         // overwrite res.send
         const send = res.send;
-        req.send = function(data) {
-            // TODO: validate response
-            send.call(res, data);
+        res.send = function(body) {
+            const openapi = req[options.reqProperty];
+            const headers = res.getHeaders();
+            const data = { body, headers };
+
+            // create the response object
+            const response = openapi.response({
+                contentType: headers['content-type'],
+                statusCode: res.statusCode,
+            });
+
+            // check for errors
+            const errors = response.errors(data);
+            if (errors) {
+                debug.response('Response invalid: \n  ' + errors.join('\n  '));
+                res.sendStatus(500);
+            }
+
+            // serialize
+            data.skipValidation = true;
+            const result = response.serialize(data);
+
+            // send response
+            res.send = send;
+            Object.keys(result.headers)
+                .forEach(name => {
+                    res.set(name, result.headers[name]);
+                });
+            res.send(result.body);
         };
 
         const beforeNext = function(err) {
@@ -202,8 +228,9 @@ EnforcerMiddleware.prototype.controllers = function(options) {
             }
 
             // mock from example
-            const contentType = req.headers.accepts || '*/*';
-            const example = openapi.response({ code, contentType }).example((mock && mock.config) || {});
+            const contentType = req.headers.accept || '*/*';
+            const response = openapi.response({ code, contentType });
+            const example = response.example((mock && mock.config) || {});
             debug.controllers('automatic mock');
             return res.status(code).send(example);
         }

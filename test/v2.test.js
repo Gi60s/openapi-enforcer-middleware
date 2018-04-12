@@ -21,10 +21,9 @@ const server        = require('./resources/server');
 const openapi       = require('../index');
 
 describe('v2', () => {
-    const schema = __dirname + '/resources/v2.yaml';
     let api;
 
-    function start(options) {
+    function start(schema, options) {
         const app = express();
         app.use(openapi(schema, options));
         return server(app).then(instance => api = instance);
@@ -35,8 +34,9 @@ describe('v2', () => {
     }
 
     describe('request validation', () => {
+        const schema = __dirname + '/resources/v2.yaml';
 
-        before(() => start({ mockFallback: true }));
+        before(() => start(schema, { mockFallback: true }));
         after(() => stop());
 
         it('default path not found returns 404', () => {
@@ -62,6 +62,24 @@ describe('v2', () => {
     });
 
     describe('response validation', () => {
+        const schema = __dirname + '/resources/v2-responses.yaml';
+
+        before(() => start(schema, { mockFallback: true }));
+        after(() => stop());
+
+        it.only('invalid example', () => {
+            const config = {
+                uri: '/',
+                headers: {
+                    'accept': 'application/json+invalid'
+                }
+            };
+            return api.request(config)
+                .then(data => {
+                    expect(data.statusCode).to.equal(500)
+                })
+        });
+
 
         it('custom valid function', () => {
             function valid(req, res, next) {

@@ -1,0 +1,22 @@
+swagger: "2.0"
+info:
+  title: Test Responses
+  version: 1.0.0
+x-controller: main
+paths:
+  /:
+    get:
+      x-operation: get
+      responses:
+        200:
+          description: A response
+          schema:
+            type: object
+            properties:
+              a:
+                type: number
+          examples:
+            application/json+valid:
+              a: 1
+            application/json+invalid:
+              a: 'hello'
