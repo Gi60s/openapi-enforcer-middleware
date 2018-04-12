@@ -23,28 +23,22 @@ const schema = {
                 }
             ],
             get: {
+                'x-operation': 'getPetById'
                 responses: { ... }
             }
         },
     }
 };
 
-const enforcer = new Enforcer(schema);
+const options = {
+    controllers: '/path/to/controllers',
+    development: true
+};
+
+const enforcer = Enforcer(schema, options);
 const app = express();
 
-app.use('/v1', enforcer.middleware({
-    controllers: '/path/to/controllers',
-    development: true,
-    invalid: function(err, req, res, next) {
-        res.status(400);
-        res.send(err.message);
-    },
-    mock: 'mock',
-    reqProperty: 'openapi',
-    valid: function(req, res, next) {
-        const id = req.params.id;   // => params parsed to match schemas
-    })
-});
+app.use('/v1', enforcer);
 ```
 
 ## Options
@@ -65,110 +59,71 @@ An express middleware function that will map the request path to a path in the O
 
 - *options* - Options that specify how the middleware should act. It has the following properties:
 
-    - *controllers* - A `string` specifying the directory to look at to find path controllers. [Details](#controllers)
+    - *controllers* [`string`] - Specifies the root directory to look into to find controllers. [Learn more about controllers](#)
 
-    - *dereference* - A `function` to call to dereference any JSON references. Must return a promise that resolves to the dereferenced object. Defaults to using [json-schema-ref-parser](https://www.npmjs.com/package/json-schema-ref-parser) dereference function. [Details](#dereference)
+    - *dereference* [`function`] - A `function` to call to dereference any JSON references. The `function` must return a promise that resolves to the dereferenced object. Defaults to using the [json-schema-ref-parser](https://www.npmjs.com/package/json-schema-ref-parser) dereference function.
 
-    - *invalid* - An error middleware `function` or a `boolean` that defines how invalid client requests or server responses should be handled. If set to `true` then this middleware will automatically send an appropriate response to the client. If set to `false` the next error middleware will be called. [Details](#invalid)
+    - *development* [`boolean`] - Set to `true` to allow invalid examples and missing controllers. Defaults to `true` if the environment variable `NODE_ENV` is not set to `"production"`.
 
-    - *mockProperty* - A `string`, a `boolean`, or an `object`. Defaults to `"x-mock"`.
+    - *fallthrough* [`boolean`]- If a request is made to a path that is not defined in the OpenAPI document and this value is set to `true` then it will ignore the 404 status and continue on to the next middleware. If set to `false` an error with a `statusCode` property will be generated and passed to the next error handling middleware. Defaults to `true`.
 
-        Use a `string` to specify the name of the query parameter and header to look for for manual mocking. Use `false` to disable manual mocking. Use `true` to use `"x-mock"` as the query parameter or header name. Use an `object` with properties `header` and/or `query` to specify the name for header and query string separately.
+    - *mockControllers* [`string`] - Specifies the root directory to look into to find controllers that produce mock responses. [Learn more about controllers](#)
 
-        ```js
+    - *mockFallback* [`boolean`] - When using the [controller middleware](#) if a matching controller operation is not found then setting this value to `true` will automatically produce a response based on examples in the OpenAPI document or will randomly generate a value that adheres to the response schema. Defaults to `false`.
 
-        ```
+    - *mockHeader* [`string`] - The name of the request header to look for to enable manual mocking. If a request has this header and is executing the controllers, even if a controller is defined it will instead execute the mock and provide a mocked response. Defaults to `"x-mock"`. [Learn more about mock requests](#)
 
+    - *mockQuery* [`string`] - The name of the request query parameter to look for to enable manual mocking. If a request has this header and is executing the controllers, even if a controller is defined it will instead execute the mock and provide a mocked response. Defaults to `"x-mock"`. [Learn more about mock requests](#)
 
+    - *reqProperty* [`string`] - The name of the property to attach the enforcer data to on the request object. Defaults to `"openapi"`.
 
-| Parameter | Description | Type |
-| --------- | ----------- | ---- |
-| schema | The file path to an OpenAPI document or an object that is an OpenAPI document | `string` or `object` |
-| options | Specify how the middleware should act. | `object` |
+    - *xController* [`string`] - The name of the property within the OpenAPI document that defines the controller to use for an operation. Defaults to `"x-controller"`.
 
-**Options Properties**
+    - *xOperation* [`string`] - The name of the property within the OpenAPI document that defines the controller operation to use for an operation. Defaults to `"x-operation"` but also automatically falls back to `"operation"` regardless of what this value is set to.
 
-| Parameter | Description | Type |
-| --------- | ----------- | ---- |
-| controllers | The directory to look at to find a controller with the same name as that specified in the `x-controller`. Defaults to the current working directory. | `string` |
-| dereference | A function to call to dereference any JSON references. Must return a promise that resolves to the dereferenced object. Defaults to using [json-schema-ref-parser](https://www.npmjs.com/package/json-schema-ref-parser). | `function` |
-| invalid | An error middleware function to call if the client request or server response is invalid according to your OpenAPI document. Set to `true` to have the OpenAPI-Enforcer middleware automatically send an appropriate response | `function` |
-| mockProperty | The name of the property to look for on the headers or query string for manual mocking. Should begin with an `x-`. Set to blank to disable. | `string` |
-| mockControllers | The path to the base mocks directory. This allows for creating mocks through function calls. Set to blank to disable. | `function` |
-| reqProperty | The name of the property on the req object to store openapi data onto. Defaults to `"openapi"` | `string` |
-| valid | A middleware function to run if the request was valid but no controller exists to handle the request. | `function` |
-| xController | The name of the property within the OpenAPI definition that describes which controller to use. Defaults to `x-controller`. | `string` |
-| xOperation | The name of the operation within the OpenAPI definition that describes the method name within the controller to use. First "operation" will be used, then this value. Defaults to `x-operation`. | `string` |
+Returns a middleware function with static properties [`controllers`](#) and [`use`](#) to provide flexibility in usage.
 
-Returns a middleware function.
+#### Basic Usage
+
+This example will analyze incoming requests and if they match a path defined in the OpenAPI document will look for a [controller](#) within the `/path/to/controllers` directory that has the same name as that definined in the `x-controller` property of the OpenAPI document operation. [For more information, check out the detailed explanation and working example for Basic Usage.](#)
 
 ```js
-const Enforcer = require('openapi-enforcer-middleware');
+const Enforcer = require('openapi-enforcer');
 const express = require('express');
 
-const schema = {
-    openapi: '3.0.0',
-    info: { title: 'Pet Store', version: 'v1' },
-    paths: {
-        '/pets/{id}': {
-            'x-controller': 'pets',
-            parameters: [
-                {
-                    name: 'id',
-                    in: 'path',
-                    required: true,
-                    schema: { type: 'number', mininum: 1 }
-                }
-            ],
-            get: {
-                responses: { ... }
-            }
-        },
-    }
-};
+// define enforcer middleware
+const enforcer = Enforcer('/path/to/openapi-doc.yaml', {
+    controllers: '/path/to/controllers'
+});
 
-const enforcer = new Enforcer(schema);
+// define express app and have it use enforcer middleware
 const app = express();
+app.use('/v1', enforcer);
+```
 
-app.use('/v1', enforcer({
-    controllers: '/path/to/controllers',
-    schema: schema,
+#### Run Middleware within the Enforcer Context
 
-    // this function runs if the request was not valid
-    invalid: function(err, req, res, next) {
-        res.status(err.statusCode);
-        res.send(err.message);
-    },
+This example shows how we can add middleware to the enforcer middleware context. That means you get the enforcer information and functionality that is associated with the request. Using this method you can add regular middleware and error handling middleware. You also can still use the built in [controllers middleware](#). [For more information, check out the detailed explanation and working example for Custom Middleware within Enforcer Context.](#)
 
-    // this function runs if the request was valid and no controller was found
-    valid: function(req, res, next) {
-        const id = req.params.id;   // request deserialized and validated
-        const mock = req.openapi.mock();
-        res.send(mock);
-    })
+```js
+const Enforcer = require('openapi-enforcer');
+const express = require('express');
+
+// define enforcer middleware
+const enforcer = Enforcer('/path/to/openapi-doc.yaml');
+
+// 1) within enforcer middleware context: run custom middleware
+enforcer.use(function(req, res, next) {
+    // run some code: for example, check authorization
+    next();
 });
 
+// 2) within enforcer middleware context: run controllers middleware
+enforcer.use(enforcer.controllers());
 
-
-
-
-app.use(
-    '/v2',
-    enforcer.middleware({ controllers: '/' }
-    requestValid,
-    enforcerError // Enforcer.error
-);
-
-// this middleware runs if the request was valid
-function requestValid(req, res, next) {
-    const id = req.params.id;   // request deserialized and validated
-    const mock = req.openapi.mock();
-    res.send(mock);
-});
-
-// put error catching middleware at the end
-function enforcerError((err, req, res, next) {
-    if (err.code === 'E_OAPI_ENFORCER') {
+// 3) within enforcer middleware context: run error handling middleware
+enforcer.use(function(err, req, res, next) {
+    if (err.code === Enforcer.ERROR_CODE) {
         res.status(err.statusCode);
         res.send(err.message);
     } else {
@@ -176,36 +131,8 @@ function enforcerError((err, req, res, next) {
     }
 });
 
-
-
-
-app.use(
-    '/v3',
-    enforcer.start('./path/to/schema', { dereference: schema => { ... }, reqProperty: 'openapi', development: true }),
-    enforcer.mock({ header: 'x-mock', query: 'x-mock', controllers: './mocks' }),
-    enforcer.controllers({ controllers: './controllers', xController: 'x-controller', xOperation: 'x-operation', mockUnimplmented: true }),
-    function (req, res, next) {
-        if (!req.openapi) return next();
-        // custom logic for valid requests
-    }),
-    enforcer.error({ handler: customCallback }),
-    enforcer.stop()
-);
-
-
-
-
-
-const enforcer = Enforcer(schema, config);
-
-enforcer.use((req, res, next) => {});
-
-enforcer.use(enforcer.controllers({});
-
-enforcer.use((err, req, res, next) => {});
-
-
-
+// add the enforcer middleware to the express app
 const app = express();
-app.use(enforcer);
+app.use('/v1', enforcer);
 ```
+
