@@ -15,23 +15,29 @@
  *    limitations under the License.
  **/
 'use strict';
+const express       = require('express');
 const expect        = require('chai').expect;
 const server        = require('./resources/server');
+const openapi       = require('../index');
 
-describe.only('v2', () => {
+describe('v2', () => {
     const schema = __dirname + '/resources/v2.yaml';
     let api;
 
-    before(() => {
-        return server(schema, {})
-            .then(instance => api = instance);
-    });
+    function start(options) {
+        const app = express();
+        app.use(openapi(schema, options));
+        return server(app).then(instance => api = instance);
+    }
 
-    after(() => {
+    function stop() {
         return api.stop();
-    });
+    }
 
-    describe('request invalid', () => {
+    describe('request validation', () => {
+
+        before(() => start({ mockFallback: true }));
+        after(() => stop());
 
         it('default path not found returns 404', () => {
             return api.request({ uri: '/dne' })
@@ -48,21 +54,14 @@ describe.only('v2', () => {
                 .then(data => expect(data.statusCode).to.equal(405))
         });
 
-        it('custom invalid function', () => {
-            function invalid(err, req, res, next) {
-                res.status(err.statusCode).send('Nope');
-            }
-            return server.one({ uri: '/dne' }, schema, { invalid })
-                .then(data => {
-                    expect(data.statusCode).to.equal(404);
-                    expect(data.body).to.equal('Nope');
-                });
+        it('valid request', () => {
+            return api.request({ uri: '/people' })
+                .then(res => expect(res.statusCode).to.equal(200));
         });
 
     });
 
-    describe('request valid', () => {
-
+    describe('response validation', () => {
 
         it('custom valid function', () => {
             function valid(req, res, next) {
