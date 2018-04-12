@@ -15,29 +15,12 @@
  *    limitations under the License.
  **/
 'use strict';
-const express       = require('express');
-const openapi       = require('../../index');
 const request       = require('request-promise-native');
 
 module.exports = server;
 
-function server(schema, options) {
+function server(app) {
     return new Promise((resolve, reject) => {
-
-        const app = express();
-
-        app.use(openapi(schema, options));
-
-        app.use((req, res) => {
-            res.json({
-                body: req.body,
-                cookies: req.cookies,
-                headers: req.headers,
-                params: req.params,
-                query: req.query
-            });
-        });
-
         const listener = app.listen(err => {
             if (err) return reject(err);
 
@@ -67,22 +50,20 @@ function server(schema, options) {
             console.log('Test server started on port ' + result.port);
             resolve(result);
         });
-
     });
 }
 
-// start a server, make a request, end the server
-server.one = function(request, schema, options) {
-    let _api;
-    let _data;
-    return server(schema, options)
-        .then(api => {
-            _api = api;
-            return api.request(request);
+server.one = function(app, request) {
+    let _server
+    let _res;
+    return server(app)
+        .then(s => {
+            _server = s;
+            return s.request(request);
         })
-        .then(data => {
-            _data = data;
-            return _api.stop();
+        .then(res => {
+            _res = res;
+            return _server.stop();
         })
-        .then(() => _data);
+        .then(() => _res);
 };
