@@ -42,6 +42,8 @@ const ERROR_CODE = 'E_OPENAPI_ENFORCER_MIDDLEWARE';
  * @param {string} [options.controllers] The path to the base controllers directory.
  * @param {function} [options.dereference] The function to call to dereference any JSON references. Must return a promise that resolves to the dereferenced object.
  * @param {boolean} [options.development] Whether in development mode. Defaults to true unless the NODE_ENV environment variable is set to "production".
+ * @param {boolean} [options.fallthrough=true]
+ * @param {boolean} [options.mockFallback=false]
  * @param {string} [options.mockControllers] The path to the base mocks directory. This allows for creating mocks through function calls.
  * @param {string} [options.mockHeader='x-mock'] The name of the header to look for for manual mocking. Set to empty string to disable.
  * @param {string} [options.mockQuery='x-mock'] The name of the query string parameter to look for for manual mocking. Set to empty string to disable.
@@ -56,6 +58,8 @@ module.exports = function(schema, options) {
     if (!options) options = {};
     if (!options.hasOwnProperty('dereference')) options.dereference = schema => RefParser.dereference(schema);
     if (!options.hasOwnProperty('development')) options.development = process.env.NODE_ENV !== 'production';
+    if (!options.hasOwnProperty('fallthrough')) options.fallthrough = true;
+    if (!options.hasOwnProperty('mockFallback')) options.mockFallback = false;
     if (!options.hasOwnProperty('mockHeader')) options.mockHeader = 'x-mock';
     if (!options.hasOwnProperty('mockQuery')) options.mockQuery = 'x-mock';
     if (!options.hasOwnProperty('reqProperty')) options.reqProperty = 'openapi';
@@ -73,13 +77,10 @@ module.exports = function(schema, options) {
     if (typeof options.xOperation !== 'string') throw Error('Configuration option "xOperation" must be a string. Received: ' + options.xOperation);
 
     // dereference schema and populate controllers
-    const controllers = {};
     const promise = options.dereference(schema)
         .then(schema => {
-            const valid = validateExamples(schema) && mapControllers(controllers, schema, options);
-            if (!options.development && !valid) process.exit(1);
+            if (!validateExamples(schema) && !options.development) throw Error('One or more examples do not match their schemas');
             return {
-                controllers,
                 enforcer: new Enforcer(schema),
                 schema: deepFreeze(schema)
             };
@@ -89,7 +90,7 @@ module.exports = function(schema, options) {
     const enforcer = new EnforcerMiddleware(options, promise);
 
     // if a controllers and/or mocks directory has been specified then we have a controllers middleware to execute
-    if (options.development || options.controllers || options.mockControllers) {
+    if (options.mockFallback || options.controllers || options.mockControllers) {
         enforcer.use(enforcer.controllers(options));
     }
 
@@ -103,10 +104,20 @@ module.exports = function(schema, options) {
             send.call(res, data);
         };
 
-        enforcer.run(req, res, err => {
+        const beforeNext = function(err) {
             res.send = send;
             next(err);
-        });
+        };
+
+        promise
+            .then(data => {
+                if (!enforcer.schema) {
+                    enforcer.enforcer = data.enforcer;
+                    enforcer.schema = data.schema;
+                }
+                enforcer.run(req, res, beforeNext);
+            })
+            .catch(beforeNext);
     };
 
     result.controllers = enforcer.controllers.bind(enforcer);
@@ -114,6 +125,12 @@ module.exports = function(schema, options) {
 
     return result;
 };
+
+Object.defineProperty(module.exports, 'ERROR_CODE', {
+    value: ERROR_CODE
+});
+
+
 
 function EnforcerMiddleware(options, promise) {
     this.middlewares = [];
@@ -123,18 +140,33 @@ function EnforcerMiddleware(options, promise) {
 
 EnforcerMiddleware.prototype.controllers = function(options) {
     if (!options) options = {};
-    if (!options.hasOwnProperty('development')) options.development = this.options.development;
+    if (!options.hasOwnProperty('fallthrough')) options.fallthrough = this.options.fallthrough;
+    if (!options.hasOwnProperty('mockFallback')) options.mockFallback = this.options.mockFallback;
     if (options.hasOwnProperty('controllers') && typeof options.controllers !== 'string') throw Error('Configuration option "controllers" must be a string. Received: ' + options.controllers);
     if (options.hasOwnProperty('mockControllers') && typeof options.mockControllers !== 'string') throw Error('Configuration option "mockControllers" must be a string. Received: ' + options.mockControllers);
 
-    return function(req, res, next) {
+    const controllers = {};
+    this.promise
+        .then(data => {
+            const hasErrors = mapControllers(controllers, data.schema, options);
+            if (hasErrors && !options.development) throw Error('One or more errors encountered while loading controllers');
+        });
+
+    return (req, res, next) => {
+        const method = req.method.toLowerCase();
         const openapi = req[this.options.reqProperty];
 
+        // if the openapi property has errors then handler them
+        if (openapi.errors) return parsedNextHandler(openapi, options, next);
+
+        // get operation responses
+        const responses = openapi.operation[method].responses;
+
         // get response codes
-        const codes = Object.keys(openapi.responses);
+        const codes = responses ? Object.keys(responses) : [];
 
         // get controller data
-        const controller = controllers[req.method.toLowerCase() + openapi.path];
+        const controller = controllers[method + openapi.path];
 
         // detect manual mocking
         const mock = getManualMock(req, this.options);
@@ -146,7 +178,7 @@ EnforcerMiddleware.prototype.controllers = function(options) {
         }
 
         // execute the mock
-        if (options.development || mock) {
+        if (options.mockFallback || mock) {
 
             // mock using controller
             if (controller.mock) {
@@ -164,7 +196,7 @@ EnforcerMiddleware.prototype.controllers = function(options) {
             const code = (mock && mock.code) || codes[0];
 
             // handle case where mock not available
-            if (!code || !openapi.responses || !openapi.responses[code]) {
+            if (!code || !responses || !responses[code]) {
                 debug.controllers('mock response code not implemented');
                 return next(notImplemented());
             }
@@ -181,65 +213,43 @@ EnforcerMiddleware.prototype.controllers = function(options) {
     }
 };
 
-EnforcerMiddleware.prototype.run = function() {
-    return (req, res, next) => {
-        // overwrite res.send
-        const send = res.send;
-        req.send = function(data) {
-            // TODO: validate response
-            send.call(res, data);
-        };
+EnforcerMiddleware.prototype.run = function(req, res, next) {
+    const enforcer = this.enforcer;
 
-        this.promise
-            .then(data => {
-                const enforcer = data.enforcer;
+    // create the middleware runner that will restore res.send when last next is called
+    const runner = middlewareRunner(this.middlewares, req, res, next);
 
-                // create the middleware runner that will restore res.send when last next is called
-                const runner = middlewareRunner(this.middlewares, req, res, err => {
-                    res.send = send;
-                    next(err);
-                });
+    // parse, serialize, and validate request
+    const parsed = enforcer.request({
+        body: req.body,
+        cookies: req.cookies,
+        headers: req.headers,
+        method: req.method,
+        path: req.originalUrl.substr(req.baseUrl.length)
+    });
 
-                // parse, serialize, and validate request
-                const parsed = enforcer.request({
-                    body: req.body,
-                    cookies: req.cookies,
-                    headers: req.headers,
-                    method: req.method,
-                    path: req.originalUrl.substr(req.baseUrl.length)
-                });
-
-                // create the openapi request property
-                req[options.reqProperty] = {
-                    enforcer: enforcer,
-                    operation: parsed.schema,
-                    path: parsed.path,
-                    request: parsed.request,
-                    response: parsed.response,
-                    schema: data.schema
-                };
-
-                // copy the request object and merge parsed parameters into copy
-                const request = parsed.request || {};
-                request.params = request.path;
-                const reqCopy = Object.assign({}, req);
-                ['cookies', 'headers', 'params', 'query']
-                    .forEach(key => reqCopy[key] = Object.assign({}, reqCopy[key], request[key]));
-                if (request.hasOwnProperty('body')) reqCopy.body = request.body;
-
-                // if there is a client request error then call runner with error
-                if (parsed.errors) {
-                    const err = Error(parsed.errors.join('\n'));
-                    err.statusCode = parsed.statusCode;
-                    err.code = ERROR_CODE;
-                    return runner(err);
-                }
-
-                // run the middleware runner
-                runner();
-            })
-            .catch(next);
+    // create the openapi request property
+    req[this.options.reqProperty] = {
+        errors: parsed.errors,
+        enforcer: enforcer,
+        operation: parsed.schema,
+        path: parsed.path,
+        request: parsed.request,
+        response: parsed.response,
+        schema: this.schema,
+        statusCode: parsed.statusCode
     };
+
+    // copy the request object and merge parsed parameters into copy
+    const request = parsed.request || {};
+    request.params = request.path;
+    const reqCopy = Object.assign({}, req);
+    ['cookies', 'headers', 'params', 'query']
+        .forEach(key => reqCopy[key] = Object.assign({}, reqCopy[key], request[key]));
+    if (request.hasOwnProperty('body')) reqCopy.body = request.body;
+
+    // run next after analyzing parsed result
+    parsedNextHandler(parsed, this.options, runner);
 };
 
 EnforcerMiddleware.prototype.use = function(middleware) {
@@ -252,8 +262,11 @@ EnforcerMiddleware.prototype.use = function(middleware) {
 
 
 function getManualMock(req, options) {
-    const responses = req[options.reqProperty].responses;
-    const codes = Object.keys(responses);
+    const method = req.method.toLowerCase();
+    const openapi = req[options.reqProperty];
+
+    const responses = openapi.operation[method].responses;
+    const codes = responses ? Object.keys(responses) : [];
     let manual;
 
     // use specified mock code or if empty string use first response code
@@ -283,8 +296,6 @@ function getManualMock(req, options) {
 
         return { code, config };
     }
-
-    return {};
 }
 
 function deepFreeze(value) {
@@ -300,11 +311,12 @@ function middlewareRunner(middlewares, req, res, next) {
     middlewares = middlewares.slice(0);
     const run = err => {
         while (middlewares.length) {
-            const m = middlewares.shift();
-            if (err && m.length >= 4) {
-                return m(err, req, res, run);
-            } else if (!err) {
-                return m(req, res, run);
+            const middleware = middlewares.shift();
+            const isErrorHandling = middleware.length >= 4;
+            if (err && isErrorHandling) {
+                return middleware(err, req, res, run);
+            } else if (!err && !isErrorHandling) {
+                return middleware(req, res, run);
             }
         }
         next(err);
@@ -317,4 +329,19 @@ function notImplemented() {
     err.statusCode = 501;
     err.code = ERROR_CODE;
     return err;
+}
+
+function parsedNextHandler(parsed, options, next) {
+    if (parsed.errors) {
+        if (parsed.statusCode === 404 && options.fallthrough) {
+            return next();
+        } else {
+            const err = Error(parsed.errors.join('\n'));
+            err.statusCode = parsed.statusCode;
+            err.code = ERROR_CODE;
+            return next(err);
+        }
+    } else {
+        next();
+    }
 }
