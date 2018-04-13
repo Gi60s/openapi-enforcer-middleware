@@ -41,17 +41,11 @@ const app = express();
 app.use('/v1', enforcer);
 ```
 
-## Options
-
-This module accepts the following options:
-
-
-
-## Enforcer.prototype.middleware
+## Enforcer
 
 An express middleware function that will map the request path to a path in the Open API document before calling the next middleware.
 
-`Enforcer.prototype.middleware ( schema, options )`
+`Enforcer ( schema, options )`
 
 **Parameters**
 
@@ -59,7 +53,7 @@ An express middleware function that will map the request path to a path in the O
 
 - *options* - Options that specify how the middleware should act. It has the following properties:
 
-    - *controllers* [`string`] - Specifies the root directory to look into to find controllers. [Learn more about controllers](#)
+    - *controllers* [`string`] - Specifies the root directory to look into to find controllers. [Learn more about controllers](#controllers)
 
     - *dereference* [`function`] - A `function` to call to dereference any JSON references. The `function` must return a promise that resolves to the dereferenced object. Defaults to using the [json-schema-ref-parser](https://www.npmjs.com/package/json-schema-ref-parser) dereference function.
 
@@ -67,7 +61,7 @@ An express middleware function that will map the request path to a path in the O
 
     - *fallthrough* [`boolean`]- If a request is made to a path that is not defined in the OpenAPI document and this value is set to `true` then it will ignore the 404 status and continue on to the next middleware. If set to `false` an error with a `statusCode` property will be generated and passed to the next error handling middleware. Defaults to `true`.
 
-    - *mockControllers* [`string`] - Specifies the root directory to look into to find controllers that produce mock responses. [Learn more about controllers](#)
+    - *mockControllers* [`string`] - Specifies the root directory to look into to find controllers that produce mock responses. [Learn more about controllers](#controllers)
 
     - *mockFallback* [`boolean`] - When using the [controller middleware](#) if a matching controller operation is not found then setting this value to `true` will automatically produce a response based on examples in the OpenAPI document or will randomly generate a value that adheres to the response schema. Defaults to `false`.
 
@@ -136,3 +130,68 @@ const app = express();
 app.use('/v1', enforcer);
 ```
 
+## Controllers
+
+Your Open API document can specify which JavaScript file to use and which function within that file to run. This is done be defining the `x-controller` property and `x-operation` (or `operationId`) property within the Open API document. (Note, the property name used for `x-controller` and `x-operation` can be changed by specifying a different value in the option parameter of the [enforcer](#enforcer) function.)
+
+There are three steps to making this work:
+
+1. [Define your controller names](#define-your-controller-names)
+2. [Tell the Enforcer where to find your controllers](#tell-the-enforcer-where-to-find-your-controllers)
+2. [Create a controller file](#create-a-controller-file)
+
+### Define Your Controller Names
+
+The `x-controller` property can be defined at the root of your document, within a path, and within an operation. The operation controller has precedence, followed by the path controller, then the global controller.
+
+In the following partial example of an OpenAPI document you can see that the `x-controller` is specified at three levels. In this case `"controllerC"` will be used if a request goes to `GET /`, `"controllerB"` will be used if request is a `POST /`, and `"controllerA"` will be used if the request is to `GET /alt`.
+
+```yaml
+x-controller: controllerA
+paths: {
+  /:
+    x-controller: controllerB
+    get:
+      x-controller: controllerC
+      x-operation: functionC
+      ...
+    post:
+      x-operation: functionB
+      ...
+  /alt:
+    get:
+      x-operation: functionA
+      ...
+```
+
+### Tell the Enforcer Where to Find Your Controllers
+
+You can specify the path for normal controllers and mock controllers when you call the [enforcer function](#enforcer). Mock controllers will run if 1) there is no controller and you are in development mode or 2) if a request has the mock header or query paramater.
+
+```js
+const Enforcer = require('openapi-enforcer');
+const express = require('express');
+
+const enforcer = Enforcer('/path/to/openapi-document.yaml', {
+    controllers: '/path/to/controllers',
+    mockControllers: '/path/to/mockControllers'
+});
+
+const app = express();
+app.use(enforcer);
+```
+
+### Create a Controller File
+
+Create a JavaScript file in your controllers directory. Give the JavaScript file the same name as that defined in your `x-controller` property. For example: `"controllerA.js"`. Within that file export your function with the same name as the `x-operation` value.
+
+**controllerA.js**
+
+```js
+exports.functionA = function(req, res, next) {
+    // run your code here
+    // 1) req has already been parsed and validated
+    // 2) when you use res.send() the response body and headers will be validated and serialized
+    // 3) call next() if you don't want to handle the request in the controller.
+}
+```
