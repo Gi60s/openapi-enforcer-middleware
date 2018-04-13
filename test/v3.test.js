@@ -18,7 +18,7 @@
 const expect        = require('chai').expect;
 const server        = require('./resources/server');
 
-describe('v3', () => {
+describe.skip('v3', () => {
     const path = __dirname + '/resources/v3.yaml';
     let api;
 
