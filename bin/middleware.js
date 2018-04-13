@@ -100,6 +100,8 @@ module.exports = function(schema, options) {
         // overwrite res.send
         const send = res.send;
         res.send = function(body) {
+            res.send = send;
+
             const openapi = req[options.reqProperty];
             const headers = res.getHeaders();
             const data = { body, headers };
@@ -113,8 +115,11 @@ module.exports = function(schema, options) {
             // check for errors
             const errors = response.errors(data);
             if (errors) {
-                debug.response('Response invalid: \n  ' + errors.join('\n  '));
-                res.sendStatus(500);
+                const message = 'Response invalid: \n  ' + errors.join('\n  ');
+                debug.response(message);
+                return options.development
+                    ? res.set('content-type', 'text/plain').status(500).send(message)
+                    : res.sendStatus(500);
             }
 
             // serialize
@@ -122,7 +127,6 @@ module.exports = function(schema, options) {
             const result = response.serialize(data);
 
             // send response
-            res.send = send;
             Object.keys(result.headers)
                 .forEach(name => {
                     res.set(name, result.headers[name]);
