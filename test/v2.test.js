@@ -67,27 +67,72 @@ describe('v2', () => {
         before(() => start(schema, { mockFallback: true }));
         after(() => stop());
 
-        it.only('invalid example', () => {
+        it('invalid example from examples', () => {
             const config = {
-                uri: '/',
+                uri: '/examples',
                 headers: {
                     'accept': 'application/json+invalid'
                 }
             };
             return api.request(config)
-                .then(data => {
-                    expect(data.statusCode).to.equal(500)
-                })
+                .then(res => {
+                    expect(res.statusCode).to.equal(500);
+                    expect(res.body).to.match(/expected a number/i);
+                });
         });
 
+        it('valid example from examples', () => {
+            const config = {
+                uri: '/examples',
+                headers: {
+                    'accept': 'application/json+valid'
+                }
+            };
+            return api.request(config)
+                .then(res => {
+                    expect(res.statusCode).to.equal(200);
+                    expect(res.body).to.deep.equal({ a: 1 });
+                });
+        });
 
-        it('custom valid function', () => {
-            function valid(req, res, next) {
-                res.send('Yep');
-            }
-            return server.one({ uri: '/people' }, schema, { valid })
-                .then(data => {
-                    expect(data.body).to.equal('Yep');
+        it('invalid example from schema example', () => {
+            const config = {
+                uri: '/schema-invalid',
+                headers: {
+                    'accept': 'application/json'
+                }
+            };
+            return api.request(config)
+                .then(res => {
+                    expect(res.statusCode).to.equal(500);
+                    expect(res.body).to.match(/expected a number/i);
+                });
+        });
+
+        it('valid example from schema example', () => {
+            const config = {
+                uri: '/schema-valid',
+                headers: {
+                    'accept': 'application/json'
+                }
+            };
+            return api.request(config)
+                .then(res => {
+                    expect(res.statusCode).to.equal(200);
+                    expect(res.body).to.deep.equal({ a: 2 });
+                });
+        });
+
+        it('valid random example', () => {
+            const config = {
+                uri: '/examples',
+                headers: {
+                    'accept': 'application/json'
+                }
+            };
+            return api.request(config)
+                .then(res => {
+                    expect(res.statusCode).to.equal(200);
                 });
         });
 

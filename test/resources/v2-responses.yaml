@@ -4,7 +4,7 @@ info:
   version: 1.0.0
 x-controller: main
 paths:
-  /:
+  /examples:
     get:
       x-operation: get
       responses:
@@ -15,8 +15,47 @@ paths:
             properties:
               a:
                 type: number
+            example:
+              a: 2
           examples:
             application/json+valid:
               a: 1
             application/json+invalid:
               a: 'hello'
+  /schema-invalid:
+    get:
+      x-operation: get
+      responses:
+        200:
+          description: A response
+          schema:
+            type: object
+            properties:
+              a:
+                type: number
+            example:
+              a: 'abc'
+  /schema-random:
+    get:
+      x-operation: get
+      responses:
+        200:
+          description: A response
+          schema:
+            type: object
+            properties:
+              a:
+                type: number
+  /schema-valid:
+    get:
+      x-operation: get
+      responses:
+        200:
+          description: A response
+          schema:
+            type: object
+            properties:
+              a:
+                type: number
+            example:
+              a: 2
