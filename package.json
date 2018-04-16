@@ -19,6 +19,7 @@
   "author": "James Speirs <james.speirs@gmail.com>",
   "license": "Apache-2.0",
   "dependencies": {
+    "debug": "^3.1.0",
     "json-schema-ref-parser": "^4.1.0",
     "openapi-enforcer": "0.0.2"
   },
