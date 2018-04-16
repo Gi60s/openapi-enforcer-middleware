@@ -65,9 +65,9 @@ An express middleware function that will map the request path to a path in the O
 
     - *mockFallback* [`boolean`] - When using the [controller middleware](#controllers-middleware) if a matching controller operation is not found then setting this value to `true` will automatically produce a response based on examples in the OpenAPI document or will randomly generate a value that adheres to the response schema. Defaults to `false`.
 
-    - *mockHeader* [`string`] - The name of the request header to look for to enable manual mocking. If a request has this header and is executing the controllers, even if a controller is defined it will instead execute the mock and provide a mocked response. Defaults to `"x-mock"`. [Learn more about mock requests](#)
+    - *mockHeader* [`string`] - The name of the request header to look for to enable manual mocking. If a request has this header and is executing the controllers, even if a controller is defined it will instead execute the mock and provide a mocked response. Defaults to `"x-mock"`. [Learn more about mocks](#mock-responses)
 
-    - *mockQuery* [`string`] - The name of the request query parameter to look for to enable manual mocking. If a request has this header and is executing the controllers, even if a controller is defined it will instead execute the mock and provide a mocked response. Defaults to `"x-mock"`. [Learn more about mock requests](#)
+    - *mockQuery* [`string`] - The name of the request query parameter to look for to enable manual mocking. If a request has this header and is executing the controllers, even if a controller is defined it will instead execute the mock and provide a mocked response. Defaults to `"x-mock"`. [Learn more about mocks](#mock-responses)
 
     - *reqProperty* [`string`] - The name of the property to attach the enforcer data to on the request object. Defaults to `"openapi"`.
 
@@ -226,7 +226,7 @@ There are three steps to making this work:
 
 ### Tell the Enforcer Where to Find Your Controllers
 
-You can specify the path for normal controllers and [mock controllers](#) when you call the [enforcer function](#enforcer).
+You can specify the path for normal controllers and [mock controllers](#mock-responses) when you call the [enforcer function](#enforcer).
 
 ```js
 const Enforcer = require('openapi-enforcer');
