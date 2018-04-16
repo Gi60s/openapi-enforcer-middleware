@@ -57,7 +57,7 @@ An express middleware function that will map the request path to a path in the O
 
     - *dereference* [`function`] - A `function` to call to dereference any JSON references. The `function` must return a promise that resolves to the dereferenced object. Defaults to using the [json-schema-ref-parser](https://www.npmjs.com/package/json-schema-ref-parser) dereference function.
 
-    - *development* [`boolean`] - Set to `true` to allow invalid examples, missing controllers, and detailed response errors. When set to `false` invalid examples and missing controllers will cause the process to exit with an error code and response errors will produce a simple `500 - Internal Server Error` response Enable [debug logs](#debug-logs) to see that data in the logs. Defaults to `true` if the environment variable `NODE_ENV` is not set to `"production"`.
+    - *development* [`boolean`] - Set to `true` to allow invalid examples, missing controllers, and detailed response errors. When set to `false` invalid examples and missing controllers will cause the process to exit with an error code and response errors will produce a simple `500 - Internal Server Error` response. Enable [debug logs](#debug-logs) to see that data in the logs. Defaults to `true` if the environment variable `NODE_ENV` is not set to `"production"`.
 
     - *fallthrough* [`boolean`]- If a request is made to a path that is not defined in the OpenAPI document and this value is set to `true` then it will ignore the 404 status and continue on to the next middleware. If set to `false` an error with a `statusCode` property will be generated and passed to the next error handling middleware. Defaults to `true`.
 
