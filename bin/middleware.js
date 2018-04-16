@@ -22,7 +22,7 @@ process.on('unhandledRejection', err => {
 });
 
 const Debug             = require('debug');
-const Enforcer          = require('../../openapi-enforcer/index');  // require('openapi-enforcer');
+const Enforcer          = require('openapi-enforcer');
 const mapControllers    = require('./map-controllers');
 const RefParser         = require('json-schema-ref-parser');
 const validateExamples  = require('./validate-examples');
@@ -114,17 +114,21 @@ module.exports = function(schema, options) {
 
             // check for errors
             const errors = response.errors(data);
+            debug.response('validating response');
             if (errors) {
-                const message = 'Response invalid: \n  ' + errors.join('\n  ');
-                debug.response(message);
+                const message = '\n  ' + errors.join('\n  ');
+                debug.response('response invalid:' + message);
                 return options.development
-                    ? res.set('content-type', 'text/plain').status(500).send(message)
+                    ? res.set('content-type', 'text/plain').status(500).send('Response invalid:' + message)
                     : res.sendStatus(500);
+            } else {
+                debug.response('response valid');
             }
 
             // serialize
             data.skipValidation = true;
             const result = response.serialize(data);
+            debug.response('response serialized');
 
             // send response
             Object.keys(result.headers)
@@ -251,6 +255,7 @@ EnforcerMiddleware.prototype.run = function(req, res, next) {
     const runner = middlewareRunner(this.middlewares, req, res, next);
 
     // parse, serialize, and validate request
+    debug.request('validating and parsing');
     const parsed = enforcer.request({
         body: req.body,
         cookies: req.cookies,
@@ -365,9 +370,13 @@ function notImplemented() {
 function parsedNextHandler(parsed, options, next) {
     if (parsed.errors) {
         if (parsed.statusCode === 404 && options.fallthrough) {
+            debug.request('path not found');
             return next();
         } else {
-            const err = Error(parsed.errors.join('\n'));
+            const message = parsed.errors.join('\n');
+            debug.request('request invalid');
+            debug.request(message);
+            const err = Error(message);
             err.statusCode = parsed.statusCode;
             err.code = ERROR_CODE;
             return next(err);
