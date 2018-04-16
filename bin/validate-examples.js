@@ -18,10 +18,61 @@
 
 /**
  * Validate examples against their schemas.
+ * @param {object} enforcer The enforcer object.
  * @param {object} schema A dereferenced schema.
  * @returns {boolean} true if no errors, false otherwise
  */
-module.exports = function(schema) {
-    // TODO: validate examples
-    return true;
+module.exports = function(enforcer, schema) {
+    let isValid = true;
+
+    getExamplesAndSchemas([], new Map(), '/root', schema)
+        .forEach(data => {
+            const errors = enforcer.errors(data.schema, data.example);
+            if (errors) {
+                console.log('Errors with example at: ' + data.path + ':\n  ' + errors.join('\n  '));
+                isValid = false;
+            }
+        });
+
+
+    return isValid;
 };
+
+function getExamplesAndSchemas(results, map, path, obj) {
+    if (obj && typeof obj === 'object') {
+        if (!map.has(obj)) {
+            map.set(obj, true);
+
+            if (obj.hasOwnProperty('schema')) {
+                const schema = obj.schema;
+                if (obj.hasOwnProperty('examples')) {
+                    Object.keys(obj.examples)
+                        .forEach(key => {
+                            results.push({
+                                example: obj.examples[key],
+                                path: path + '/examples/' + key,
+                                schema: schema
+                            });
+                        });
+                }
+
+                if (schema.hasOwnProperty('example')) {
+                    results.push({
+                        example: schema.example,
+                        path: path + '/example',
+                        schema: schema
+                    });
+                }
+            }
+
+            Object.keys(obj)
+                .forEach(key => {
+                    if (key !== 'example' && key !== 'examples') {
+                        getExamplesAndSchemas(results, map, path + '/' + key, obj[key]);
+                    }
+                });
+        }
+    }
+
+    return results;
+}

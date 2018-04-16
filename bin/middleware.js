@@ -15,11 +15,6 @@
  *    limitations under the License.
  **/
 'use strict';
-// TODO: get rid of this unhandledRejection listener
-process.on('unhandledRejection', err => {
-    console.error(err.stack);
-    process.exit(1);
-});
 
 const Debug             = require('debug');
 const Enforcer          = require('openapi-enforcer');
@@ -79,9 +74,10 @@ module.exports = function(schema, options) {
     // dereference schema and populate controllers
     const promise = options.dereference(schema)
         .then(schema => {
-            if (!validateExamples(schema) && !options.development) throw Error('One or more examples do not match their schemas');
+            const enforcer = new Enforcer(schema);
+            if (!validateExamples(enforcer, schema) && !options.development) throw Error('One or more examples do not match their schemas');
             return {
-                enforcer: new Enforcer(schema),
+                enforcer: enforcer,
                 schema: deepFreeze(schema)
             };
         });
