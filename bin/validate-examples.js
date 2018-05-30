@@ -29,7 +29,7 @@ module.exports = function(enforcer, schema) {
         .forEach(data => {
             const errors = enforcer.errors(data.schema, data.example);
             if (errors) {
-                console.log('Errors with example at: ' + data.path + ':\n  ' + errors.join('\n  '));
+                console.log('WARNING: Errors with example at: ' + data.path + ':\n  ' + errors.join('\n  '));
                 isValid = false;
             }
         });
