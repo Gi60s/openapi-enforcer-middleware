@@ -1,0 +1,83 @@
+swagger: "2.0"
+info:
+  version: "1.0.0"
+  title: "To Do List API"
+basePath: "/v2"
+schemes:
+- "http"
+paths:
+  /:
+    x-controller: todo
+    get:
+      x-operation: getList
+      responses:
+        200:
+          description: Get a list of tasks
+          schema:
+            $ref: '#/definitions/TaskList'
+    post:
+      x-operation: addItem
+      parameters:
+      - $ref: "#/parameters/TaskItem"
+      responses:
+        200:
+          description: Get the added task
+          schema:
+            $ref: '#/definitions/Task'
+  /{task_id}:
+    x-controller: todo
+    parameters:
+    - in: path
+      name: task_id
+      description: The task ID
+      required: true
+      type: number
+      minimum: 0
+    put:
+      x-operation: updateItem
+      parameters:
+      - $ref: "#/parameters/TaskItem"
+      responses:
+        200:
+          description: Get the updated task
+          schema:
+            $ref: '#/definitions/Task'
+    get:
+      x-operation: deleteItem
+      responses:
+        204:
+          description: Task deleted
+          schema:
+            type: string
+            maxLength: 0
+definitions:
+  Task:
+    type: object
+    required:
+    - title
+    - due
+    properties:
+      id:
+        type: number
+        minimum: 0
+      title:
+        type: string
+        minLength: 1
+      due:
+        type: string
+        format: date-time
+      completed:
+        type: boolean
+        default: false
+  TaskList:
+    type: array
+    items:
+      $ref: '#/definitions/Task'
+parameters:
+  TaskItem:
+    in: body
+    name: body
+    description: Update a task item
+    required: true
+    schema:
+      $ref: "#/definitions/Task"
