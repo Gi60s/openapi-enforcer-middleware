@@ -42,12 +42,12 @@ module.exports = function(map, schema, options) {
                 const op = controller[operation];
                 if (op) return controller[operation];
 
-                console.log('Operation "' + operation + '" does not exist in controller: ' + controllerPath);
+                console.log('WARNING: Operation "' + operation + '" does not exist in controller: ' + controllerPath);
                 errors = true;
             }
 
         } catch (err) {
-            console.log('Unable to load controller: ' + controllerPath);
+            console.log('WARNING: Unable to load controller: ' + controllerPath);
             dneControllers[controllerPath] = true
             errors = true;
         }
