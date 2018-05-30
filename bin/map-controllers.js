@@ -25,6 +25,7 @@ const path = require('path');
  * @returns {boolean} true if no errors, false otherwise
  */
 module.exports = function(map, schema, options) {
+    const dneControllers = {};
     const methods = ['get', 'post', 'put', 'delete', 'options', 'head', 'trace'];
     const xController = options.xController;
     const xOperation = options.xOperation;
@@ -36,15 +37,18 @@ module.exports = function(map, schema, options) {
     function load(directory, filename, operation) {
         const controllerPath = path.resolve(directory, filename);
         try {
-            const controller = require(controllerPath);
-            const op = controller[operation];
-            if (op) return controller[operation];
+            if (!dneControllers[controllerPath]) {
+                const controller = require(controllerPath);
+                const op = controller[operation];
+                if (op) return controller[operation];
 
-            console.log('Operation "' + operation + '" does not exist in controller: ' + controllerPath);
-            errors = true;
+                console.log('Operation "' + operation + '" does not exist in controller: ' + controllerPath);
+                errors = true;
+            }
 
         } catch (err) {
             console.log('Unable to load controller: ' + controllerPath);
+            dneControllers[controllerPath] = true
             errors = true;
         }
     }
