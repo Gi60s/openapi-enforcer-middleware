@@ -247,6 +247,11 @@ EnforcerMiddleware.prototype.controllers = function(options) {
 EnforcerMiddleware.prototype.run = function(req, res, next) {
     const enforcer = this.enforcer;
 
+    if (!this.middlewares.length) {
+        console.log('WARNING: openapi-enforcer-middleware has nothing to run')
+        return next()
+    }
+
     // create the middleware runner that will restore res.send when last next is called
     const runner = middlewareRunner(this.middlewares, req, res, next);
 
