@@ -25,7 +25,6 @@ const path = require('path');
  * @returns {boolean} true if no errors, false otherwise
  */
 module.exports = function(map, schema, options) {
-    const dneControllers = {};
     const methods = ['get', 'post', 'put', 'delete', 'options', 'head', 'trace'];
     const xController = options.xController;
     const xOperation = options.xOperation;
@@ -34,21 +33,19 @@ module.exports = function(map, schema, options) {
     const mocksDirectory = options.mockControllers ? path.resolve(process.cwd(), options.mockControllers) : undefined;
     let errors = false;
 
-    function load(directory, filename, operation) {
+    function load(directory, filename, operation, isMock, errLocation) {
         const controllerPath = path.resolve(directory, filename);
+        const errController = isMock ? 'mock controller' : 'controller'
         try {
-            if (!dneControllers[controllerPath]) {
-                const controller = require(controllerPath);
-                const op = controller[operation];
-                if (op) return controller[operation];
+            const controller = require(controllerPath);
+            const op = controller[operation];
+            if (op) return controller[operation];
 
-                console.log('WARNING: Operation "' + operation + '" does not exist in controller: ' + controllerPath);
-                errors = true;
-            }
+            console.log('WARNING: Operation "' + operation + '" does not exist in ' + errController + ' file "' + controllerPath + '" referenced by path: ' + errLocation);
+            errors = true;
 
         } catch (err) {
-            console.log('WARNING: Unable to load controller: ' + controllerPath);
-            dneControllers[controllerPath] = true
+            console.log('WARNING: Unable to load ' + errController + ' file "' + controllerPath + '" referenced by path: ' + errLocation);
             errors = true;
         }
     }
@@ -64,11 +61,13 @@ module.exports = function(map, schema, options) {
                 const controllerName = methodController || pathController || rootController;
                 const operationName = methodSchema && (methodSchema[xOperation] || methodSchema.operationId);
 
+                const errLocation = method.toUpperCase() + ' ' + pathKey
+
                 const data = {};
                 map[method + pathKey] = data;
                 if (controllerName && operationName) {
-                    if (controllersDirectory) data.controller = load(controllersDirectory, controllerName, operationName);
-                    if (mocksDirectory) data.mock = load(mocksDirectory, controllerName, operationName);
+                    if (controllersDirectory) data.controller = load(controllersDirectory, controllerName, operationName, false, errLocation);
+                    if (mocksDirectory) data.mock = load(mocksDirectory, controllerName, operationName, true, errLocation);
                 }
             });
         });
