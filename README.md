@@ -2,6 +2,20 @@
 
 An express middleware that makes it easy to write web services that follow an Open API specification by leveraging the tools provided in the [openapi-enforcer](https://www.npmjs.com/package/openapi-enforcer) package.
 
+## Features
+
+- Supports OpenAPI (Swagger) 2.0 and 3.x
+- Express middleware
+- Validates incoming requests
+- Parses incoming requests
+- Validates responses
+- Assists in building responses more quickly
+- Validates examples
+- Automatic response mocking in development
+- Option for manual response mocking in production
+- Highly configurable
+- Accepts plugins
+
 ## Example
 
 ```js
