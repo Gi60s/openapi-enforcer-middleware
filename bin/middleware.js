@@ -186,9 +186,6 @@ EnforcerMiddleware.prototype.controllers = function(options) {
         const method = req.method.toLowerCase();
         const openapi = req[this.options.reqProperty];
 
-        // if the openapi property has errors then handler them
-        if (openapi.errors) return parsedNextHandler(openapi, options, next);
-
         // get operation responses
         const responses = openapi.operation[method].responses;
 
