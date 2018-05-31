@@ -121,7 +121,7 @@ module.exports = function(schema, options) {
                 debug.response('response valid');
             }
 
-            // serialize
+            // serialize - will validate with res.send(), so no need to double validate with serialize
             data.skipValidation = true;
             const result = response.serialize(data);
             debug.response('response serialized');
@@ -269,6 +269,7 @@ EnforcerMiddleware.prototype.run = function(req, res, next) {
     req[this.options.reqProperty] = {
         errors: parsed.errors,
         enforcer: enforcer,
+        method: req.method.toLowerCase(),
         operation: parsed.schema,
         path: parsed.path,
         request: parsed.request,
