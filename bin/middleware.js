@@ -24,7 +24,8 @@ const validateExamples  = require('./validate-examples');
 
 const debug = {
     controllers: Debug('openapi-enforcer-middleware:controllers'),
-    request: Debug('openapi-enforcer-middleware:request'),  // TODO: add request and response debug logs
+    mock: Debug('openapi-enforcer-middleware:mock'),
+    request: Debug('openapi-enforcer-middleware:request'),
     response: Debug('openapi-enforcer-middleware:response')
 };
 
@@ -36,10 +37,10 @@ const ERROR_CODE = 'E_OPENAPI_ENFORCER_MIDDLEWARE';
  * @param {object} [options]
  * @param {string} [options.controllers] The path to the base controllers directory.
  * @param {function} [options.dereference] The function to call to dereference any JSON references. Must return a promise that resolves to the dereferenced object.
- * @param {boolean} [options.development] Whether in development mode. Defaults to true unless the NODE_ENV environment variable is set to "production".
  * @param {boolean} [options.fallthrough=true]
- * @param {boolean} [options.mockFallback=false]
  * @param {string} [options.mockControllers] The path to the base mocks directory. This allows for creating mocks through function calls.
+ * @param {boolean} [options.mockEnabled=true] Set this value to true to allow manual mocking requests
+ * @param {boolean} [options.mockFallback=false]
  * @param {string} [options.mockHeader='x-mock'] The name of the header to look for for manual mocking. Set to empty string to disable.
  * @param {string} [options.mockQuery='x-mock'] The name of the query string parameter to look for for manual mocking. Set to empty string to disable.
  * @param {string} [options.reqProperty='openapi'] The name of the property on the req object to store openapi data onto.
@@ -48,13 +49,14 @@ const ERROR_CODE = 'E_OPENAPI_ENFORCER_MIDDLEWARE';
  * @returns {function}
  */
 module.exports = function(schema, options) {
+    const development = process.env.NODE_ENV !== 'production';
 
     // set option defaults
     if (!options) options = {};
     if (!options.hasOwnProperty('dereference')) options.dereference = schema => RefParser.dereference(schema);
-    if (!options.hasOwnProperty('development')) options.development = process.env.NODE_ENV !== 'production';
     if (!options.hasOwnProperty('fallthrough')) options.fallthrough = true;
-    if (!options.hasOwnProperty('mockFallback')) options.mockFallback = false;
+    if (!options.hasOwnProperty('mockEnabled')) options.mockEnabled = options.hasOwnProperty('controllers');
+    if (!options.hasOwnProperty('mockFallback')) options.mockFallback = development;
     if (!options.hasOwnProperty('mockHeader')) options.mockHeader = 'x-mock';
     if (!options.hasOwnProperty('mockQuery')) options.mockQuery = 'x-mock';
     if (!options.hasOwnProperty('reqProperty')) options.reqProperty = 'openapi';
@@ -71,6 +73,9 @@ module.exports = function(schema, options) {
     if (typeof options.xController !== 'string') throw Error('Configuration option "xController" must be a string. Received: ' + options.xController);
     if (typeof options.xOperation !== 'string') throw Error('Configuration option "xOperation" must be a string. Received: ' + options.xOperation);
 
+    // set environment
+    options.development = development;
+
     // dereference schema and populate controllers
     const promise = options.dereference(schema)
         .then(schema => {
@@ -85,10 +90,10 @@ module.exports = function(schema, options) {
     // create an enforcer instance
     const enforcer = new EnforcerMiddleware(options, promise);
 
-    // if a controllers and/or mocks directory has been specified then we have a controllers middleware to execute
-    if (options.mockFallback || options.controllers || options.mockControllers) {
-        enforcer.use(enforcer.controllers(options));
-    }
+    // add middlewares according to configuration options
+    if (options.mockEnabled) enforcer.use(enforcer.mock({ automatic: false, controllers: options.mockControllers }));
+    if (options.controllers) enforcer.use(enforcer.controllers({ controllers: options.controllers }));
+    if (options.mockFallback) enforcer.use(enforcer.mock({ automatic: true, controllers: options.mockControllers }));
 
     // return middleware
     const result = (req, res, next) => {
@@ -135,8 +140,12 @@ module.exports = function(schema, options) {
         };
 
         const beforeNext = function(err) {
-            res.send = send;
-            next(err);
+            if (err || options.fallthrough) {
+                res.send = send;
+                next(err);
+            } else {
+                next(notImplemented());
+            }
         };
 
         promise
@@ -168,76 +177,99 @@ function EnforcerMiddleware(options, promise) {
     this.promise = promise;
 }
 
+/**
+ * Get middleware that executes the correct controller.
+ * @param {object} options
+ * @param {boolean} [options.fallthrough=true] Set to true to allow missing controllers to fall through, otherwise a not-implemented error is generated
+ * @param {string} options.controllers The path to the controllers directory.
+ * @returns {Function}
+ */
 EnforcerMiddleware.prototype.controllers = function(options) {
     if (!options) options = {};
     if (!options.hasOwnProperty('fallthrough')) options.fallthrough = this.options.fallthrough;
-    if (!options.hasOwnProperty('mockFallback')) options.mockFallback = this.options.mockFallback;
-    if (options.hasOwnProperty('controllers') && typeof options.controllers !== 'string') throw Error('Configuration option "controllers" must be a string. Received: ' + options.controllers);
-    if (options.hasOwnProperty('mockControllers') && typeof options.mockControllers !== 'string') throw Error('Configuration option "mockControllers" must be a string. Received: ' + options.mockControllers);
+    if (!options.hasOwnProperty('controllers')) throw Error('Controllers middleware missing required option: controllers');
+    if (typeof options.controllers !== 'string') throw Error('Configuration option "controllers" must be a string. Received: ' + options.controllers);
 
-    const controllers = {};
-    this.promise
-        .then(data => {
-            const hasErrors = mapControllers(controllers, data.schema, options);
-            if (hasErrors && !options.development) throw Error('One or more errors encountered while loading controllers');
-        });
+    const promise = this.promise
+        .then(data => mapControllers(data.schema, options.controllers, false, this.options));
 
     return (req, res, next) => {
-        const method = req.method.toLowerCase();
-        const openapi = req[this.options.reqProperty];
+        promise
+            .then(controllers => {
+                const openapi = req[this.options.reqProperty];
+                const controller = controllers[openapi.pathId];
+                const mock = openapi.mock;
+                const mockOverride = mock && mock.manual;
 
-        // get operation responses
-        const responses = openapi.operation[method].responses;
+                if (controller.controller && !mockOverride) {
+                    debug.controllers('executing controller');
+                    controller.controller(req, res, next);
 
-        // get response codes
-        const codes = responses ? Object.keys(responses) : [];
+                } else if (options.fallthrough) {
+                    debug.controllers('fallthrough');
+                    next();
 
-        // get controller data
-        const controller = controllers[method + openapi.path];
+                } else {
+                    debug.controllers('not implemented');
+                    next(notImplemented());
+                }
+            })
+            .catch(next);
+    }
+};
 
-        // detect manual mocking
-        const mock = getManualMock(req, this.options);
+/**
+ * Get middleware that generates a mock response.
+ * @param {object} options
+ * @param {boolean} [options.automatic=false] Set to true to automatically mock responses.
+ * @param {string} options.controllers The path to the mock controllers directory
+ * @returns {Function}
+ */
+EnforcerMiddleware.prototype.mock = function(options) {
+    if (!options) options = {};
+    if (!options.hasOwnProperty('automatic')) options.automatic = false;
+    if (options.controllers && typeof options.controllers !== 'string') throw Error('Configuration option for mock "controllers" must be a string. Received: ' + options.controllers);
 
-        // execute controller
-        if (controller.controller && !mock) {
-            debug.controllers('executing controller');
-            return controller.controller(req, res, next);
-        }
+    const promise = this.promise
+        .then(data => mapControllers(data.schema, options.controllers, false, this.options));
 
-        // execute the mock
-        if (options.mockFallback || mock) {
+    return (req, res, next) => {
+        promise
+            .then(controllers => {
+                const openapi = req[this.options.reqProperty];
+                const controller = controllers[openapi.pathId];
+                const mock = openapi.mock;
 
-            // mock using controller
-            if (controller.mock) {
-                debug.controllers('executing mock controller');
-                return controller.mock(req, res, next);
-            }
+                if (options.automatic || (mock && mock.manual)) {
 
-            // if no response codes then nothing to mock
-            if (!codes.length) {
-                debug.controllers('no responses to mock');
-                return next(notImplemented());
-            }
+                    if (!mock) {
+                        debug.mock('cannot perform automatic mock');
+                        next();
 
-            // get the mock response code
-            const code = (mock && mock.code) || codes[0];
+                    } else if (mock.controller && controller) {
+                        debug.mock('executing mock controller');
+                        controller(req, res, next);
 
-            // handle case where mock not available
-            if (!code || !responses || !responses[code]) {
-                debug.controllers('mock response code not implemented');
-                return next(notImplemented());
-            }
+                    } else {
+                        debug.mock('creating mock from schema')
 
-            // mock from example
-            const contentType = req.headers.accept || '*/*';
-            const response = openapi.response({ code, contentType });
-            const example = response.example((mock && mock.config) || {});
-            debug.controllers('automatic mock');
-            return res.status(code).send(example);
-        }
+                        const code = mock.code;
+                        const contentType = req.headers.accept || '*/*';
+                        const response = openapi.response({ code, contentType });
 
-        debug.controllers('not implemented');
-        return next(notImplemented());
+                        // determine configuration for getting example
+                        const exampleConfig = { ignoreDocumentExample: !mock.example };
+                        if (typeof mock.example === 'string') exampleConfig.name = mock.example;
+
+                        const example = response.example(exampleConfig);
+                        res.status(code).send(example);
+                    }
+
+                } else {
+                    next();
+                }
+            })
+            .catch(next);
     }
 };
 
@@ -262,15 +294,22 @@ EnforcerMiddleware.prototype.run = function(req, res, next) {
         path: req.originalUrl.substr(req.baseUrl.length)
     });
 
-    // create the openapi request property
+    // create the openapi request object
+    const method = req.method.toLowerCase();
+    const responses = parsed.schema[method].responses;
+    const responseCodes = responses ? Object.keys(responses) : [];
     req[this.options.reqProperty] = {
         errors: parsed.errors,
         enforcer: enforcer,
-        method: req.method.toLowerCase(),
+        method: method,
+        mock: getMockData(responses, responseCodes, req, this.options),
         operation: parsed.schema,
         path: parsed.path,
+        pathId: method + parsed.path,
         request: parsed.request,
         response: parsed.response,
+        responseCodes: responseCodes,
+        responses: responses,
         schema: this.schema,
         statusCode: parsed.statusCode
     };
@@ -296,41 +335,78 @@ EnforcerMiddleware.prototype.use = function(middleware) {
 
 
 
-function getManualMock(req, options) {
-    const method = req.method.toLowerCase();
-    const openapi = req[options.reqProperty];
+function getMockData(responses, responseCodes, req, options) {
+    const defaultCode = responseCodes[0];
+    const result = {
+        controller: true,
+        example: true,
+        manual: false
+    };
 
-    const responses = openapi.operation[method].responses;
-    const codes = responses ? Object.keys(responses) : [];
-    let manual;
+    let mock;
 
-    // use specified mock code or if empty string use first response code
+    // check for manual mock configuration settings
     if (options.mockHeader && req.headers.hasOwnProperty(options.mockHeader)) {
-        manual = req.headers[options.mockHeader] || codes[0];
+        mock = req.headers[options.mockHeader] || defaultCode;
+        result.manual = true;
     } else if (options.mockQuery && req.query.hasOwnProperty(options.mockQuery)) {
-        manual = req.query[options.mockQuery] || codes[0];
+        mock = req.query[options.mockQuery] || defaultCode;
+        result.manual = true;
+    } else if (responseCodes[0]) {
+        mock = defaultCode;
     }
 
-    if (manual) {
-        const array = manual.split(',');
-        const code = array[0] || codes[0];
-        if (!responses[code]) return;
+    // unable to mock
+    if (!mock) return;
 
-        let config = {};
-        switch(array[1]) {
-            case '*':
-                config.ignoreDocumentExample = true;
+    // check that mock code exists otherwise unable to mock
+    const ar = mock.split(';');
+    const code = ar[0];
+    if (!responses[code]) return;
+
+    // parse mock data - ex: 200;controller=false&example=foo
+    result.code = code;
+    const pairs = ar[1] ? ar[1].split('&') : [];
+    pairs.forEach(pair => {
+        const kv = pair.split('=');
+        const v = kv[1];
+        switch(kv[0]) {
+            case 'controller':
+                if (v === 'false') result.controller = false;
                 break;
-            case '':
-            case undefined:
-                break;
-            default:
-                config.name = array[1];
+            case 'example':
+                if (v === 'false') {
+                    result.example = false;
+                } else if (v && v !== 'true') {
+                    result.example = v;
+                }
                 break;
         }
+    })
 
-        return { code, config };
+    return result;
+
+    /*
+    let config = {
+        controller: true,       // 200,controller   || 200,!controller
+        example: true,          // 200,example      || 200,!example         || 200,example=bob
+        random: true            // 200,random       || 200,!random
+    };
+
+    switch(array[1]) {
+        case '*':
+            config.ignoreDocumentExample = true;
+            break;
+        case '':
+        case undefined:
+            break;
+        default:
+            config.name = array[1];
+            break;
     }
+
+    return { code, config };
+    */
 }
 
 function deepFreeze(value) {
