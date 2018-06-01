@@ -19,33 +19,37 @@ const path = require('path');
 
 /**
  * Map all controllers.
- * @param {object} map An object to load with controller mappings.
  * @param {object} schema A dereferenced schema.
+ * @param {string} directory The directory to look for controllers in.
+ * @param {boolean} isMock Whether the controllers are mock controllers or not.
  * @param {object} options Options passed into middleware.
+ * @param {string} options.xController
+ * @param {boolean} options.development
+ * @param {string} options.xOperation
  * @returns {boolean} true if no errors, false otherwise
  */
-module.exports = function(map, schema, options) {
+module.exports = function(schema, directory, isMock, options) {
+    const map = {};
     const methods = ['get', 'post', 'put', 'delete', 'options', 'head', 'trace'];
     const xController = options.xController;
     const xOperation = options.xOperation;
     const rootController = schema && schema[xController];
-    const controllersDirectory = options.controllers ? path.resolve(process.cwd(), options.controllers) : undefined;
-    const mocksDirectory = options.mockControllers ? path.resolve(process.cwd(), options.mockControllers) : undefined;
+    const errController = isMock ? 'mock controller' : 'controller'
+    const errorPrefix = options.development ? 'ERROR' : 'WARNING';
     let errors = false;
 
-    function load(directory, filename, operation, isMock, errLocation) {
+    function load(directory, filename, operation, errLocation) {
         const controllerPath = path.resolve(directory, filename);
-        const errController = isMock ? 'mock controller' : 'controller'
         try {
             const controller = require(controllerPath);
             const op = controller[operation];
             if (op) return controller[operation];
 
-            console.log('WARNING: Operation "' + operation + '" does not exist in ' + errController + ' file "' + controllerPath + '" referenced by path: ' + errLocation);
+            if (options.development) console.log(errorPrefix + ': Operation "' + operation + '" does not exist in ' + errController + ' file "' + controllerPath + '" referenced by path: ' + errLocation);
             errors = true;
 
         } catch (err) {
-            console.log('WARNING: Unable to load ' + errController + ' file "' + controllerPath + '" referenced by path: ' + errLocation);
+            if (options.development) console.log(errorPrefix + ': Unable to load ' + errController + ' file "' + controllerPath + '" referenced by path: ' + errLocation);
             errors = true;
         }
     }
@@ -60,18 +64,14 @@ module.exports = function(map, schema, options) {
                 const methodController = methodSchema && methodSchema[xController];
                 const controllerName = methodController || pathController || rootController;
                 const operationName = methodSchema && (methodSchema[xOperation] || methodSchema.operationId);
-
-                const errLocation = method.toUpperCase() + ' ' + pathKey
-
-                const data = {};
-                map[method + pathKey] = data;
                 if (controllerName && operationName) {
-                    if (controllersDirectory) data.controller = load(controllersDirectory, controllerName, operationName, false, errLocation);
-                    if (mocksDirectory) data.mock = load(mocksDirectory, controllerName, operationName, true, errLocation);
+                    map[method + pathKey] = load(directory, controllerName, operationName, method.toUpperCase() + ' ' + pathKey);
                 }
             });
         });
     }
 
-    return errors;
+    if (errors && !options.development) throw Error('One or more errors encountered while loading controllers');
+
+    return map;
 };
