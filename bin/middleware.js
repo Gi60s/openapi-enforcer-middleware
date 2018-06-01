@@ -40,7 +40,7 @@ const ERROR_CODE = 'E_OPENAPI_ENFORCER_MIDDLEWARE';
  * @param {boolean} [options.fallthrough=true]
  * @param {string} [options.mockControllers] The path to the base mocks directory. This allows for creating mocks through function calls.
  * @param {boolean} [options.mockEnabled=true] Set this value to true to allow manual mocking requests
- * @param {boolean} [options.mockFallback=false]
+ * @param {boolean} [options.mockFallback]
  * @param {string} [options.mockHeader='x-mock'] The name of the header to look for for manual mocking. Set to empty string to disable.
  * @param {string} [options.mockQuery='x-mock'] The name of the query string parameter to look for for manual mocking. Set to empty string to disable.
  * @param {string} [options.reqProperty='openapi'] The name of the property on the req object to store openapi data onto.
@@ -131,6 +131,9 @@ module.exports = function(schema, options) {
             const result = response.serialize(data);
             debug.response('response serialized');
 
+            // add openapi-enforcer header
+            if (openapi.handlerName) res.set('x-openapi-enforcer', openapi.handlerName);
+
             // send response
             Object.keys(result.headers)
                 .forEach(name => {
@@ -160,6 +163,7 @@ module.exports = function(schema, options) {
     };
 
     result.controllers = enforcer.controllers.bind(enforcer);
+    result.mock = enforcer.mock.bind(enforcer);
     result.use = enforcer.use.bind(enforcer);
 
     return result;
@@ -202,6 +206,7 @@ EnforcerMiddleware.prototype.controllers = function(options) {
                 const mockOverride = mock && mock.manual;
 
                 if (controller.controller && !mockOverride) {
+                    openapi.handlerName = 'controller';
                     debug.controllers('executing controller');
                     controller.controller(req, res, next);
 
@@ -231,7 +236,11 @@ EnforcerMiddleware.prototype.mock = function(options) {
     if (options.controllers && typeof options.controllers !== 'string') throw Error('Configuration option for mock "controllers" must be a string. Received: ' + options.controllers);
 
     const promise = this.promise
-        .then(data => mapControllers(data.schema, options.controllers, false, this.options));
+        .then(data => {
+            return options.controllers
+                ? mapControllers(data.schema, options.controllers, false, this.options)
+                : {};
+        });
 
     return (req, res, next) => {
         promise
@@ -239,18 +248,22 @@ EnforcerMiddleware.prototype.mock = function(options) {
                 const openapi = req[this.options.reqProperty];
                 const controller = controllers[openapi.pathId];
                 const mock = openapi.mock;
+                const manual = mock && mock.manual;
 
-                if (options.automatic || (mock && mock.manual)) {
+                if (options.automatic || manual) {
+                    openapi.handlerName = manual ? 'requested mock' : 'automatic mock'
 
                     if (!mock) {
                         debug.mock('cannot perform automatic mock');
                         next();
 
                     } else if (mock.controller && controller) {
+                        openapi.handlerName += ' controller';
                         debug.mock('executing mock controller');
                         controller(req, res, next);
 
                     } else {
+                        openapi.handlerName += ' example';
                         debug.mock('creating mock from schema')
 
                         const code = mock.code;
@@ -282,7 +295,7 @@ EnforcerMiddleware.prototype.run = function(req, res, next) {
     }
 
     // create the middleware runner that will restore res.send when last next is called
-    const runner = middlewareRunner(this.middlewares, req, res, next);
+    const runner = middlewareRunner(this.middlewares, this.options, req, res, next);
 
     // parse, serialize, and validate request
     debug.request('validating and parsing');
@@ -296,11 +309,12 @@ EnforcerMiddleware.prototype.run = function(req, res, next) {
 
     // create the openapi request object
     const method = req.method.toLowerCase();
-    const responses = parsed.schema[method].responses;
+    const responses = parsed.schema && parsed.schema[method] && parsed.schema[method].responses;
     const responseCodes = responses ? Object.keys(responses) : [];
     req[this.options.reqProperty] = {
         errors: parsed.errors,
         enforcer: enforcer,
+        handlerName: '',
         method: method,
         mock: getMockData(responses, responseCodes, req, this.options),
         operation: parsed.schema,
@@ -385,28 +399,6 @@ function getMockData(responses, responseCodes, req, options) {
     })
 
     return result;
-
-    /*
-    let config = {
-        controller: true,       // 200,controller   || 200,!controller
-        example: true,          // 200,example      || 200,!example         || 200,example=bob
-        random: true            // 200,random       || 200,!random
-    };
-
-    switch(array[1]) {
-        case '*':
-            config.ignoreDocumentExample = true;
-            break;
-        case '':
-        case undefined:
-            break;
-        default:
-            config.name = array[1];
-            break;
-    }
-
-    return { code, config };
-    */
 }
 
 function deepFreeze(value) {
@@ -418,10 +410,11 @@ function deepFreeze(value) {
 }
 
 // get a middleware runner "next" function
-function middlewareRunner(middlewares, req, res, next) {
+function middlewareRunner(middlewares, options, req, res, next) {
     middlewares = middlewares.slice(0);
     const run = err => {
         while (middlewares.length) {
+            req[options.reqProperty].handlerName = '';
             const middleware = middlewares.shift();
             const isErrorHandling = middleware.length >= 4;
             if (err && isErrorHandling) {
