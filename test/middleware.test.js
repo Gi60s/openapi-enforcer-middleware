@@ -23,31 +23,99 @@ const openapi       = require('../index');
 describe('middleware', () => {
     const schema = __dirname + '/resources/v2.yaml';
 
-    it('fall through to error middleware', () => {
-        const flow = [];
+    describe.only('options', () => {
 
-        const app = express();
-        const mw = openapi(schema, { fallthrough: false}) ;
+        describe('fallthrough', () => {
 
-        app.use(mw);
+            it('true calls next without error', () => {
+                const flow = [];
 
-        app.use((req, res, next) => {
-            flow.push(1);
-            next();
-        });
+                const app = express();
+                const mw = openapi(schema, { fallthrough: true }) ;
 
-        app.use((err, req, res, next) => {
-            flow.push(2);
-            expect(err.code).to.equal(openapi.ERROR_CODE);
-            expect(err.statusCode).to.equal(404);
-            next();
-        });
+                app.use(mw);
 
-        return server.one(app, { uri: '/dne' })
-            .then(() => {
-                expect(flow).to.deep.equal([2]);
+                app.use((req, res, next) => {
+                    flow.push(1);
+                    next();
+                });
+
+                app.use((err, req, res, next) => {
+                    flow.push(2);
+                    next();
+                });
+
+                return server.one(app, { uri: '/dne' })
+                    .then(() => {
+                        expect(flow).to.deep.equal([1]);
+                    });
             });
-    });
+
+            it('false calls next with error', () => {
+                const flow = [];
+
+                const app = express();
+                const mw = openapi(schema, { fallthrough: false }) ;
+
+                app.use(mw);
+
+                app.use((req, res, next) => {
+                    flow.push(1);
+                    next();
+                });
+
+                app.use((err, req, res, next) => {
+                    flow.push(2);
+                    expect(err.code).to.equal(openapi.ERROR_CODE);
+                    expect(err.statusCode).to.equal(404);
+                    next();
+                });
+
+                return server.one(app, { uri: '/dne' })
+                    .then(() => {
+                        expect(flow).to.deep.equal([2]);
+                    });
+            });
+        });
+
+        describe.only('mockEnabled', () => {
+            let env = process.env.NODE_ENV;
+
+            after(() => {
+                process.env.NODE_ENV = env;
+            })
+
+            it('default not enabled', () => {
+                process.env.NODE_ENV = 'production';
+                const app = express();
+                const mw = openapi(schema) ;
+                app.use(mw);
+
+                return server.one(app, { uri: '/people', headers: { 'x-mock': '' }})
+                    .then(res => {
+                        expect(res.statusCode).to.equal(404);
+                    })
+            })
+
+            it('default enabled', () => {
+                process.env.NODE_ENV = 'development';
+                const app = express();
+                const mw = openapi(schema) ;
+                app.use(mw);
+
+                return server.one(app, { uri: '/people', headers: { 'x-mock': '' }})
+                    .then(res => {
+                        expect(res.headers['x-openapi-enforcer']).to.match(/manual mock/);
+                        expect(res.statusCode).to.equal(200);
+                    })
+            })
+
+        })
+
+    })
+
+
+
 
     it('fall through to own error middleware', () => {
         const flow = [];
