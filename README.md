@@ -71,42 +71,68 @@ An express middleware function that will map the request path to a path in the O
 
     - *dereference* [`function`] - A `function` to call to dereference any JSON references. The `function` must return a promise that resolves to the dereferenced object. Defaults to using the [json-schema-ref-parser](https://www.npmjs.com/package/json-schema-ref-parser) dereference function.
 
-    - *development* [`boolean`] - Set to `true` to allow invalid examples, missing controllers, and detailed response errors. When set to `false` invalid examples and missing controllers will cause the process to exit with an error code and response errors will produce a simple `500 - Internal Server Error` response. Enable [debug logs](#debug-logs) to see that data in the logs. Defaults to `true` if the environment variable `NODE_ENV` is not set to `"production"`.
-
-    - *fallthrough* [`boolean`]- If a request is made to a path that is not defined in the OpenAPI document and this value is set to `true` then it will ignore the 404 status and continue on to the next middleware. If set to `false` an error with a `statusCode` property will be generated and passed to the next error handling middleware. Defaults to `true`.
+    - *fallthrough* [`boolean`] - If a request is made that this middleware does not handle and this value is set to `true` then the request will be passed to the next middleware. If set to `false` an error with a `statusCode` property will be generated and passed to the next error handling middleware. Defaults to `true`.
 
     - *mockControllers* [`string`] - Specifies the root directory to look into to find controllers that produce mock responses. [Learn more about controllers](#controllers)
 
-    - *mockFallback* [`boolean`] - When using the [controller middleware](#controllers-middleware) if a matching controller operation is not found then setting this value to `true` will automatically produce a response based on examples in the OpenAPI document or will randomly generate a value that adheres to the response schema. Defaults to `false`.
+    - *mockEnabled* [`boolean`] - If set to `true` then manual mocking is enabled. Defaults to `true` if the `controllers` option has been specified, otherwise it defaults to `false`. [Learn more about mocks](#mock-responses)
 
-    - *mockHeader* [`string`] - The name of the request header to look for to enable manual mocking. If a request has this header and is executing the controllers, even if a controller is defined it will instead execute the mock and provide a mocked response. Defaults to `"x-mock"`. [Learn more about mocks](#mock-responses)
+    - *mockFallback* [`boolean`] - If set to `true` then mock responses will be generated if an actual response is not provided. If [`NODE_ENV=production`](#development-vs-production) then this value defaults to `false`, otherwise it defaults to `true`.
 
-    - *mockQuery* [`string`] - The name of the request query parameter to look for to enable manual mocking. If a request has this header and is executing the controllers, even if a controller is defined it will instead execute the mock and provide a mocked response. Defaults to `"x-mock"`. [Learn more about mocks](#mock-responses)
+    - *mockHeader* [`string`] - The name of the request header to look for to trigger manual mocking. If a request has this header and the `mockEnabled` option is set to `true` then a mock response will take precedence to a controller's response. Defaults to `"x-mock"`. [Learn more about mocks](#mock-responses)
+
+    - *mockQuery* [`string`] - The name of the request query parameter to look for to trigger manual mocking. If a request has this header and the `mockEnabled` option is set to `true` then a mock response will take precedence to a controller's response. Defaults to `"x-mock"`. [Learn more about mocks](#mock-responses)
 
     - *reqProperty* [`string`] - The name of the property to attach the enforcer data to on the request object. Defaults to `"openapi"`.
 
     - *xController* [`string`] - The name of the property within the OpenAPI document that defines the controller to use for an operation. Defaults to `"x-controller"`.
 
-    - *xOperation* [`string`] - The name of the property within the OpenAPI document that defines the controller operation to use for an operation. Defaults to `"x-operation"` but also automatically falls back to `"operation"` regardless of what this value is set to.
+    - *xOperation* [`string`] - The name of the property within the OpenAPI document that defines the controller operation to use for an operation. Defaults to `"x-operation"` but also automatically falls back to `"operationId"` regardless of what this value is set to.
 
 Returns a middleware function with static properties [`controllers`](#controllers-middleware) and [`use`](#custom-middleware) to provide flexibility in usage.
 
 ## Basic Usage
 
-This example will analyze incoming requests and if they match a path defined in the OpenAPI document will look for a [controller](#controllers) within the `/path/to/controllers` directory that has the same name as that defined in the `x-controller` property of the OpenAPI document operation.
+The following example will do the following with each incoming request:
+
+1. Check to see if manual mocking has been requested and if so provide a mock response, otherwise...
+2. Call the [controller function](#controllers) associated with the request if defined, otherwise...
+3. Will produce a mock response if in [development mode](#development-vs-production), otherwise...
+4. Call the next middleware.
 
 ```js
-const Enforcer = require('openapi-enforcer');
+const Enforcer = require('openapi-enforcer-middleware');
 const express = require('express');
+
+const app = express();
 
 // define enforcer middleware
 const enforcer = Enforcer('/path/to/openapi-doc.yaml', {
     controllers: '/path/to/controllers'
 });
 
-// define express app and have it use enforcer middleware
+// call openapi enforcer middleware
+app.use(enforcer);
+```
+
+The code above is equivalent to the following [advanced usage](#advanced-usage) example:
+
+```js
+const Enforcer = require('openapi-enforcer-middleware');
+const express = require('express');
+
 const app = express();
-app.use('/v1', enforcer);
+
+// define enforcer middleware
+const enforcer = Enforcer('/path/to/openapi-doc.yaml');
+
+// add middlewares to enforcer
+enforcer.use(enforcer.mock({ automatic: false });
+enforcer.use(enforcer.controllers({ controllers: '/path/to/controllers' });
+enforcer.use(enforcer.mock({ automatic: true });
+
+// call openapi enforcer middleware
+app.use(enforcer);
 ```
 
 ## Advanced Usage
@@ -299,6 +325,22 @@ exports.functionA = function(req, res, next) {
     // 3) call next() if you don't want to handle the request in the controller.
 }
 ```
+
+## Development and Production
+
+This middleware uses the `NODE_ENV` environment variable (as popularized by the [express package](https://www.npmjs.com/package/express)) to determine if it is being run in production or development.
+
+If the `NODE_ENV=production` then the following will apply:
+
+- All examples within the OpenAPI document must be valid, otherwise the application will throw an error.
+- All controllers and operation endpoints must exist, otherwise the application will throw an error.
+- Invalid responses will return a `500` status code with a generic `Internal Server Error` message.
+
+If the `NODE_ENV` is not set to `production` then:
+
+- Invalid examples will produce warnings to the console but the application will still start.
+- Missing controllers or operation endpoints will produce warnings to the console but the application will still start.
+- Invalid responses will return a `500` status code with the complete error stack trace.
 
 ## Debug Logs
 
