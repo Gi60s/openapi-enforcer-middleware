@@ -115,7 +115,7 @@ const enforcer = Enforcer('/path/to/openapi-doc.yaml', {
 app.use(enforcer);
 ```
 
-The code above is equivalent to the following [advanced usage](#advanced-usage) example:
+The example above is equivalent to the following advanced usage example. Advanced usage allows you specify exactly what middleware to run in the enforcer middleware context. Middleware run in the enforcer context works the same as normal express middleware except that responses will be validated.
 
 ```js
 const Enforcer = require('openapi-enforcer-middleware');
@@ -135,72 +135,6 @@ enforcer.use(enforcer.mock({ automatic: true });
 app.use(enforcer);
 ```
 
-## Advanced Usage
-
-Advanced usage adds the following benefits:
-
-1. Run your own custom middleware (including error handling middleware) within the context of the enforcer.
-2. Run the [controllers](#controllers) portion of the middleware when you want (before or after your middleware, or not at all).
-
-To accomplish this you first need to create the enforcer middleware instance. If you don't want to run the [controllers](#controllers) yet, omit the `mockFallback`, `controllers`, and `mockControllers` options or simply don't add any options.
-
-```js
-const Enforcer = require('openapi-enforcer');
-const enforcer = Enforcer('/path/to/openapi-doc.yaml');
-```
-
-Next you can add your own middleware and if/when you want you can add the enforcer controllers middleware through the enforcer object.
-
-```js
-enforcer.use(function(req, res, next) {
-    // run some code
-    next();
-});
-```
-
-Finally, you add the enforcer as express middleware:
-
-```js
-const express = require('express');
-const app = express();
-app.use('/v1', enforcer);
-```
-
-### Example of Advanced Usage
-
-This example shows how we can add middleware to the enforcer middleware context. That means you get the enforcer information and functionality that is associated with the request. Using this method you can add regular middleware and error handling middleware. You also can still use the built in [controllers middleware](#controllers-middleware).
-
-```js
-const Enforcer = require('openapi-enforcer');
-const express = require('express');
-
-// define enforcer middleware
-const enforcer = Enforcer('/path/to/openapi-doc.yaml');
-
-// 1) within enforcer middleware context: run custom middleware
-enforcer.use(function(req, res, next) {
-    // run some code: for example, check authorization
-    next();
-});
-
-// 2) within enforcer middleware context: run controllers middleware
-enforcer.use(enforcer.controllers());
-
-// 3) within enforcer middleware context: run error handling middleware
-enforcer.use(function(err, req, res, next) {
-    if (err.code === Enforcer.ERROR_CODE) {
-        res.status(err.statusCode);
-        res.send(err.message);
-    } else {
-        next(err);
-    }
-});
-
-// add the enforcer middleware to the express app
-const app = express();
-app.use('/v1', enforcer);
-```
-
 ### Controllers Middleware
 
 The controllers middleware is the middleware that ties the [`x-controller` and `x-operation` in the Open API document](#controllers) to actual code.
@@ -211,21 +145,34 @@ The controllers middleware is the middleware that ties the [`x-controller` and `
 
 - *options* [`object`] - Options that specify how the middleware should act. It has the following properties:
 
-    - *controllers* [`string`] - Specifies the root directory to look into to find controllers.
+    - *controllers* [`string`] - **REQUIRED** The directory path to look into to find controllers.
 
-    - *mockControllers* [`string`] - Specifies the root directory to look into to find controllers that produce mock responses.
-
-    - *mockFallback* [`boolean`] -If a matching controller operation is not found then setting this value to `true` will automatically produce a response based on examples in the OpenAPI document or will randomly generate a value that adheres to the response schema. Defaults to `false`.
+    - *fallthrough* [`boolean`] - If the middleware doesn't handle the path then continue on to the next middleware, otherwise produces an error response that signals the functionality has not yet been implemented.
 
 Returns a middleware function.
 
 ```js
 const enforcer = Enforcer('/path/to/openapi-doc.yaml');
 enforcer.use(enforcer.controllers({
-    controllers: '/path/to/controllers',
-    mockControllers: '/path/to/mockControllers'
+    controllers: '/path/to/controllers'
 }));
 ```
+
+### Mock Middleware
+
+This middleware is used to produce mock responses.
+
+`enforcer.mock ( options )`
+
+**Parameters**
+
+- *options* [`object`] - The mock middleware options.
+
+    - *automatic* [`boolean`] - Set to `true` to send a mock response whether it was requested or not. If set to `false` then mock responses will only occur when specificially requested. Defaults to `false`.
+
+    - *controllers* [`string`] - The directory path to look into to find mock controllers.
+
+Returns a middleware function.
 
 ### Custom Middleware
 
