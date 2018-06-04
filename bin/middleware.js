@@ -143,12 +143,8 @@ module.exports = function(schema, options) {
         };
 
         const beforeNext = function(err) {
-            if (err || options.fallthrough) {
-                res.send = send;
-                next(err);
-            } else {
-                next(notImplemented());
-            }
+            res.send = send;
+            next(err);
         };
 
         promise
@@ -184,13 +180,11 @@ function EnforcerMiddleware(options, promise) {
 /**
  * Get middleware that executes the correct controller.
  * @param {object} options
- * @param {boolean} [options.fallthrough=true] Set to true to allow missing controllers to fall through, otherwise a not-implemented error is generated
  * @param {string} options.controllers The path to the controllers directory.
  * @returns {Function}
  */
 EnforcerMiddleware.prototype.controllers = function(options) {
     if (!options) options = {};
-    if (!options.hasOwnProperty('fallthrough')) options.fallthrough = this.options.fallthrough;
     if (!options.hasOwnProperty('controllers')) throw Error('Controllers middleware missing required option: controllers');
     if (typeof options.controllers !== 'string') throw Error('Configuration option "controllers" must be a string. Received: ' + options.controllers);
 
@@ -202,21 +196,15 @@ EnforcerMiddleware.prototype.controllers = function(options) {
             .then(controllers => {
                 const openapi = req[this.options.reqProperty];
                 const controller = controllers[openapi.pathId];
-                const mock = openapi.mock;
-                const mockOverride = mock && mock.manual;
 
-                if (controller.controller && !mockOverride) {
+                if (controller) {
                     openapi.handlerName = 'controller';
                     debug.controllers('executing controller');
-                    controller.controller(req, res, next);
-
-                } else if (options.fallthrough) {
-                    debug.controllers('fallthrough');
-                    next();
+                    controller(req, res, next);
 
                 } else {
-                    debug.controllers('not implemented');
-                    next(notImplemented());
+                    // TODO: should there be a not implemented?
+                    next();
                 }
             })
             .catch(next);
@@ -248,13 +236,13 @@ EnforcerMiddleware.prototype.mock = function(options) {
                 const openapi = req[this.options.reqProperty];
                 const controller = controllers[openapi.pathId];
                 const mock = openapi.mock;
-                const manual = mock && mock.manual;
+                const manualMock = mock && mock.manual;
 
-                if (options.automatic || manual) {
-                    openapi.handlerName = manual ? 'requested mock' : 'automatic mock'
+                if (options.automatic || manualMock) {
+                    openapi.handlerName = manualMock ? 'requested mock' : 'automatic mock';
 
                     if (!mock) {
-                        debug.mock('cannot perform automatic mock');
+                        debug.mock('unable to mock');
                         next();
 
                     } else if (mock.controller && controller) {
@@ -386,12 +374,14 @@ function getMockData(responses, responseCodes, req, options) {
         const v = kv[1];
         switch(kv[0]) {
             case 'controller':
-                if (v === 'false') result.controller = false;
+                result.controller = v !== 'false';
                 break;
             case 'example':
                 if (v === 'false') {
                     result.example = false;
-                } else if (v && v !== 'true') {
+                } else if (v === 'true' || v === '') {
+                    result.example = true;
+                } else {
                     result.example = v;
                 }
                 break;
@@ -426,13 +416,6 @@ function middlewareRunner(middlewares, options, req, res, next) {
         next(err);
     };
     return run;
-}
-
-function notImplemented() {
-    const err = Error('Not implemented');
-    err.statusCode = 501;
-    err.code = ERROR_CODE;
-    return err;
 }
 
 function parsedNextHandler(parsed, options, next) {
