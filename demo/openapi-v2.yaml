@@ -33,6 +33,15 @@ paths:
       required: true
       type: number
       minimum: 0
+    get:
+      x-operation: getItem
+      parameters:
+      - $ref: "#/parameters/TaskItem"
+      responses:
+        200:
+          description: Get the task
+          schema:
+            $ref: '#/definitions/Task'
     put:
       x-operation: updateItem
       parameters:
@@ -42,7 +51,7 @@ paths:
           description: Get the updated task
           schema:
             $ref: '#/definitions/Task'
-    get:
+    delete:
       x-operation: deleteItem
       responses:
         204:

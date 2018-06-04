@@ -14,7 +14,7 @@ An express middleware that makes it easy to write web services that follow an Op
 - Automatic response mocking in development
 - Option for manual response mocking in production
 - Highly configurable
-- Accepts plugins
+- Accepts middleware
 
 ## Example
 
