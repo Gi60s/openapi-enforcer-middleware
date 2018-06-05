@@ -21,13 +21,14 @@
   "dependencies": {
     "debug": "^3.1.0",
     "json-schema-ref-parser": "^4.1.1",
-    "openapi-enforcer": "^0.9.1"
+    "openapi-enforcer": "^0.9.2"
   },
   "devDependencies": {
+    "body-parser": "^1.18.3",
     "chai": "^4.1.2",
     "express": "^4.16.3",
-    "mocha": "^5.1.0",
-    "request": "^2.85.0",
+    "mocha": "^5.2.0",
+    "request": "^2.87.0",
     "request-promise-native": "^1.0.5"
   }
 }
