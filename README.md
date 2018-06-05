@@ -91,7 +91,7 @@ An express middleware function that will map the request path to a path in the O
 
 Returns a middleware function with static properties [`controllers`](#controllers-middleware) and [`use`](#custom-middleware) to provide flexibility in usage.
 
-## Basic Usage
+## Usage
 
 The following example will do the following with each incoming request:
 
