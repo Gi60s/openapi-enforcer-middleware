@@ -98,6 +98,9 @@ module.exports = function(schema, options) {
     // return middleware
     const result = (req, res, next) => {
 
+        // make a copy of the request to be used just within this middleware
+        req = Object.assign({}, req);
+
         // overwrite res.send
         const send = res.send;
         res.send = function(body) {
@@ -110,7 +113,7 @@ module.exports = function(schema, options) {
             // create the response object
             const response = openapi.response({
                 contentType: headers['content-type'],
-                statusCode: res.statusCode,
+                code: res.statusCode,
             });
 
             // check for errors
@@ -189,7 +192,7 @@ EnforcerMiddleware.prototype.controllers = function(options) {
     if (typeof options.controllers !== 'string') throw Error('Configuration option "controllers" must be a string. Received: ' + options.controllers);
 
     const promise = this.promise
-        .then(data => mapControllers(data.schema, options.controllers, false, this.options));
+        .then(data => mapControllers(data.schema, options.controllers, null, this.options));
 
     return (req, res, next) => {
         promise
@@ -226,7 +229,7 @@ EnforcerMiddleware.prototype.mock = function(options) {
     const promise = this.promise
         .then(data => {
             return options.controllers
-                ? mapControllers(data.schema, options.controllers, false, this.options)
+                ? mapControllers(data.schema, options.controllers, debug.controllers, this.options)
                 : {};
         });
 
@@ -319,10 +322,9 @@ EnforcerMiddleware.prototype.run = function(req, res, next) {
     // copy the request object and merge parsed parameters into copy
     const request = parsed.request || {};
     request.params = request.path;
-    const reqCopy = Object.assign({}, req);
-    ['cookies', 'headers', 'params', 'query']
-        .forEach(key => reqCopy[key] = Object.assign({}, reqCopy[key], request[key]));
-    if (request.hasOwnProperty('body')) reqCopy.body = request.body;
+    //const reqCopy = Object.assign({}, req);
+    ['cookies', 'headers', 'params', 'query'].forEach(key => req[key] = request[key]);
+    if (request.hasOwnProperty('body')) req.body = request.body;
 
     // run next after analyzing parsed result
     parsedNextHandler(parsed, this.options, runner);
