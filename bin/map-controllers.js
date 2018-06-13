@@ -21,21 +21,21 @@ const path = require('path');
  * Map all controllers.
  * @param {object} schema A dereferenced schema.
  * @param {string} directory The directory to look for controllers in.
- * @param {boolean} isMock Whether the controllers are mock controllers or not.
+ * @param {boolean} debug If specified use debug logging.
  * @param {object} options Options passed into middleware.
  * @param {string} options.xController
  * @param {boolean} options.development
  * @param {string} options.xOperation
  * @returns {boolean} true if no errors, false otherwise
  */
-module.exports = function(schema, directory, isMock, options) {
+module.exports = function(schema, directory, debug, options) {
     const map = {};
     const methods = ['get', 'post', 'put', 'delete', 'options', 'head', 'trace'];
     const xController = options.xController;
     const xOperation = options.xOperation;
     const rootController = schema && schema[xController];
-    const errController = isMock ? 'mock controller' : 'controller'
-    const errorPrefix = options.development ? 'ERROR' : 'WARNING';
+    const errController = debug ? 'mock controller' : 'controller'
+    const errorPrefix = options.development ? 'WARNING' : 'ERROR';
     let errors = false;
 
     function load(directory, filename, operation, errLocation) {
@@ -45,11 +45,11 @@ module.exports = function(schema, directory, isMock, options) {
             const op = controller[operation];
             if (op) return controller[operation];
 
-            if (options.development) console.log(errorPrefix + ': Operation "' + operation + '" does not exist in ' + errController + ' file "' + controllerPath + '" referenced by path: ' + errLocation);
+            if (options.development) log(debug, errorPrefix + ': Operation "' + operation + '" does not exist in ' + errController + ' file "' + controllerPath + '" referenced by path: ' + errLocation);
             errors = true;
 
         } catch (err) {
-            if (options.development) console.log(errorPrefix + ': Unable to load ' + errController + ' file "' + controllerPath + '" referenced by path: ' + errLocation);
+            if (options.development) log(debug, errorPrefix + ': Unable to load ' + errController + ' file "' + controllerPath + '" referenced by path: ' + errLocation);
             errors = true;
         }
     }
@@ -75,3 +75,11 @@ module.exports = function(schema, directory, isMock, options) {
 
     return map;
 };
+
+function log(debug, message) {
+    if (debug) {
+        debug(message)
+    } else {
+        console.log(message)
+    }
+}
