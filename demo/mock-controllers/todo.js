@@ -15,22 +15,9 @@
  *    limitations under the License.
  **/
 'use strict'
-const bodyParser = require('body-parser')
-const express = require('express')
-const Enforcer = require('../')
-const path = require('path')
 
-const app = express()
-
-app.use(bodyParser.json())
-
-const enforcer = Enforcer(path.resolve(__dirname, 'openapi-v2.yaml'), {
-  mockControllers: __dirname + '/mock-controllers',
-  mockFallback: true
-})
-app.use(enforcer)
-
-const listener = app.listen(8080, err => {
-  if (err) return console.error(err.stack)
-  console.log('Server listening on port ' + listener.address().port)
-})
+exports.addItem = function(req, res, next) {
+  const resBody = Object.assign({ id: 1, completed: false }, req.body)
+  res.status(200)
+  res.send(resBody)
+}
