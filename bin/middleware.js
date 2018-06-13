@@ -80,11 +80,23 @@ module.exports = function(schema, options) {
     const promise = options.dereference(schema)
         .then(schema => {
             const enforcer = new Enforcer(schema);
-            if (!validateExamples(enforcer, schema) && !options.development) throw Error('One or more examples do not match their schemas');
+            const errors = validateExamples(enforcer, schema);
+            if (errors.length) {
+                if (options.development) {
+                    errors.forEach(error => console.log(error));
+                } else {
+                    throw Error('One or more examples do not match their schemas');
+                }
+            }
+
             return {
                 enforcer: enforcer,
                 schema: deepFreeze(schema)
             };
+        })
+        .catch(e => {
+            console.error(e.stack);
+            process.exit(1);
         });
 
     // create an enforcer instance
@@ -323,7 +335,7 @@ EnforcerMiddleware.prototype.run = function(req, res, next) {
     const request = parsed.request || {};
     request.params = request.path;
     //const reqCopy = Object.assign({}, req);
-    ['cookies', 'headers', 'params', 'query'].forEach(key => req[key] = request[key]);
+    ['cookies', 'headers', 'params', 'query'].forEach(key => req[key] = Object.assign({}, req[key], request[key]));
     if (request.hasOwnProperty('body')) req.body = request.body;
 
     // run next after analyzing parsed result

@@ -20,22 +20,22 @@
  * Validate examples against their schemas.
  * @param {object} enforcer The enforcer object.
  * @param {object} schema A dereferenced schema.
- * @returns {boolean} true if no errors, false otherwise
+ * @returns {array[]} An array of error messages.
  */
 module.exports = function(enforcer, schema) {
-    let isValid = true;
+    const results = [];
 
     getExamplesAndSchemas([], new Map(), '/root', schema)
         .forEach(data => {
-            const errors = enforcer.errors(data.schema, data.example);
+            const deserialized = enforcer.deserialize(data.schema, data.example);
+            const errors = deserialized.errors || enforcer.errors(data.schema, deserialized.value);
             if (errors) {
-                console.log('WARNING: Errors with example at: ' + data.path + ':\n  ' + errors.join('\n  '));
-                isValid = false;
+                results.push('WARNING: Errors with example at: ' + data.path + ':\n  ' + errors.join('\n  '));
             }
         });
 
 
-    return isValid;
+    return results;
 };
 
 function getExamplesAndSchemas(results, map, path, obj) {
