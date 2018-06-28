@@ -25,9 +25,9 @@ describe('middleware', () => {
 
     describe('options', () => {
 
-        describe('fallthrough', () => {
+        describe('404 fallthrough', () => {
 
-            it('true calls next without error', () => {
+            it('fallthrough enabled calls next middleware', () => {
                 const flow = [];
 
                 const app = express();
@@ -51,7 +51,7 @@ describe('middleware', () => {
                     });
             });
 
-            it('false calls next with error', () => {
+            it('fallthrough disabled does not call next middleware', () => {
                 const flow = [];
 
                 const app = express();
@@ -66,15 +66,82 @@ describe('middleware', () => {
 
                 app.use((err, req, res, next) => {
                     flow.push(2);
-                    expect(err.code).to.equal(openapi.ERROR_CODE);
-                    expect(err.statusCode).to.equal(404);
                     next();
                 });
 
                 return server.one(app, { uri: '/dne' })
-                    .then(() => {
-                        expect(flow).to.deep.equal([2]);
+                    .then(res => {
+                        expect(res.statusCode).to.equal(404);
+                        expect(flow).to.deep.equal([]);
                     });
+            });
+
+            describe('manual fallthrough for client errors', () => {
+                let api;
+
+                before(() => {
+                    const app = express();
+
+                    const mw = openapi(schema, { fallthrough: false, mockFallback: false, development: false }) ;
+                    app.use(mw);
+
+                    mw.use((req, res, next) => {
+                        if (req.url === '/people') return res.send('this is an invalid response');
+                        if (req.url === '/people?classification=hero') throw Error('an error');
+                        next();
+                    })
+
+                    mw.use((err, req, res, next) => {
+                        const code = err.meta && err.meta.statusCode
+                        if (code >= 400 && code < 500) {
+                            next();
+                        } else {
+                            res.sendStatus(err.statusCode);
+                        }
+                    });
+
+                    app.use((req, res, next) => {
+                        res.send('fell through');
+                    })
+
+                    return server(app).then(instance => api = instance);
+                });
+
+                after(() => api.stop());
+
+                it('404', () => {
+                    return api.request({ uri: '/dne' })
+                        .then(res => {
+                            expect(res.statusCode).to.equal(200);
+                            expect(res.body).to.equal('fell through');
+                        });
+                });
+
+                it('400', () => {
+                    return api.request({ uri: '/people?classification=dne' })
+                        .then(res => {
+                            expect(res.statusCode).to.equal(200);
+                            expect(res.body).to.equal('fell through');
+                        });
+                });
+
+                it('500 invalid response', () => {
+                    return api.request({ uri: '/people' })
+                        .then(res => {
+                            expect(res.statusCode).to.equal(500);
+                            console.log(res.body);
+                            expect(res.body).to.equal('Internal Server Error');
+                        });
+                });
+
+                it('500 thrown error', () => {
+                    return api.request({ uri: '/people?classification=hero' })
+                        .then(res => {
+                            expect(res.statusCode).to.equal(500);
+                            console.log(res.body);
+                            expect(res.body).to.equal('Internal Server Error');
+                        });
+                });
             });
         });
 
