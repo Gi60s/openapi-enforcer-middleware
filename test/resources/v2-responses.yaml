@@ -18,9 +18,9 @@ paths:
             example:
               a: 2
           examples:
-            application/json+valid:
+            application/valid+json:
               a: 1
-            application/json+invalid:
+            application/invalid+json:
               a: 'hello'
   /schema-invalid:
     get:
