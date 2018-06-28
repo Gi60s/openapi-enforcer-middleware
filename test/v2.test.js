@@ -36,22 +36,31 @@ describe('v2', () => {
     describe('request validation', () => {
         const schema = __dirname + '/resources/v2.yaml';
 
-        before(() => start(schema, { mockFallback: true }));
+        before(() => start(schema, { fallthrough: false }));
         after(() => stop());
 
         it('default path not found returns 404', () => {
             return api.request({ uri: '/dne' })
-                .then(data => expect(data.statusCode).to.equal(404))
+                .then(data => {
+                    expect(data.statusCode).to.equal(404);
+                    expect(data.body).to.match(/path not found/i);
+                })
         });
 
         it('invalid request parameter value returns 400', () => {
             return api.request({ uri: '/people?classification=dne' })
-                .then(data => expect(data.statusCode).to.equal(400))
+                .then(data => {
+                    expect(data.statusCode).to.equal(400);
+                    expect(data.body).to.match(/did not meet enum requirements/);
+                })
         });
 
         it('invalid method returns 405', () => {
             return api.request({ uri: '/people', method: 'PUT' })
-                .then(data => expect(data.statusCode).to.equal(405))
+                .then(data => {
+                    expect(data.statusCode).to.equal(405);
+                    expect(data.body).to.match(/method not allowed/i);
+                })
         });
 
         it('valid request', () => {
@@ -71,7 +80,7 @@ describe('v2', () => {
             const config = {
                 uri: '/examples',
                 headers: {
-                    'accept': 'application/json+invalid'
+                    'accept': 'application/invalid+json'
                 }
             };
             return api.request(config)
@@ -85,7 +94,7 @@ describe('v2', () => {
             const config = {
                 uri: '/examples',
                 headers: {
-                    'accept': 'application/json+valid'
+                    'accept': 'application/valid+json'
                 }
             };
             return api.request(config)
