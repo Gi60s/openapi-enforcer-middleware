@@ -26,6 +26,15 @@ paths:
             type: array
             items:
               $ref: '#/definitions/Person'
+        default:
+          description: A standard response
+          schema:
+            type: object
+            properties:
+              code:
+                type: number
+              message:
+                type: string
     post:
       x-operation: addPerson
       tags:
