@@ -71,6 +71,18 @@ An express middleware function that will map the request path to a path in the O
 
     - *dereference* [`function`] - A `function` to call to dereference any JSON references. The `function` must return a promise that resolves to the dereferenced object. Defaults to using the [json-schema-ref-parser](https://www.npmjs.com/package/json-schema-ref-parser) dereference function.
 
+    - *development* [`boolean`] - Set to `true` to:
+
+        1. Get detailed response messages when 500 errors occur
+
+        2. Allow missing controllers
+
+        3. Enable mockFallback by default
+
+        4. Allow examples not to match their schema
+
+        Defaults to development if the environment variable `NODE_ENV` is not set to `"production"`.
+
     - *fallthrough* [`boolean`] - If a request is made that this middleware does not handle and this value is set to `true` then the request will be passed to the next middleware. If set to `false` an error with a `statusCode` property will be generated and passed to the next error handling middleware. Defaults to `true`.
 
     - *mockControllers* [`string`] - Specifies the root directory to look into to find controllers that produce mock responses. [Learn more about controllers](#controllers)
