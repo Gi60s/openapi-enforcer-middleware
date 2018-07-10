@@ -29,14 +29,13 @@ const debug = {
     response: Debug('openapi-enforcer-middleware:response')
 };
 
-const ERROR_CODE = 'E_OPENAPI_ENFORCER_MIDDLEWARE';
-
 /**
  * Create an openapi middleware instance.
  * @param {object|string} schema
  * @param {object} [options]
  * @param {string} [options.controllers] The path to the base controllers directory.
  * @param {function} [options.dereference] The function to call to dereference any JSON references. Must return a promise that resolves to the dereferenced object.
+ * @param {boolean} [options.development]
  * @param {boolean} [options.fallthrough=true]
  * @param {string} [options.mockControllers] The path to the base mocks directory. This allows for creating mocks through function calls.
  * @param {boolean} [options.mockEnabled=true] Set this value to true to allow manual mocking requests
@@ -48,11 +47,18 @@ const ERROR_CODE = 'E_OPENAPI_ENFORCER_MIDDLEWARE';
  * @param {string} [options.xOperation='x-operation'] The name of the operation within the OpenAPI definition that describes the method name within the controller to use. First "operation" will be used, then this value.
  * @returns {function}
  */
-module.exports = function(schema, options) {
-    const development = process.env.NODE_ENV !== 'production';
+module.exports = OpenAPIEnforcerMiddleware;
+
+function OpenAPIEnforcerMiddleware(schema, options) {
 
     // set option defaults
     if (!options) options = {};
+    const development = options.hasOwnProperty('development')
+        ? options.development
+        : process.env.NODE_ENV !== 'production';
+
+    // set option defaults
+    options.development = development;
     if (!options.hasOwnProperty('dereference')) options.dereference = schema => RefParser.dereference(schema);
     if (!options.hasOwnProperty('fallthrough')) options.fallthrough = true;
     if (!options.hasOwnProperty('mockEnabled')) options.mockEnabled = options.hasOwnProperty('controllers');
@@ -73,13 +79,16 @@ module.exports = function(schema, options) {
     if (typeof options.xController !== 'string') throw Error('Configuration option "xController" must be a string. Received: ' + options.xController);
     if (typeof options.xOperation !== 'string') throw Error('Configuration option "xOperation" must be a string. Received: ' + options.xOperation);
 
-    // set environment
-    options.development = development;
-
     // dereference schema and populate controllers
     const promise = options.dereference(schema)
         .then(schema => {
-            const enforcer = new Enforcer(schema);
+            const enforcer = new Enforcer(schema, {
+                deserialize: { throw: false },
+                errors: { prefix: '' },
+                populate: { throw: false },
+                request: { throw: false },
+                serialize: { throw: false }
+            });
             const errors = validateExamples(enforcer, schema);
             if (errors.length) {
                 if (options.development) {
@@ -125,7 +134,7 @@ module.exports = function(schema, options) {
             // create the response object
             const response = openapi.response({
                 contentType: headers['content-type'],
-                code: res.statusCode,
+                code: res.statusCode
             });
 
             // check for errors
@@ -143,6 +152,7 @@ module.exports = function(schema, options) {
 
             // serialize - will validate with res.send(), so no need to double validate with serialize
             data.skipValidation = true;
+            data.options = { throw: true };
             const result = response.serialize(data);
             debug.response('response serialized');
 
@@ -159,7 +169,21 @@ module.exports = function(schema, options) {
 
         const beforeNext = function(err) {
             res.send = send;
-            next(err);
+            if (err && err.isOpenAPIException) {
+                const message = err.toString();
+                if (err.meta) {
+                    const status = err.meta.statusCode;
+                    if (status >= 400 && status < 500) {
+                        res.status(status).send(message);
+                    } else {
+                        res.sendStatus(status);
+                    }
+                } else {
+                    next(Error(message));
+                }
+            } else {
+                next(err);
+            }
         };
 
         promise
@@ -178,11 +202,9 @@ module.exports = function(schema, options) {
     result.use = enforcer.use.bind(enforcer);
 
     return result;
-};
+}
 
-Object.defineProperty(module.exports, 'ERROR_CODE', {
-    value: ERROR_CODE
-});
+OpenAPIEnforcerMiddleware.Enforcer = Enforcer;
 
 
 
@@ -302,15 +324,21 @@ EnforcerMiddleware.prototype.run = function(req, res, next) {
 
     // parse, serialize, and validate request
     debug.request('validating and parsing');
-    const parsed = enforcer.request({
-        body: req.body,
-        cookies: req.cookies,
+    const requestObj = {
         headers: req.headers,
         method: req.method,
         path: req.originalUrl.substr(req.baseUrl.length)
-    });
+    };
+    if (req.hasOwnProperty('body')) requestObj.body = req.body;
+    if (req.hasOwnProperty('cookies')) requestObj.cookies = req.cookies;
+    let parsed = enforcer.request(requestObj);
+    if (parsed.error) {
+        req[this.options.reqProperty] = {};
+        return parsedNextHandler(parsed, this.options, runner);
+    }
 
     // create the openapi request object
+    parsed = parsed.value;
     const method = req.method.toLowerCase();
     const responses = parsed.schema && parsed.schema[method] && parsed.schema[method].responses;
     const responseCodes = responses ? Object.keys(responses) : [];
@@ -421,10 +449,14 @@ function middlewareRunner(middlewares, options, req, res, next) {
             req[options.reqProperty].handlerName = '';
             const middleware = middlewares.shift();
             const isErrorHandling = middleware.length >= 4;
-            if (err && isErrorHandling) {
-                return middleware(err, req, res, run);
-            } else if (!err && !isErrorHandling) {
-                return middleware(req, res, run);
+            try {
+                if (err && isErrorHandling) {
+                    return middleware(err, req, res, run);
+                } else if (!err && !isErrorHandling) {
+                    return middleware(req, res, run);
+                }
+            } catch (e) {
+                return run(e)
             }
         }
         next(err);
@@ -433,17 +465,14 @@ function middlewareRunner(middlewares, options, req, res, next) {
 }
 
 function parsedNextHandler(parsed, options, next) {
-    if (parsed.errors) {
-        if (parsed.statusCode === 404 && options.fallthrough) {
+    if (parsed.error) {
+        const err = parsed.error;
+        const statusCode = err.meta && err.meta.statusCode;
+        if (statusCode === 404 && options.fallthrough) {
             debug.request('path not found');
             return next();
         } else {
-            const message = parsed.errors.join('\n');
             debug.request('request invalid');
-            debug.request(message);
-            const err = Error(message);
-            err.statusCode = parsed.statusCode;
-            err.code = ERROR_CODE;
             return next(err);
         }
     } else {
