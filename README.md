@@ -19,7 +19,7 @@ An express middleware that makes it easy to write web services that follow an Op
 ## Example
 
 ```js
-const Enforcer = require('openapi-enforcer');
+const EnforcerMiddleware = require('openapi-enforcer-middleware');
 const express = require('express');
 
 const schema = {
@@ -49,10 +49,13 @@ const options = {
     development: true
 };
 
-const enforcer = Enforcer(schema, options);
+const middleware = EnforcerMiddleware(schema, options);
 const app = express();
 
-app.use('/v1', enforcer);
+// get enforcer module being used by the middleware
+const enforcer = EnforcerMiddleware.Enforcer;
+
+app.use('/v1', middleware);
 ```
 
 ## Enforcer
