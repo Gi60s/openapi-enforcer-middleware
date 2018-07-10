@@ -360,11 +360,9 @@ EnforcerMiddleware.prototype.run = function(req, res, next) {
     };
 
     // copy the request object and merge parsed parameters into copy
-    const request = parsed.request || {};
-    request.params = request.path;
-    //const reqCopy = Object.assign({}, req);
-    ['cookies', 'headers', 'params', 'query'].forEach(key => req[key] = Object.assign({}, req[key], request[key]));
-    if (request.hasOwnProperty('body')) req.body = request.body;
+    req.params = parsed.params || {};
+    ['cookies', 'headers', 'params', 'query'].forEach(key => req[key] = Object.assign({}, req[key], parsed[key]));
+    if (parsed.hasOwnProperty('body')) req.body = parsed.body;
 
     // run next after analyzing parsed result
     parsedNextHandler(parsed, this.options, runner);
