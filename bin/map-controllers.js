@@ -49,7 +49,10 @@ module.exports = function(schema, directory, debug, options) {
             errors = true;
 
         } catch (err) {
-            if (options.development) log(debug, errorPrefix + ': Unable to load ' + errController + ' file "' + controllerPath + '" referenced by path: ' + errLocation);
+            if (options.development) {
+                log(debug, errorPrefix + ': Unable to load ' + errController + ' file "' + controllerPath + '" referenced by path: ' + errLocation);
+                console.log(err.stack);
+            }
             errors = true;
         }
     }
