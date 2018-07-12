@@ -15,4 +15,4 @@
  *    limitations under the License.
  **/
 'use strict';
-module.exports = require('./bin/middleware');
+module.exports = require('./bin');
