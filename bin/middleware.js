@@ -15,12 +15,11 @@
  *    limitations under the License.
  **/
 'use strict';
-
 const Debug             = require('debug');
-const Enforcer          = require('openapi-enforcer');
 const mapControllers    = require('./map-controllers');
-const RefParser         = require('json-schema-ref-parser');
-const validateExamples  = require('./validate-examples');
+
+module.exports = EnforcerMiddleware;
+
 
 const debug = {
     controllers: Debug('openapi-enforcer-middleware:controllers'),
@@ -29,95 +28,23 @@ const debug = {
     response: Debug('openapi-enforcer-middleware:response')
 };
 
-/**
- * Create an openapi middleware instance.
- * @param {object|string} schema
- * @param {object} [options]
- * @param {string} [options.controllers] The path to the base controllers directory.
- * @param {function} [options.dereference] The function to call to dereference any JSON references. Must return a promise that resolves to the dereferenced object.
- * @param {boolean} [options.development]
- * @param {boolean} [options.fallthrough=true]
- * @param {string} [options.mockControllers] The path to the base mocks directory. This allows for creating mocks through function calls.
- * @param {boolean} [options.mockEnabled=true] Set this value to true to allow manual mocking requests
- * @param {boolean} [options.mockFallback]
- * @param {string} [options.mockHeader='x-mock'] The name of the header to look for for manual mocking. Set to empty string to disable.
- * @param {string} [options.mockQuery='x-mock'] The name of the query string parameter to look for for manual mocking. Set to empty string to disable.
- * @param {string} [options.reqProperty='openapi'] The name of the property on the req object to store openapi data onto.
- * @param {string} [options.xController='x-controller'] The name of the property within the OpenAPI definition that describes which controller to use.
- * @param {string} [options.xOperation='x-operation'] The name of the operation within the OpenAPI definition that describes the method name within the controller to use. First "operation" will be used, then this value.
- * @returns {function}
- */
-module.exports = OpenAPIEnforcerMiddleware;
+function EnforcerMiddleware(options, promise) {
+    const middlewares = [];
+    const gOptions = options;
+    let enforcer;
+    let schema;
 
-function OpenAPIEnforcerMiddleware(schema, options) {
-
-    // set option defaults
-    if (!options) options = {};
-    const development = options.hasOwnProperty('development')
-        ? options.development
-        : process.env.NODE_ENV !== 'production';
-
-    // set option defaults
-    options.development = development;
-    if (!options.hasOwnProperty('dereference')) options.dereference = schema => RefParser.dereference(schema);
-    if (!options.hasOwnProperty('fallthrough')) options.fallthrough = true;
-    if (!options.hasOwnProperty('mockEnabled')) options.mockEnabled = options.hasOwnProperty('controllers');
-    if (!options.hasOwnProperty('mockFallback')) options.mockFallback = development;
-    if (!options.hasOwnProperty('mockHeader')) options.mockHeader = 'x-mock';
-    if (!options.hasOwnProperty('mockQuery')) options.mockQuery = 'x-mock';
-    if (!options.hasOwnProperty('reqProperty')) options.reqProperty = 'openapi';
-    if (!options.hasOwnProperty('xController')) options.xController = 'x-controller';
-    if (!options.hasOwnProperty('xOperation')) options.xOperation = 'x-operation';
-
-    // validate options
-    if (options.hasOwnProperty('controllers') && typeof options.controllers !== 'string') throw Error('Configuration option "controllers" must be a string. Received: ' + options.controllers);
-    if (typeof options.dereference !== 'function') throw Error('Configuration option "dereference" must be a function. Received: ' + options.dereference);
-    if (options.hasOwnProperty('mockControllers') && typeof options.mockControllers !== 'string') throw Error('Configuration option "mockControllers" must be a string. Received: ' + options.mockControllers);
-    if (options.mockHeader && typeof options.mockHeader !== 'string') throw Error('Configuration option "mockHeader" must be a string. Received: ' + options.mockHeader);
-    if (options.mockQuery && typeof options.mockQuery !== 'string') throw Error('Configuration option "mockQuery" must be a string. Received: ' + options.mockQuery);
-    if (typeof options.reqProperty !== 'string') throw Error('Configuration option "reqProperty" must be a string. Received: ' + options.reqProperty);
-    if (typeof options.xController !== 'string') throw Error('Configuration option "xController" must be a string. Received: ' + options.xController);
-    if (typeof options.xOperation !== 'string') throw Error('Configuration option "xOperation" must be a string. Received: ' + options.xOperation);
-
-    // dereference schema and populate controllers
-    const promise = options.dereference(schema)
-        .then(schema => {
-            const enforcer = new Enforcer(schema, {
-                deserialize: { throw: false },
-                errors: { prefix: '' },
-                populate: { throw: false },
-                request: { throw: false },
-                serialize: { throw: false }
-            });
-            const errors = validateExamples(enforcer, schema);
-            if (errors.length) {
-                if (options.development) {
-                    errors.forEach(error => console.log(error));
-                } else {
-                    throw Error('One or more examples do not match their schemas');
-                }
-            }
-
-            return {
-                enforcer: enforcer,
-                schema: deepFreeze(schema)
-            };
+    // as soon as the promise fulfills get the schema and enforcer instance
+    promise = promise
+        .then(data => {
+            enforcer = data.enforcer;
+            schema = data.schema;
         })
-        .catch(e => {
-            console.error(e.stack);
-            process.exit(1);
-        });
+        .catch(() => {})
 
-    // create an enforcer instance
-    const enforcer = new EnforcerMiddleware(options, promise);
-
-    // add middlewares according to configuration options
-    if (options.mockEnabled) enforcer.use(enforcer.mock({ automatic: false, controllers: options.mockControllers }));
-    if (options.controllers) enforcer.use(enforcer.controllers({ controllers: options.controllers }));
-    if (options.mockFallback) enforcer.use(enforcer.mock({ automatic: true, controllers: options.mockControllers }));
-
-    // return middleware
-    const result = (req, res, next) => {
+    function middleware(req, res, next) {
+        // runner will be initialized after promise resolves
+        let runner;
 
         // make a copy of the request to be used just within this middleware
         req = Object.assign({}, req);
@@ -138,14 +65,11 @@ function OpenAPIEnforcerMiddleware(schema, options) {
             });
 
             // check for errors
-            const errors = response.errors(data);
+            const exception = response.validate(data);
             debug.response('validating response');
-            if (errors) {
-                const message = '\n  ' + errors.join('\n  ');
-                debug.response('response invalid:' + message);
-                return options.development
-                    ? res.set('content-type', 'text/plain').status(500).send('Response invalid:' + message)
-                    : res.sendStatus(500);
+            if (exception) {
+                debug.response('response invalid:' + '\n  ' + exception);
+                return runner(exception);
             } else {
                 debug.response('response valid');
             }
@@ -157,7 +81,7 @@ function OpenAPIEnforcerMiddleware(schema, options) {
             debug.response('response serialized');
 
             // add openapi-enforcer header
-            if (openapi.handlerName) res.set('x-openapi-enforcer', openapi.handlerName);
+            res.set('x-openapi-enforcer', openapi.handlerName || 'true');
 
             // send response
             Object.keys(result.headers)
@@ -167,71 +91,76 @@ function OpenAPIEnforcerMiddleware(schema, options) {
             res.send(result.body);
         };
 
-        const beforeNext = function(err) {
-            res.send = send;
-            if (err && err.isOpenAPIException) {
-                const message = err.toString();
-                if (err.meta) {
-                    const status = err.meta.statusCode;
-                    if (status >= 400 && status < 500) {
-                        res.status(status).send(message);
-                    } else {
-                        res.sendStatus(status);
-                    }
-                } else {
-                    next(Error(message));
-                }
-            } else {
-                next(err);
-            }
-        };
-
         promise
-            .then(data => {
-                if (!enforcer.schema) {
-                    enforcer.enforcer = data.enforcer;
-                    enforcer.schema = data.schema;
+            .then(() => {
+
+                // if there is nothing to run then exit to express middleware
+                if (!middlewares.length) {
+                    console.log('WARNING: openapi-enforcer-middleware has nothing to run');
+                    res.set('x-openapi-enforcer', 'no middleware');
+                    return next()
                 }
-                enforcer.run(req, res, beforeNext);
+
+                runner = initializeRunner(enforcer, middlewares, gOptions, schema, req, res, err => {
+                    delete req[options.reqProperty];
+                    res.send = send;
+
+                    // convert enforcer exception into
+                    if (err && err.isOpenAPIException) {
+                        const message = err.toString();
+                        if (err.meta) {
+                            res.set('x-openapi-enforcer', 'exception');
+                            const status = err.meta.statusCode;
+                            if (status >= 400 && status < 500) {
+                                res.status(status).send(message);
+                            } else if (status >= 500 && options.development) {
+                                res.set('content-type', 'text/plain').status(500).send(message);
+                            } else {
+                                res.sendStatus(status);
+                            }
+                        } else {
+                            res.set('x-openapi-enforcer', 'fallthrough');
+                            next(Error(message));
+                        }
+                    } else {
+                        res.set('x-openapi-enforcer', 'fallthrough');
+                        next(err);
+                    }
+                });
             })
-            .catch(beforeNext);
+            .catch(next);
+    }
+
+    middleware.controllers = options => controllers(promise, gOptions, options);
+    middleware.mock = options => mock(promise, gOptions, options);
+    middleware.use = fn => {
+        if (typeof fn !== 'function') throw Error('Invalid input parameter. Expected a function received: ' + fn);
+        middlewares.push(fn);
     };
 
-    result.controllers = enforcer.controllers.bind(enforcer);
-    result.mock = enforcer.mock.bind(enforcer);
-    result.use = enforcer.use.bind(enforcer);
-
-    return result;
-}
-
-OpenAPIEnforcerMiddleware.Enforcer = Enforcer;
-
-
-
-function EnforcerMiddleware(options, promise) {
-    this.middlewares = [];
-    this.options = options;
-    this.promise = promise;
+    return middleware;
 }
 
 /**
  * Get middleware that executes the correct controller.
+ * @param {Promise} promise The dereference promise.
+ * @param {object} gOptions Global options for instance.
  * @param {object} options
  * @param {string} options.controllers The path to the controllers directory.
  * @returns {Function}
  */
-EnforcerMiddleware.prototype.controllers = function(options) {
+function controllers(promise, gOptions, options) {
     if (!options) options = {};
     if (!options.hasOwnProperty('controllers')) throw Error('Controllers middleware missing required option: controllers');
     if (typeof options.controllers !== 'string') throw Error('Configuration option "controllers" must be a string. Received: ' + options.controllers);
 
-    const promise = this.promise
-        .then(data => mapControllers(data.schema, options.controllers, null, this.options));
+    promise = promise
+        .then(data => mapControllers(data.schema, options.controllers, null, gOptions));
 
     return (req, res, next) => {
         promise
             .then(controllers => {
-                const openapi = req[this.options.reqProperty];
+                const openapi = req[gOptions.reqProperty];
                 const controller = controllers[openapi.pathId];
 
                 if (controller) {
@@ -246,31 +175,34 @@ EnforcerMiddleware.prototype.controllers = function(options) {
             })
             .catch(next);
     }
-};
+}
 
 /**
  * Get middleware that generates a mock response.
+ * @param {Promise} promise The dereference promise.
+ * @param {object} gOptions Global options for instance.
  * @param {object} options
  * @param {boolean} [options.automatic=false] Set to true to automatically mock responses.
  * @param {string} options.controllers The path to the mock controllers directory
  * @returns {Function}
  */
-EnforcerMiddleware.prototype.mock = function(options) {
+function mock(promise, gOptions, options) {
     if (!options) options = {};
     if (!options.hasOwnProperty('automatic')) options.automatic = false;
     if (options.controllers && typeof options.controllers !== 'string') throw Error('Configuration option for mock "controllers" must be a string. Received: ' + options.controllers);
-
-    const promise = this.promise
+    
+    // get a promise that resolves to the loaded controllers
+    promise = promise
         .then(data => {
             return options.controllers
-                ? mapControllers(data.schema, options.controllers, debug.controllers, this.options)
+                ? mapControllers(data.schema, options.controllers, debug.controllers, gOptions)
                 : {};
         });
 
     return (req, res, next) => {
         promise
             .then(controllers => {
-                const openapi = req[this.options.reqProperty];
+                const openapi = req[gOptions.reqProperty];
                 const controller = controllers[openapi.pathId];
                 const mock = openapi.mock;
                 const manualMock = mock && mock.manual;
@@ -309,69 +241,7 @@ EnforcerMiddleware.prototype.mock = function(options) {
             })
             .catch(next);
     }
-};
-
-EnforcerMiddleware.prototype.run = function(req, res, next) {
-    const enforcer = this.enforcer;
-
-    if (!this.middlewares.length) {
-        console.log('WARNING: openapi-enforcer-middleware has nothing to run')
-        return next()
-    }
-
-    // create the middleware runner that will restore res.send when last next is called
-    const runner = middlewareRunner(this.middlewares, this.options, req, res, next);
-
-    // parse, serialize, and validate request
-    debug.request('validating and parsing');
-    const requestObj = {
-        headers: req.headers,
-        method: req.method,
-        path: req.originalUrl.substr(req.baseUrl.length)
-    };
-    if (req.hasOwnProperty('body')) requestObj.body = req.body;
-    if (req.hasOwnProperty('cookies')) requestObj.cookies = req.cookies;
-    let parsed = enforcer.request(requestObj);
-    if (parsed.error) {
-        req[this.options.reqProperty] = {};
-        return parsedNextHandler(parsed, this.options, runner);
-    }
-
-    // create the openapi request object
-    parsed = parsed.value;
-    const method = req.method.toLowerCase();
-    const responses = parsed.schema && parsed.schema[method] && parsed.schema[method].responses;
-    const responseCodes = responses ? Object.keys(responses) : [];
-    req[this.options.reqProperty] = {
-        errors: parsed.errors,
-        enforcer: enforcer,
-        handlerName: '',
-        method: method,
-        mock: getMockData(responses, responseCodes, req, this.options),
-        operation: parsed.schema,
-        path: parsed.path,
-        pathId: method + parsed.path,
-        request: parsed.request,
-        response: parsed.response,
-        responseCodes: responseCodes,
-        responses: responses,
-        schema: this.schema,
-        statusCode: parsed.statusCode
-    };
-
-    // copy the request object and merge parsed parameters into copy
-    req.params = parsed.params || {};
-    ['cookies', 'headers', 'params', 'query'].forEach(key => req[key] = Object.assign({}, req[key], parsed[key]));
-    if (parsed.hasOwnProperty('body')) req.body = parsed.body;
-
-    // run next after analyzing parsed result
-    parsedNextHandler(parsed, this.options, runner);
-};
-
-EnforcerMiddleware.prototype.use = function(middleware) {
-    if (typeof middleware !== 'function') throw Error('Invalid input parameter. Expected a function received: ' + middleware);
-    this.middlewares.push(middleware);
-};
+}
 
 
 
@@ -431,14 +301,6 @@ function getMockData(responses, responseCodes, req, options) {
     return result;
 }
 
-function deepFreeze(value) {
-    if (value && typeof value === 'object') {
-        Object.freeze(value);
-        Object.keys(value).forEach(key => deepFreeze(value[key]));
-    }
-    return value;
-}
-
 // get a middleware runner "next" function
 function middlewareRunner(middlewares, options, req, res, next) {
     middlewares = middlewares.slice(0);
@@ -462,18 +324,70 @@ function middlewareRunner(middlewares, options, req, res, next) {
     return run;
 }
 
-function parsedNextHandler(parsed, options, next) {
+
+
+function initializeRunner(enforcer, middlewares, options, schema, req, res, next) {
+
+    // create the middleware runner that will restore res.send when last next is called
+    const runner = middlewareRunner(middlewares, options, req, res, next);
+
+    // parse, serialize, and validate request
+    debug.request('validating and parsing');
+    const requestObj = {
+        headers: req.headers,
+        method: req.method,
+        path: req.originalUrl.substr(req.baseUrl.length)
+    };
+    if (req.hasOwnProperty('body')) requestObj.body = req.body;
+    if (req.hasOwnProperty('cookies')) requestObj.cookies = req.cookies;
+    const parsed = enforcer.request(requestObj);
+
+    // create the openapi request object
+    const value = parsed.value || {};
+    const method = req.method.toLowerCase();
+    const responses = value.schema && value.schema[method] && value.schema[method].responses;
+    const responseCodes = responses ? Object.keys(responses) : [];
+    req[options.reqProperty] = {
+        errors: value.errors,
+        enforcer: enforcer,
+        handlerName: '',
+        method: method,
+        mock: getMockData(responses, responseCodes, req, options),
+        operation: value.schema,
+        path: value.path,
+        pathId: method + value.path,
+        request: value.request,
+        response: value.response,
+        responseCodes: responseCodes,
+        responses: responses,
+        schema: schema,
+        statusCode: value.statusCode
+    };
+
+    // copy the request object and merge parsed parameters into copy
+    req.params = value.params || {};
+    ['cookies', 'headers', 'params', 'query'].forEach(key => req[key] = Object.assign({}, req[key], value[key]));
+    if (value.hasOwnProperty('body')) req.body = value.body;
+
     if (parsed.error) {
         const err = parsed.error;
         const statusCode = err.meta && err.meta.statusCode;
+
+        // if 404 and fallthrough then exit to express middleware
         if (statusCode === 404 && options.fallthrough) {
             debug.request('path not found');
-            return next();
+            next();
+
+        // run own middleware with error
         } else {
             debug.request('request invalid');
-            return next(err);
+            process.nextTick(() => runner(err));
         }
+
     } else {
-        next();
+        // run own middleware
+        process.nextTick(() => runner());
     }
+
+    return runner;
 }
