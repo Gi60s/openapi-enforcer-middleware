@@ -21,6 +21,7 @@ const path = require('path');
  * Map all controllers.
  * @param {object} schema A dereferenced schema.
  * @param {string} directory The directory to look for controllers in.
+ * @param {Array} dependencyInjection Dependencies to inject into controllers that are functions.
  * @param {boolean} debug If specified use debug logging.
  * @param {object} options Options passed into middleware.
  * @param {string} options.xController
@@ -28,7 +29,8 @@ const path = require('path');
  * @param {string} options.xOperation
  * @returns {boolean} true if no errors, false otherwise
  */
-module.exports = function(schema, directory, debug, options) {
+module.exports = function(schema, directory, dependencyInjection, debug, options) {
+    const loadedControllers = {};
     const map = {};
     const methods = ['get', 'post', 'put', 'delete', 'options', 'head', 'trace'];
     const xController = options.xController;
@@ -41,7 +43,12 @@ module.exports = function(schema, directory, debug, options) {
     function load(directory, filename, operation, errLocation) {
         const controllerPath = path.resolve(directory, filename);
         try {
-            const controller = require(controllerPath);
+            if (!loadedControllers[controllerPath]) {
+                let controller = require(controllerPath);
+                if (typeof controller === 'function') controller = controller.apply(controller, dependencyInjection);
+                loadedControllers[controllerPath] = controller;
+            }
+            const controller = loadedControllers[controllerPath];
             const op = controller[operation];
             if (op) return controller[operation];
 

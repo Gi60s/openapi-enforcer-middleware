@@ -59,6 +59,7 @@ function OpenAPIEnforcerMiddleware(schema, options) {
 
     // set option defaults
     options.development = development;
+    if (!options.hasOwnProperty('dependencyInjection')) options.dependencyInjection = [];
     if (!options.hasOwnProperty('dereference')) options.dereference = schema => RefParser.dereference(schema);
     if (!options.hasOwnProperty('fallthrough')) options.fallthrough = true;
     if (!options.hasOwnProperty('mockEnabled')) options.mockEnabled = options.hasOwnProperty('controllers');
@@ -71,6 +72,7 @@ function OpenAPIEnforcerMiddleware(schema, options) {
 
     // validate options
     if (options.hasOwnProperty('controllers') && typeof options.controllers !== 'string') throw Error('Configuration option "controllers" must be a string. Received: ' + options.controllers);
+    if (!Array.isArray(options.dependencyInjection)) throw Error('Configuration option "dependencyInjection" must be an array');
     if (typeof options.dereference !== 'function') throw Error('Configuration option "dereference" must be a function. Received: ' + options.dereference);
     if (options.hasOwnProperty('mockControllers') && typeof options.mockControllers !== 'string') throw Error('Configuration option "mockControllers" must be a string. Received: ' + options.mockControllers);
     if (options.mockHeader && typeof options.mockHeader !== 'string') throw Error('Configuration option "mockHeader" must be a string. Received: ' + options.mockHeader);
@@ -113,7 +115,7 @@ function OpenAPIEnforcerMiddleware(schema, options) {
 
     // add middlewares according to configuration options
     if (options.mockEnabled) enforcer.use(enforcer.mock({ automatic: false, controllers: options.mockControllers }));
-    if (options.controllers) enforcer.use(enforcer.controllers({ controllers: options.controllers }));
+    if (options.controllers) enforcer.use(enforcer.controllers({ controllers: options.controllers, dependencyInjection: options.dependencyInjection }));
     if (options.mockFallback) enforcer.use(enforcer.mock({ automatic: true, controllers: options.mockControllers }));
 
     // return middleware
@@ -218,12 +220,14 @@ function EnforcerMiddleware(options, promise) {
  * Get middleware that executes the correct controller.
  * @param {object} options
  * @param {string} options.controllers The path to the controllers directory.
+ * @param {Array} options.dependencyInjection Any data to inject into a controller that is a function.
  * @returns {Function}
  */
 EnforcerMiddleware.prototype.controllers = function(options) {
     if (!options) options = {};
     if (!options.hasOwnProperty('controllers')) throw Error('Controllers middleware missing required option: controllers');
     if (typeof options.controllers !== 'string') throw Error('Configuration option "controllers" must be a string. Received: ' + options.controllers);
+    if (options.dependencyInjection && !Array.isArray(options.dependencyInjection)) throw Error('Configuration option "dependencyInjection" must be an array. Received: ' + options.dependencyInjection);
 
     const promise = this.promise
         .then(data => mapControllers(data.schema, options.controllers, null, this.options));
@@ -253,12 +257,14 @@ EnforcerMiddleware.prototype.controllers = function(options) {
  * @param {object} options
  * @param {boolean} [options.automatic=false] Set to true to automatically mock responses.
  * @param {string} options.controllers The path to the mock controllers directory
+ * @param {Array} options.dependencyInjection Any data to inject into a controller that is a function.
  * @returns {Function}
  */
 EnforcerMiddleware.prototype.mock = function(options) {
     if (!options) options = {};
     if (!options.hasOwnProperty('automatic')) options.automatic = false;
     if (options.controllers && typeof options.controllers !== 'string') throw Error('Configuration option for mock "controllers" must be a string. Received: ' + options.controllers);
+    if (options.dependencyInjection && !Array.isArray(options.dependencyInjection)) throw Error('Configuration option "dependencyInjection" must be an array. Received: ' + options.dependencyInjection);
 
     const promise = this.promise
         .then(data => {
