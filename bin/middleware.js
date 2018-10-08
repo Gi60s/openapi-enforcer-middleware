@@ -228,9 +228,10 @@ EnforcerMiddleware.prototype.controllers = function(options) {
     if (!options.hasOwnProperty('controllers')) throw Error('Controllers middleware missing required option: controllers');
     if (typeof options.controllers !== 'string') throw Error('Configuration option "controllers" must be a string. Received: ' + options.controllers);
     if (options.dependencyInjection && !Array.isArray(options.dependencyInjection)) throw Error('Configuration option "dependencyInjection" must be an array. Received: ' + options.dependencyInjection);
+    const dependencyInjection = options.dependencyInjection || [];
 
     const promise = this.promise
-        .then(data => mapControllers(data.schema, options.controllers, null, this.options));
+        .then(data => mapControllers(data.schema, options.controllers, dependencyInjection, false, this.options));
 
     return (req, res, next) => {
         promise
@@ -265,11 +266,12 @@ EnforcerMiddleware.prototype.mock = function(options) {
     if (!options.hasOwnProperty('automatic')) options.automatic = false;
     if (options.controllers && typeof options.controllers !== 'string') throw Error('Configuration option for mock "controllers" must be a string. Received: ' + options.controllers);
     if (options.dependencyInjection && !Array.isArray(options.dependencyInjection)) throw Error('Configuration option "dependencyInjection" must be an array. Received: ' + options.dependencyInjection);
+    const dependencyInjection = options.dependencyInjection || [];
 
     const promise = this.promise
         .then(data => {
             return options.controllers
-                ? mapControllers(data.schema, options.controllers, debug.controllers, this.options)
+                ? mapControllers(data.schema, options.controllers, dependencyInjection, debug.controllers, this.options)
                 : {};
         });
 
