@@ -1,47 +1,10 @@
 {
-  "_from": "openapi-enforcer-middleware",
-  "_id": "openapi-enforcer-middleware@0.11.1",
-  "_inBundle": false,
-  "_integrity": "sha512-6lfMJupXVSto5XNTKh9Udv6le2BliwJjFlzKLdagTeH9xf0DLF7PdSkN4vMOZhX7nP8365Tu1spb3P72n3YYIw==",
-  "_location": "/openapi-enforcer-middleware",
-  "_phantomChildren": {},
-  "_requested": {
-    "type": "tag",
-    "registry": true,
-    "raw": "openapi-enforcer-middleware",
-    "name": "openapi-enforcer-middleware",
-    "escapedName": "openapi-enforcer-middleware",
-    "rawSpec": "",
-    "saveSpec": null,
-    "fetchSpec": "latest"
-  },
-  "_requiredBy": [
-    "#USER",
-    "/"
-  ],
-  "_resolved": "https://registry.npmjs.org/openapi-enforcer-middleware/-/openapi-enforcer-middleware-0.11.1.tgz",
-  "_shasum": "3f56e2cbcee54f89917a34a537bab6b519627aaa",
-  "_spec": "openapi-enforcer-middleware",
-  "_where": "/home/james/temp",
-  "author": {
-    "name": "James Speirs",
-    "email": "james.speirs@gmail.com"
-  },
-  "bundleDependencies": false,
-  "dependencies": {
-    "debug": "^3.1.0",
-    "json-schema-ref-parser": "^4.1.1",
-    "openapi-enforcer": "^0.10.2"
-  },
-  "deprecated": false,
+  "name": "openapi-enforcer-middleware",
+  "version": "0.11.2",
   "description": "An express middleware that makes it easy to write web services that follow an Open API specification.",
-  "devDependencies": {
-    "body-parser": "^1.18.3",
-    "chai": "^4.1.2",
-    "express": "^4.16.3",
-    "mocha": "^5.2.0",
-    "request": "^2.87.0",
-    "request-promise-native": "^1.0.5"
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha test"
   },
   "keywords": [
     "openapi",
@@ -53,11 +16,19 @@
     "parse",
     "format"
   ],
+  "author": "James Speirs <james.speirs@gmail.com>",
   "license": "Apache-2.0",
-  "main": "index.js",
-  "name": "openapi-enforcer-middleware",
-  "scripts": {
-    "test": "mocha test"
+  "dependencies": {
+    "debug": "^3.1.0",
+    "json-schema-ref-parser": "^4.1.1",
+    "openapi-enforcer": "^0.11.0"
   },
-  "version": "0.11.2"
+  "devDependencies": {
+    "body-parser": "^1.18.3",
+    "chai": "^4.1.2",
+    "express": "^4.16.3",
+    "mocha": "^5.2.0",
+    "request": "^2.87.0",
+    "request-promise-native": "^1.0.5"
+  }
 }
