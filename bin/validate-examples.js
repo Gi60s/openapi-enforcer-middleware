@@ -28,9 +28,11 @@ module.exports = function(enforcer, schema) {
     getExamplesAndSchemas([], new Map(), '/root', schema)
         .forEach(data => {
             const deserialized = enforcer.deserialize(data.schema, data.example, { throw: false });
-            const errors = deserialized.error || enforcer.errors(data.schema, deserialized.value);
-            if (errors) {
-                results.push('WARNING: Errors with example at: ' + data.path + ':\n  ' + errors.join('\n  '));
+            if (deserialized.error) {
+                results.push('WARNING: Errors with example at: ' + data.path + ':\n  ' + deserialized.error.join('\n  '));
+            } else {
+                const error = enforcer.errors(data.schema, deserialized.value);
+                if (error) results.push('WARNING: Errors with example at: ' + data.path + ':\n  ' + error.toString().split('\n').map(v => '  ' + v).join('\n'));
             }
         });
 
