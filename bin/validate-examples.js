@@ -28,7 +28,7 @@ module.exports = function(enforcer, schema) {
     getExamplesAndSchemas([], new Map(), '/root', schema)
         .forEach(data => {
             const deserialized = enforcer.deserialize(data.schema, data.example, { throw: false });
-            const errors = deserialized.errors || enforcer.errors(data.schema, deserialized.value);
+            const errors = deserialized.error || enforcer.errors(data.schema, deserialized.value);
             if (errors) {
                 results.push('WARNING: Errors with example at: ' + data.path + ':\n  ' + errors.join('\n  '));
             }
