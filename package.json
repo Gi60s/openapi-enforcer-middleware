@@ -21,7 +21,7 @@
   "dependencies": {
     "debug": "^3.2.6",
     "json-schema-ref-parser": "^4.1.1",
-    "openapi-enforcer": "^0.11.4"
+    "openapi-enforcer": "^0.11.5"
   },
   "devDependencies": {
     "body-parser": "^1.18.3",
