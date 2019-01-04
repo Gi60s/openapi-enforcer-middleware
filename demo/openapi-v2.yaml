@@ -29,7 +29,6 @@ paths:
     parameters:
     - in: path
       name: task_id
-      description: The task ID
       required: true
       type: number
       minimum: 0
@@ -86,7 +85,6 @@ parameters:
   TaskItem:
     in: body
     name: body
-    description: Update a task item
     required: true
     schema:
       $ref: "#/definitions/Task"
