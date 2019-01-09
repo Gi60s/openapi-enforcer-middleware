@@ -15,9 +15,9 @@
  *    limitations under the License.
  **/
 'use strict';
-const Debug             = require('debug');
-const Enforcer          = require('openapi-enforcer');
-const mapControllers    = require('./map-controllers');
+const Debug = require('debug');
+const Enforcer = require('openapi-enforcer');
+const path = require('path');
 
 const debug = {
     controllers: Debug('openapi-enforcer-middleware:controllers'),
@@ -40,6 +40,7 @@ function OpenApiEnforcerMiddleware (definition, options) {
     const general = {
         development: options.hasOwnProperty('development') ? options.development : process.env.NODE_ENV !== 'production',
         fallthrough: options.hasOwnProperty('fallthrough') ? options.fallthrough : true,
+        middleware: [],
         mockHeader: options.mockHeader || 'x-mock',
         mockQuery: options.mockQuery || 'x-mock',
         reqMockStatusCodeProperty: options.reqMockStatusCodeProperty || 'mockStatusCode',
@@ -66,11 +67,7 @@ function OpenApiEnforcerMiddleware (definition, options) {
             if (exception) throw Error(exception.toString());
             if (warning) console.warn(warning);
             return openapi
-        })
-        .catch(e => {
-            console.error(e.stack);
-            process.exit(1);
-        })
+        });
 }
 
 OpenApiEnforcerMiddleware.prototype.controllers = function (controllersDirectoryPath, ...dependencyInjection) {
@@ -80,7 +77,7 @@ OpenApiEnforcerMiddleware.prototype.controllers = function (controllersDirectory
             return mapControllers(exception, openapi, controllersDirectoryPath, dependencyInjection, this.options)
         });
 
-    return (req, res, next) => {
+    this.use((req, res, next) => {
         promise
             .then(controllers => {
                 const operation = req[this.options.reqOperationProperty];
@@ -94,46 +91,198 @@ OpenApiEnforcerMiddleware.prototype.controllers = function (controllersDirectory
                 }
             })
             .catch(next);
-    };
+    });
 }
 
-OpenApiEnforcerMiddleware.prototype.mock = function (controllersDirectoryPath, automatic, ...dependencyInjection) {
+OpenApiEnforcerMiddleware.prototype.middleware = function () {
     const options = this.options;
-    if (arguments.length < 2) automatic = options.development;
+    return (req, res, next) => {
+        this.promise
+            .then(openapi => {
+                // make a copy of the request to be used just within this middleware
+                req = Object.assign({}, req);
+
+                // parse, serialize, and validate request
+                debug.request('validating and parsing');
+                const requestObj = {
+                    headers: req.headers,
+                    method: req.method,
+                    path: req.originalUrl.substr(req.baseUrl.length)
+                };
+                if (req.hasOwnProperty('body')) requestObj.body = req.body;
+                const [ request, clientError ] = openapi.request(requestObj);
+
+                // 404 renders this middleware useless so exit appropriately
+                if (clientError && clientError.statusCode === 404) {
+                    if (options.fallthrough) {
+                        debug.request('fallthrough');
+                        next();
+                    } else {
+                        res.sendStatus(404);
+                    }
+                } else {
+                    // overwrite the send
+                    const send = res.send;
+                    res.send = function (body) {
+                        res.send = send;
+
+                        const operation = req[options.reqOperationProperty];
+                        const headers = res.getHeaders();
+
+                        res.send('')
+                    }
+
+                    // store openapi instance with request object
+                    req[options.reqOpenApiProperty] = openapi;
+
+                    const runner = middlewareRunner(options.middleware, true, req, res, next);
+                    if (clientError) {
+                        runner(errorFromException(clientError));
+                    } else {
+                        // store operation instance with request
+                        req[options.reqOperationProperty] = request.operation;
+
+                        // copy deserialized and validated parameters to the request object
+                        req.params = request.params || {};
+                        ['cookies', 'headers', 'params', 'query'].forEach(key => req[key] = Object.assign({}, req[key], request[key]));
+                        if (request.hasOwnProperty('body')) req.body = request.body;
+
+                        runner();
+                    }
+                }
+            })
+            .catch(next);
+    }
+}
+
+OpenApiEnforcerMiddleware.prototype.mocks = function (controllersDirectoryPath, automatic = false, ...dependencyInjection) {
+    const options = this.options;
+    let _openapi;
     const promise = this.promise
         .then(openapi => {
+            _openapi = openapi;
             const exception = new Enforcer.Exception('Unable to load one or more directory mock controllers within ' + controllersDirectoryPath)
             return mapControllers(exception, openapi, controllersDirectoryPath, dependencyInjection, this.options)
         });
-    return (req, res, next) => {
+
+    this.use((req, res, next) => {
         promise
             .then(controllers => {
                 const operation = req[this.options.reqOperationProperty];
                 const controller = controllers.get(operation);
+                const responseCodes = Object.keys(operation.responses);
 
                 // check to see if using manual mock or automatic
                 const mockHeaderKey = options.mockHeader;
                 const mockQueryKey = options.mockQuery;
+                let mock
                 if (req.headers.hasOwnProperty(mockHeaderKey)) {
-                    req[options.reqMockStatusCodeProperty] = req.headers[mockHeaderKey] || '';
+                    mock = {
+                        source: 'header',
+                        specified: req.headers[mockHeaderKey] !== '',
+                        statusCode: req.headers[mockHeaderKey] || responseCodes[0] || ''
+                    };
                 } else if (req.headers.hasOwnProperty(mockQueryKey)) {
-                    req[options.reqMockStatusCodeProperty] = req.headers[mockQueryKey] || '';
+                    mock = {
+                        source: 'query',
+                        specified: req.headers[mockQueryKey] !== '',
+                        statusCode: req.headers[mockHeaderKey] || responseCodes[0] || ''
+                    };
                 } else if (automatic) {
-                    req[options.reqMockStatusCodeProperty] = '';
+                    mock = {
+                        source: 'automatic',
+                        specified: false,
+                        statusCode: responseCodes[0] || ''
+                    };
                 }
 
-                working here
-
-                if (controller) {
-                    res.set(ENFORCER_HEADER, 'controller');
-                    debug.controllers('executing controller');
-                    controller(req, res, next);
-                } else {
+                // if skipping mock then call next middleware
+                if (!mock) {
                     next();
+                } else {
+                    const version = _openapi.swagger ? 2 : /^(\d+)/.exec(_openapi.openapi)[0];
+                    const exception = new Enforcer.Exception('Unable to generate mock response');
+                    exception.statusCode = 400;
+
+                    if (operation.responses.hasOwnProperty(mock.statusCode)) mock.response = operation.responses[mock.statusCode];
+                    req[options.reqMockStatusCodeProperty] = mock;
+
+                    // if a controller is provided then call it
+                    if (controller) {
+                        res.set(ENFORCER_HEADER, 'controller');
+                        debug.controllers('executing mock controller');
+                        try {
+                            controller(req, res, next);
+                        } catch (err) {
+                            next(err);
+                        }
+
+                    // if response code is not a listed response
+                    } else if (!mock.response) {
+                        debug.controllers('unable to generate mock for unlisted status code');
+                        exception.message('No response is defined for status code: ' + mock.statusCode);
+                        next(errorFromException(exception));
+
+                    } else {
+                        const response = mock.response;
+
+                        // v2 mock
+                        if (version === 2 && response.schema) {
+                            const [ value, err, warning ] = response.schema.random()
+                            if (err) {
+                                exception.push(err);
+                                unableToMock(exception, next);
+                            } else if (warning) {
+                                exception.push(warning);
+                                unableToMock(exception, next);
+                            } else {
+                                res.status(mock.statusCode);
+                                res.send(value)
+                            }
+
+                        // v3 mock
+                        } else if (version === 3 && response.content) {
+                            const type = operation.getResponseContentTypeMatches(mock.statusCode, req.headers.accepts || '*/*');
+                            const schema = response.content[type].schema;
+                            if (schema) {
+                                const [ value, err, warning ] = schema.random()
+                                if (err) {
+                                    exception.push(err);
+                                    unableToMock(exception, next);
+                                } else if (warning) {
+                                    exception.push(warning);
+                                    unableToMock(exception, next);
+                                } else {
+                                    res.status(mock.statusCode);
+                                    res.send(value)
+                                }
+                            } else {
+                                exception.message('No schema associated with response');
+                                unableToMock(exception, next);
+                            }
+
+                        } else {
+                            unableToMock(exception, next);
+                        }
+                    }
                 }
             })
             .catch(next);
-    };
+    });
+}
+
+OpenApiEnforcerMiddleware.prototype.use = function (middleware) {
+    if (typeof middleware !== 'function') throw Error('Invalid middleware. Value must be a function. Received: ' + middleware);
+    this.options.middleware.push(middleware);
+}
+
+function arrayOf(value, type) {
+    if (!Array.isArray(value)) return false;
+    const length = value.length;
+    for (let i = 0; i < length; i++) {
+        if (typeof value[i] !== type) return false;
+    }
+    return true;
 }
 
 function exceptionPushError (exception, error) {
@@ -148,6 +297,13 @@ function exceptionPushError (exception, error) {
     } else {
         exception.message(String(error))
     }
+}
+
+function errorFromException (exception) {
+    const err = Error(exception.toString())
+    err.exception = exception;
+    if (exception.hasOwnProperty('statusCode')) err.statusCode = exception.statusCode;
+    return err;
 }
 
 function mapControllers (exception, openapi, controllerDirectoryPath, dependencyInjection, options) {
@@ -178,10 +334,15 @@ function mapControllers (exception, openapi, controllerDirectoryPath, dependency
                     const controller = loadedControllers[controllerPath];
                     if (!controller.hasOwnProperty(operationName)) {
                         child.message('Property not found: ' + operationName)
-                    } else if (typeof controller[operationName] !== 'function') {
-                        child.message('Expected a function. Received: ' + controller[operationName])
+                    } else if (typeof controller[operationName] !== 'function' && !arrayOf(controller[operationName], 'function')) {
+                        child.message('Expected a function or an array of functions. Received: ' + controller[operationName])
                     } else {
-                        map.set(operation, controller[operationName])
+                        let handler = controller[operationName];
+                        if (typeof handler !== 'function') handler = middlewareRunner(handler, false)
+
+                        working here -- middlewareRunner?
+
+                        map.set(operation, handler)
                     }
                 } catch (err) {
                     exceptionPushError(child, err)
@@ -191,10 +352,44 @@ function mapControllers (exception, openapi, controllerDirectoryPath, dependency
     });
 
     if (exception.hasException) {
-        options.development
-            ? console.warn(exception)
-            : throw Error(exception.toString())
+        if (options.development) {
+            console.warn(exception)
+        } else {
+            throw Error(exception.toString())
+        }
     }
 
     return map;
+}
+
+function middlewareRunner(store, updateHeader, req, res, next) {
+    const middlewares = store.slice(0);
+    const run = err => {
+        while (middlewares.length) {
+            if (updateHeader) res.removeHeader(ENFORCER_HEADER);
+            const middleware = middlewares.shift();
+            const isErrorHandling = middleware.length >= 4;
+            try {
+                if (err && isErrorHandling) {
+                    return middleware(err, req, res, run);
+                } else if (!err && !isErrorHandling) {
+                    return middleware(req, res, run);
+                }
+            } catch (e) {
+                return run(e)
+            }
+        }
+        if (updateHeader) res.removeHeader(ENFORCER_HEADER);
+        next(err);
+    };
+    return run;
+}
+
+function unableToMock (exception, next) {
+    debug.controllers('unable to generate automatic mock');
+    exception.message('Unable to generate mock response');
+    exception.statusCode = 501;
+
+    const err = errorFromException(exception);
+    next(err)
 }
