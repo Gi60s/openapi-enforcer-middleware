@@ -6,15 +6,23 @@ An express middleware that makes it easy to write web services that follow an Op
 
 - Supports OpenAPI (Swagger) 2.0 and 3.x
 - Express middleware
-- Validates incoming requests
-- Parses incoming requests
-- Validates responses
-- Assists in building responses more quickly
-- Validates examples
+- Automatically link JavaScript functions to path endpoints
+- Parses and validates incoming requests
+- Validates responses prior to sending
 - Automatic response mocking in development
 - Option for manual response mocking in production
 - Highly configurable
-- Accepts middleware
+- Accepts middleware plugins
+
+## Installation
+
+This package has [openapi-enforcer](https://www.npmjs.com/package/openapi-enforcer) as a peer dependency, so both must be installed.
+
+```bash
+npm install openapi-enforcer openapi-enforcer-middleware
+```
+
+// TODO: document how operation can be a function or an array of functions
 
 ## Example
 
@@ -22,7 +30,10 @@ An express middleware that makes it easy to write web services that follow an Op
 const EnforcerMiddleware = require('openapi-enforcer-middleware');
 const express = require('express');
 
-const schema = {
+const app = express();
+
+// Open API Specification document definition
+const definition = {
     openapi: '3.0.0',
     info: { title: 'Pet Store', version: 'v1' },
     paths: {
@@ -33,29 +44,40 @@ const schema = {
                     name: 'id',
                     in: 'path',
                     required: true,
-                    schema: { type: 'number', mininum: 1 }
+                    schema: { type: 'number', minimum: 1 }
                 }
             ],
             get: {
-                'x-operation': 'getPetById'
+                'x-operation': 'getPetById',
                 responses: { ... }
             }
         },
     }
 };
 
-const options = {
+// create the enforcer middware instance
+const enforcer = EnforcerMiddleware(definition, {
     controllers: '/path/to/controllers',
     development: true
-};
+});
 
-const middleware = EnforcerMiddleware(schema, options);
-const app = express();
+// if the middleware fails to load then exit
+enforcer.promise.catch(err => {
+    console.error(err.stack);
+    process.exit(1)
+});
 
-// get enforcer module being used by the middleware
-const enforcer = EnforcerMiddleware.Enforcer;
+// respond with mock data for specific mock requests
+enforcer.mocks('/path/to/mock/controllers', false);
 
-app.use('/v1', middleware);
+// respond with real data
+enforcer.controllers('/path/to/real/controllers');
+
+// respond with mock data
+enforcer.mocks('/path/to/mock/controllers', true);
+
+
+app.use('/v1', enforcer.middleware());
 ```
 
 ## Enforcer
@@ -86,7 +108,7 @@ An express middleware function that will map the request path to a path in the O
 
         Defaults to development if the environment variable `NODE_ENV` is not set to `"production"`.
 
-    - *fallthrough* [`boolean`] - If a request is made that this middleware does not handle and this value is set to `true` then the request will be passed to the next middleware. If set to `false` an error with a `statusCode` property will be generated and passed to the next error handling middleware. Defaults to `true`.
+    - *fallthrough* [`boolean`] - If a request is made that this middleware does not handle (404) and this value is set to `true` then the request will be passed to the next middleware. If set to `false` an error with a `statusCode` property will be generated and passed to the next error handling middleware. Defaults to `true`.
 
     - *mockControllers* [`string`] - Specifies the root directory to look into to find controllers that produce mock responses. [Learn more about controllers](#controllers)
 
