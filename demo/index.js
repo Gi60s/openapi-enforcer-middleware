@@ -15,20 +15,25 @@
  *    limitations under the License.
  **/
 'use strict'
-const bodyParser = require('body-parser')
 const express = require('express')
 const Enforcer = require('../')
 const path = require('path')
 
 const app = express()
 
-app.use(bodyParser.json())
+app.use(express.json())
 
-const enforcer = Enforcer(path.resolve(__dirname, 'openapi-v2.yaml'), {
-  mockControllers: __dirname + '/mock-controllers',
-  mockFallback: true
+const enforcer = Enforcer(path.resolve(__dirname, 'openapi-v2.yaml'))
+
+enforcer.mocks(path.resolve(__dirname, 'mock-controllers'), false)
+enforcer.controllers(path.resolve(__dirname, 'controllers'))
+enforcer.mocks(path.resolve(__dirname, 'mock-controllers'), true)
+enforcer.use(function (err, req, res, next) {
+  console.error(err.stack);
+  res.send()
 })
-app.use(enforcer)
+
+app.use(enforcer.middleware())
 
 const listener = app.listen(8080, err => {
   if (err) return console.error(err.stack)

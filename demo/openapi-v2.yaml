@@ -2,13 +2,13 @@ swagger: "2.0"
 info:
   version: "1.0.0"
   title: "To Do List API"
-basePath: "/v2"
 schemes:
-- "http"
+  - "http"
+x-controller: todo
 paths:
   /:
-    x-controller: todo
     get:
+      summary: Get a list of tasks
       x-operation: getList
       responses:
         200:
@@ -16,54 +16,60 @@ paths:
           schema:
             $ref: '#/definitions/TaskList'
     post:
-      x-operation: addItem
+      summary: Add a new task
+      x-operation: addTask
       parameters:
-      - $ref: "#/parameters/TaskItem"
+        - $ref: "#/parameters/TaskItem"
       responses:
         200:
           description: Get the added task
           schema:
             $ref: '#/definitions/Task'
   /{task_id}:
-    x-controller: todo
     parameters:
-    - in: path
-      name: task_id
-      required: true
-      type: number
-      minimum: 0
+      - in: path
+        name: task_id
+        required: true
+        type: number
+        minimum: 0
     get:
-      x-operation: getItem
+      summary: Get a task by ID
+      x-operation: getTask
       parameters:
-      - $ref: "#/parameters/TaskItem"
+        - $ref: "#/parameters/TaskItem"
       responses:
         200:
           description: Get the task
           schema:
             $ref: '#/definitions/Task'
+        404:
+          description: Not found
     put:
-      x-operation: updateItem
+      summary: Update a task
+      x-operation: updateTask
       parameters:
-      - $ref: "#/parameters/TaskItem"
+        - $ref: "#/parameters/TaskItem"
       responses:
         200:
           description: Get the updated task
           schema:
             $ref: '#/definitions/Task'
+        404:
+          description: Not found
     delete:
-      x-operation: deleteItem
+      summary: Delete a task
+      x-operation: deleteTask
       responses:
         204:
           description: Task deleted
-          schema:
-            type: string
-            maxLength: 0
+        404:
+          description: Not found
 definitions:
   Task:
     type: object
     required:
-    - title
-    - due
+      - title
+      - due
     properties:
       id:
         type: integer
