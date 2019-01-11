@@ -336,12 +336,14 @@ function mapControllers (exception, openapi, controllerDirectoryPath, dependency
                         child.message('Property not found: ' + operationName)
                     } else if (typeof controller[operationName] !== 'function' && !arrayOf(controller[operationName], 'function')) {
                         child.message('Expected a function or an array of functions. Received: ' + controller[operationName])
+                    } else if (Array.isArray(controller[operationName])) {
+                        const middlewareArray = controller[operationName]
+                        const handler = function (req, res, next) {
+                            middlewareRunner(middlewareArray, false, req, res, next)()
+                        }
+                        map.set(operation, handler)
                     } else {
-                        let handler = controller[operationName];
-                        if (typeof handler !== 'function') handler = middlewareRunner(handler, false)
-
-                        working here -- middlewareRunner?
-
+                        const handler = controller[operationName];
                         map.set(operation, handler)
                     }
                 } catch (err) {
@@ -362,11 +364,11 @@ function mapControllers (exception, openapi, controllerDirectoryPath, dependency
     return map;
 }
 
-function middlewareRunner(store, updateHeader, req, res, next) {
+function middlewareRunner(store, clearEnforcerHeader, req, res, next) {
     const middlewares = store.slice(0);
     const run = err => {
         while (middlewares.length) {
-            if (updateHeader) res.removeHeader(ENFORCER_HEADER);
+            if (clearEnforcerHeader) res.removeHeader(ENFORCER_HEADER);
             const middleware = middlewares.shift();
             const isErrorHandling = middleware.length >= 4;
             try {
@@ -379,7 +381,7 @@ function middlewareRunner(store, updateHeader, req, res, next) {
                 return run(e)
             }
         }
-        if (updateHeader) res.removeHeader(ENFORCER_HEADER);
+        if (clearEnforcerHeader) res.removeHeader(ENFORCER_HEADER);
         next(err);
     };
     return run;
