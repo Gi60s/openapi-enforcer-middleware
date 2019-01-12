@@ -70,6 +70,7 @@ function OpenApiEnforcerMiddleware (definition, options) {
     })
 }
 
+// TODO: controllersDirectoryPath can be an already mapped (although not necessarily validated) map of controllers to operations
 OpenApiEnforcerMiddleware.prototype.controllers = function (controllersDirectoryPath, ...dependencyInjection) {
   const promise = this.promise
     .then(openapi => {
