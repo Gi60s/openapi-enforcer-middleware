@@ -38,7 +38,6 @@ function OpenApiEnforcerMiddleware (definition, options) {
 
   // get general settings
   const general = {
-    development: options.hasOwnProperty('development') ? options.development : process.env.NODE_ENV !== 'production',
     fallthrough: options.hasOwnProperty('fallthrough') ? options.fallthrough : true,
     middleware: [],
     mockHeader: options.mockHeader || 'x-mock',
@@ -80,7 +79,7 @@ OpenApiEnforcerMiddleware.prototype.controllers = function (controllersDirectory
 
   this.use((req, res, next) => {
     promise
-      .then(controllers => {
+      .then(({ controllers }) => {
         const operation = req[this.options.reqOperationProperty]
         const controller = controllers.get(operation)
         if (controller) {
@@ -93,6 +92,8 @@ OpenApiEnforcerMiddleware.prototype.controllers = function (controllersDirectory
       })
       .catch(next)
   })
+
+  return promise
 }
 
 OpenApiEnforcerMiddleware.prototype.middleware = function () {
@@ -285,6 +286,8 @@ OpenApiEnforcerMiddleware.prototype.mocks = function (controllersDirectoryPath, 
       })
       .catch(next)
   })
+
+  return promise
 }
 
 OpenApiEnforcerMiddleware.prototype.use = function (middleware) {
@@ -344,44 +347,59 @@ function mapControllers (exception, openapi, controllerDirectoryPath, dependency
       const controllerName = operationController || pathController || rootController
       const operationName = operation && (operation[xOperation] || operation.operationId)
       if (controllerName && operationName) {
-        const controllerPath = path.resolve(controllerDirectoryPath, controllerName)
         const child = exception.at(controllerName)
-        try {
-          if (!loadedControllers[controllerPath]) {
-            let controller = require(controllerPath)
-            if (typeof controller === 'function') controller = controller.apply(controller, dependencyInjection)
-            loadedControllers[controllerPath] = controller
+        if (typeof controllerDirectoryPath === 'string') {
+          const controllerPath = path.resolve(controllerDirectoryPath, controllerName)
+          try {
+            if (!loadedControllers[controllerPath]) {
+              let controller = require(controllerPath)
+              if (typeof controller === 'function') controller = controller.apply(controller, dependencyInjection)
+              loadedControllers[controllerPath] = controller
+            }
+            const controller = loadedControllers[controllerPath]
+            if (!controller.hasOwnProperty(operationName)) {
+              child.message('Property not found: ' + operationName)
+            } else if (typeof controller[operationName] !== 'function' && !arrayOfFunctions(controller[operationName])) {
+              child.message('Expected a function or an array of functions. Received: ' + controller[operationName])
+            } else if (Array.isArray(controller[operationName])) {
+              const middlewareArray = controller[operationName]
+              const handler = function (req, res, next) {
+                middlewareRunner(middlewareArray, false, req, res, next)()
+              }
+              map.set(operation, handler)
+            } else {
+              const handler = controller[operationName]
+              map.set(operation, handler)
+            }
+          } catch (err) {
+            if (err.code === 'MODULE_NOT_FOUND') {
+              exception.message('Controller file not found: ' + controllerPath)
+            } else {
+              exceptionPushError(child, err)
+            }
           }
-          const controller = loadedControllers[controllerPath]
-          if (!controller.hasOwnProperty(operationName)) {
+        } else if (controllerDirectoryPath && typeof controllerDirectoryPath === 'object') {
+          const data = controllerDirectoryPath
+          if (!data[controllerName]) {
+            child.message('Not found')
+          } else if (!data[controllerName][operationName]) {
             child.message('Property not found: ' + operationName)
-          } else if (typeof controller[operationName] !== 'function' && !arrayOfFunctions(controller[operationName])) {
-            child.message('Expected a function or an array of functions. Received: ' + controller[operationName])
-          } else if (Array.isArray(controller[operationName])) {
-            const middlewareArray = controller[operationName]
-            const handler = function (req, res, next) {
-              middlewareRunner(middlewareArray, false, req, res, next)()
+          } else {
+            let handler = data[controllerName] && data[controllerName][operationName]
+            if (Array.isArray(handler)) {
+              const middlewareArray = data[controllerName][operationName]
+              handler = function (req, res, next) {
+                middlewareRunner(middlewareArray, false, req, res, next)()
+              }
             }
             map.set(operation, handler)
-          } else {
-            const handler = controller[operationName]
-            map.set(operation, handler)
           }
-        } catch (err) {
-          exceptionPushError(child, err)
         }
       }
     })
   })
 
-  if (exception.hasException) {
-    if (options.development) {
-      console.warn(exception)
-    } else {
-      throw Error(exception.toString())
-    }
-  }
-
+  if (exception.hasException) throw Error(exception.toString())
   return map
 }
 
