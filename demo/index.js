@@ -25,11 +25,11 @@ app.use(express.json())
 
 const enforcer = Enforcer(path.resolve(__dirname, 'openapi-v2.yaml'))
 
-enforcer.mocks(path.resolve(__dirname, 'mock-controllers'), false)
-enforcer.controllers(path.resolve(__dirname, 'controllers'))
-enforcer.mocks(path.resolve(__dirname, 'mock-controllers'), true)
+enforcer.mocks(path.resolve(__dirname, 'mock-controllers'), false).catch(console.error)
+enforcer.controllers(path.resolve(__dirname, 'controllers')).catch(console.error)
+enforcer.mocks(path.resolve(__dirname, 'mock-controllers'), true).catch(console.error)
 enforcer.use(function (err, req, res, next) {
-  console.error(err.stack);
+  console.error(err.stack)
   res.send()
 })
 
