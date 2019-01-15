@@ -69,17 +69,13 @@ function OpenApiEnforcerMiddleware (definition, options) {
     })
 }
 
-// TODO: controllersDirectoryPath can be an already mapped (although not necessarily validated) map of controllers to operations
-OpenApiEnforcerMiddleware.prototype.controllers = function (controllersDirectoryPath, ...dependencyInjection) {
+OpenApiEnforcerMiddleware.prototype.controllers = function (controllersTarget, ...dependencyInjection) {
   const promise = this.promise
-    .then(openapi => {
-      const exception = new Enforcer.Exception('Unable to load one or more directory controllers within ' + controllersDirectoryPath)
-      return mapControllers(exception, openapi, controllersDirectoryPath, dependencyInjection, this.options)
-    })
+    .then(openapi => mapControllers(openapi, false, controllersTarget, dependencyInjection, this.options))
 
   this.use((req, res, next) => {
     promise
-      .then(({ controllers }) => {
+      .then((controllers) => {
         const operation = req[this.options.reqOperationProperty]
         const controller = controllers.get(operation)
         if (controller) {
@@ -174,14 +170,13 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
   }
 }
 
-OpenApiEnforcerMiddleware.prototype.mocks = function (controllersDirectoryPath, automatic = false, ...dependencyInjection) {
+OpenApiEnforcerMiddleware.prototype.mocks = function (controllersTarget, automatic = false, ...dependencyInjection) {
   const options = this.options
   let _openapi
   const promise = this.promise
     .then(openapi => {
       _openapi = openapi
-      const exception = new Enforcer.Exception('Unable to load one or more directory mock controllers within ' + controllersDirectoryPath)
-      return mapControllers(exception, openapi, controllersDirectoryPath, dependencyInjection, this.options)
+      return mapControllers(openapi, true, controllersTarget, dependencyInjection, this.options)
     })
 
   this.use((req, res, next) => {
@@ -295,15 +290,6 @@ OpenApiEnforcerMiddleware.prototype.use = function (middleware) {
   this.options.middleware.push(middleware)
 }
 
-function arrayOfFunctions (value) {
-  if (!Array.isArray(value)) return false
-  const length = value.length
-  for (let i = 0; i < length; i++) {
-    if (typeof value[i] !== 'function') return false
-  }
-  return true
-}
-
 function exceptionPushError (exception, error) {
   const stack = error.stack
   if (stack) {
@@ -330,12 +316,40 @@ function hasBody (req) {
     !isNaN(req.headers['content-length'])
 }
 
-function mapControllers (exception, openapi, controllerDirectoryPath, dependencyInjection, options) {
+function isNonNullObject (value) {
+  return value && typeof value === 'object'
+}
+
+function mapControllers (openapi, isMock, controllersTarget, dependencyInjection, options) {
   const loadedControllers = {}
   const map = new Map()
   const xController = options.xController
   const xOperation = options.xOperation
   const rootController = openapi && openapi[xController]
+
+  // validate input
+  let controllersTargetType = typeof controllersTarget
+  const mockStr = isMock ? 'mock ' : ''
+  if (controllersTargetType !== 'function' && controllersTargetType !== 'string' && !isNonNullObject(controllersTarget)) {
+    const exception = new Enforcer.Exception('Unable to load ' + mockStr + 'controllers')
+    exception.message('Controllers target must be a string, a non-null object, or a function that returns a non-null object')
+    throw Error(exception.toString())
+  }
+
+  // if the controllers target is a function then execute it
+  if (controllersTargetType === 'function') {
+    controllersTarget = controllersTarget.apply(undefined, dependencyInjection)
+    if (!isNonNullObject(controllersTarget)) {
+      const exception = new Enforcer.Exception('Unable to load ' + mockStr + 'controllers')
+      exception.message('Controllers target function must return a non-null object')
+      throw Error(exception.toString())
+    }
+  }
+
+  const controllerTargetIsString = typeof controllersTarget === 'string'
+  const exception = controllerTargetIsString
+    ? new Enforcer.Exception('Unable to load one or more ' + mockStr + 'directory controllers within ' + controllersTarget)
+    : new Enforcer.Exception('Unable to load one or more ' + mockStr + 'controllers')
 
   Object.keys(openapi.paths).forEach(pathKey => {
     const pathItem = openapi.paths[pathKey]
@@ -348,8 +362,11 @@ function mapControllers (exception, openapi, controllerDirectoryPath, dependency
       const operationName = operation && (operation[xOperation] || operation.operationId)
       if (controllerName && operationName) {
         const child = exception.at(controllerName)
-        if (typeof controllerDirectoryPath === 'string') {
-          const controllerPath = path.resolve(controllerDirectoryPath, controllerName)
+        let handler
+
+        // load controller from file path
+        if (controllerTargetIsString) {
+          const controllerPath = path.resolve(controllersTarget, controllerName)
           try {
             if (!loadedControllers[controllerPath]) {
               let controller = require(controllerPath)
@@ -358,41 +375,50 @@ function mapControllers (exception, openapi, controllerDirectoryPath, dependency
             }
             const controller = loadedControllers[controllerPath]
             if (!controller.hasOwnProperty(operationName)) {
-              child.message('Property not found: ' + operationName)
-            } else if (typeof controller[operationName] !== 'function' && !arrayOfFunctions(controller[operationName])) {
-              child.message('Expected a function or an array of functions. Received: ' + controller[operationName])
-            } else if (Array.isArray(controller[operationName])) {
-              const middlewareArray = controller[operationName]
-              const handler = function (req, res, next) {
-                middlewareRunner(middlewareArray, false, req, res, next)()
-              }
-              map.set(operation, handler)
+              child.message('Operation not found: ' + operationName)
             } else {
-              const handler = controller[operationName]
-              map.set(operation, handler)
+              handler = controller[operationName]
             }
           } catch (err) {
             if (err.code === 'MODULE_NOT_FOUND') {
-              exception.message('Controller file not found: ' + controllerPath)
+              child.message('Controller file not found')
             } else {
               exceptionPushError(child, err)
             }
           }
-        } else if (controllerDirectoryPath && typeof controllerDirectoryPath === 'object') {
-          const data = controllerDirectoryPath
-          if (!data[controllerName]) {
-            child.message('Not found')
-          } else if (!data[controllerName][operationName]) {
-            child.message('Property not found: ' + operationName)
+
+        // load controller from object
+        } else {
+          if (!controllersTarget[controllerName]) {
+            child.message('Controller not found')
+          } else if (!controllersTarget[controllerName][operationName]) {
+            child.message('Controller operation not found: ' + operationName)
           } else {
-            let handler = data[controllerName] && data[controllerName][operationName]
-            if (Array.isArray(handler)) {
-              const middlewareArray = data[controllerName][operationName]
-              handler = function (req, res, next) {
-                middlewareRunner(middlewareArray, false, req, res, next)()
+            handler = controllersTarget[controllerName] && controllersTarget[controllerName][operationName]
+          }
+        }
+
+        // if a handler exists then validate and normalize it
+        if (handler) {
+          if (Array.isArray(handler)) {
+            const middlewareArray = []
+            const length = handler.length
+            const grandChild = child.nest('Expected a function or an array of functions')
+            for (let i = 0; i < length; i++) {
+              const item = handler[i]
+              if (typeof item !== 'function') {
+                grandChild.at(i).message('Not a function')
+              } else {
+                middlewareArray.push(item)
               }
             }
+            map.set(operation, function (req, res, next) {
+              middlewareRunner(middlewareArray, false, req, res, next)()
+            })
+          } else if (typeof handler === 'function') {
             map.set(operation, handler)
+          } else {
+            child.message('Expected a function or an array of functions. Received: ' + handler)
           }
         }
       }
