@@ -1,0 +1,103 @@
+openapi: "3.0.0"
+info:
+  version: "1.0.0"
+  title: "To Do List API"
+x-controller: todo
+paths:
+  /:
+    get:
+      summary: Get a list of tasks
+      x-operation: getList
+      responses:
+        200:
+          description: Get a list of tasks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskList'
+    post:
+      summary: Add a new task
+      x-operation: addTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Task"
+      responses:
+        200:
+          description: Get the added task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+  /{task_id}:
+    parameters:
+      - in: path
+        name: task_id
+        required: true
+        schema:
+          type: number
+          minimum: 0
+    get:
+      summary: Get a task by ID
+      x-operation: getTask
+      responses:
+        200:
+          description: Get the task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        404:
+          description: Not found
+    put:
+      summary: Update a task
+      x-operation: updateTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Task"
+      responses:
+        200:
+          description: Get the updated task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        404:
+          description: Not found
+    delete:
+      summary: Delete a task
+      x-operation: deleteItem
+      responses:
+        204:
+          description: Task deleted
+        404:
+          description: Not found
+components:
+  schemas:
+    Task:
+      type: object
+      required:
+        - title
+        - due
+      properties:
+        id:
+          type: integer
+          minimum: 0
+        title:
+          type: string
+          minLength: 1
+        due:
+          type: string
+          format: date-time
+        completed:
+          type: boolean
+          default: false
+    TaskList:
+      type: array
+      items:
+        $ref: '#/components/schemas/Task'
