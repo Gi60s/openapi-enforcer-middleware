@@ -24,7 +24,6 @@ declare namespace OpenApiEnforcerMiddleware {
     }
 
     export interface Options {
-        development: boolean;
         fallThrough: boolean;
         mockHeader: string;
         mockQuery: string;
