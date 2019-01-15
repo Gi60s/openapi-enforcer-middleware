@@ -15,6 +15,7 @@
  *    limitations under the License.
  **/
 'use strict'
+const express = require('express')
 const request = require('request-promise-native')
 
 module.exports = {
@@ -50,55 +51,29 @@ module.exports = {
       }
     }
   },
-  serve,
-  serveOne
+  request: oneRequest
 }
 
-function serve (app) {
+function oneRequest (enforcer, options = {}) {
   return new Promise((resolve, reject) => {
-    const listener = app.listen(err => {
-      if (err) return reject(err)
-
-      const result = {
-        port: listener.address().port,
-
-        request: function (options) {
-          const defaults = {
-            baseUrl: 'http://localhost:' + result.port,
-            resolveWithFullResponse: true,
-            simple: false,
-            json: true
-          }
-          const config = Object.assign(defaults, options)
-          console.log('Request: ' + JSON.stringify(config))
-          return request(config)
-        },
-
-        stop: () => new Promise((resolve, reject) => {
-          listener.close(err => {
-            if (err) return reject(err)
-            resolve()
-          })
+    const app = express()
+    app.use(enforcer.middleware())
+    const listener = app.listen(function (err) {
+      if (err) reject(reject)
+      const port = listener.address().port
+      options = Object.assign({
+        baseUrl: 'http://localhost:' + port,
+        uri: '/'
+      }, options)
+      Request(options)
+        .then(res => {
+          listener.close()
+          resolve(res)
         })
-      }
-
-      console.log('Test server started on port ' + result.port)
-      resolve(result)
+        .catch(err => {
+          listener.close()
+          reject(err)
+        })
     })
   })
-}
-
-function serveOne (app, request) {
-  let _server
-  let _res
-  return serve(app)
-    .then(s => {
-      _server = s
-      return s.request(request)
-    })
-    .then(res => {
-      _res = res
-      return _server.stop()
-    })
-    .then(() => _res)
 }
