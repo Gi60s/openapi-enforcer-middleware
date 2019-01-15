@@ -35,8 +35,6 @@ paths:
     get:
       summary: Get a task by ID
       x-operation: getTask
-      parameters:
-        - $ref: "#/parameters/TaskItem"
       responses:
         200:
           description: Get the task
