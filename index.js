@@ -95,7 +95,16 @@ OpenApiEnforcerMiddleware.prototype.controllers = function (controllersTarget, .
 OpenApiEnforcerMiddleware.prototype.middleware = function () {
   const extractValue = Enforcer.v3_0.Schema.extractValue // v2 and v3 extractValue is the same
   const options = this.options
-  return (req, res, next) => {
+  return (req, res, _next) => {
+    // store original send
+    const send = res.send
+
+    function next (err) {
+      res.send = send
+      if (err) return _next(err)
+      _next()
+    }
+
     this.promise
       .then(openapi => {
         // make a copy of the request to be used just within this middleware
@@ -121,7 +130,6 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
           }
         } else {
           // overwrite the send
-          const send = res.send
           res.send = function (body) {
             res.send = send
 
@@ -133,13 +141,18 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
 
             // if content type is not specified for openapi version >= 3 then derive it
             if (!headers['content-type'] && !v2) {
-              const type = operation.getResponseContentTypeMatches(code, req.headers.accepts || '*/*')
-              res.set('content-type', type)
-              headers['content-type'] = type
+              const [ type ] = operation.getResponseContentTypeMatches(code, req.headers.accepts || '*/*')
+              if (type) {
+                res.set('content-type', type)
+                headers['content-type'] = type
+              }
             }
 
             const [ response, exception ] = operation.response(code, body, Object.assign({}, headers))
-            if (exception) return next(errorFromException(exception))
+            if (exception) {
+              res.status(500)
+              return next(errorFromException(exception))
+            }
 
             Object.keys(response.headers).forEach(header => res.set(header, extractValue(response.headers[header])))
             response.hasOwnProperty('body')
@@ -152,6 +165,8 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
 
           const runner = middlewareRunner(options.middleware, true, req, res, next)
           if (clientError) {
+            const [ value ] = openapi.path(requestObj.method, requestObj.path)
+            req[options.reqOperationProperty] = value.operation
             runner(errorFromException(clientError))
           } else {
             // store operation instance with request
