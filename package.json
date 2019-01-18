@@ -23,7 +23,7 @@
     "debug": "^3.2.6"
   },
   "peerDependencies": {
-    "openapi-enforcer": ">= 1.0.2"
+    "openapi-enforcer": ">= 1.0.5"
   },
   "devDependencies": {
     "body-parser": "^1.18.3",
