@@ -16,7 +16,7 @@
  **/
 'use strict'
 const express = require('express')
-const request = require('request-promise-native')
+const Request = require('request-promise-native')
 
 module.exports = {
   definition: {
@@ -51,29 +51,46 @@ module.exports = {
       }
     }
   },
-  request: oneRequest
+  request: oneRequest,
+  server
 }
 
-function oneRequest (enforcer, options = {}) {
-  return new Promise((resolve, reject) => {
-    const app = express()
-    app.use(enforcer.middleware())
-    const listener = app.listen(function (err) {
-      if (err) reject(reject)
+async function oneRequest (enforcer, options = {}) {
+  const { app, request, start, stop } = server()
+  app.use(enforcer.middleware())
+  await start()
+  const res = await request(options)
+  await stop()
+  return res
+}
+
+function server () {
+  const app = express()
+  let listener
+  return {
+    app,
+    request (options = {}) {
       const port = listener.address().port
-      options = Object.assign({
+      return Request(Object.assign({
         baseUrl: 'http://localhost:' + port,
         uri: '/'
-      }, options)
-      Request(options)
-        .then(res => {
-          listener.close()
-          resolve(res)
+      }, options))
+    },
+    start () {
+      return new Promise((resolve, reject) => {
+        listener = app.listen(function (err) {
+          if (err) return reject(err)
+          resolve()
         })
-        .catch(err => {
-          listener.close()
-          reject(err)
+      })
+    },
+    stop () {
+      return new Promise((resolve, reject) => {
+        listener.close(err => {
+          if (err) return reject(err)
+          resolve()
         })
-    })
-  })
+      })
+    }
+  }
 }
