@@ -173,7 +173,7 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
             req[options.reqOperationProperty] = request.operation
 
             // copy deserialized and validated parameters to the request object
-            req.params = request.params || {}
+            req.params = request.path || {}
             ;['cookies', 'headers', 'params', 'query'].forEach(key => { req[key] = Object.assign({}, req[key], request[key]) })
             if (request.hasOwnProperty('body')) req.body = request.body
 
