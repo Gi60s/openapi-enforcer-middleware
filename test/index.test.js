@@ -153,7 +153,6 @@ describe('openapi-enforcer-middleware', () => {
           injected.push(a, b, c)
           return {}
         }
-
         const enforcer = Enforcer(helper.definition.v3())
         await enforcer.controllers(target, 1, 2, 3)
         expect(injected).to.deep.equal([1, 2, 3])
@@ -165,14 +164,151 @@ describe('openapi-enforcer-middleware', () => {
         definition.paths['/'].get['x-operation'] = 'injected'
         const enforcer = Enforcer(definition)
         enforcer.controllers(path.resolve(__dirname, 'resources'), 1, 'b', false)
-
-        const res = await helper.request(enforcer)
-        expect(res.body).to.deep.equal([1, 'b', false])
+        const res = await helper.request(enforcer, { json: true })
+        expect(res).to.deep.equal([1, 'b', false])
       })
     })
   })
 
   describe('run controllers', () => {
+    it('thrown middleware errors are passed to existing internal error middleware', async () => {
+      let handledError = false
+      const definition = helper.definition.v3()
+      definition['x-controller'] = 'hasError'
+      definition.paths['/'].get['x-operation'] = 'hasError'
+      definition.paths['/'].get.responses.default = { description: '' }
+      const enforcer = Enforcer(definition)
+      enforcer.controllers({
+        hasError: {
+          hasError (req, res) {
+            const err = Error('Unexpected error')
+            err.code = 'NOT_REALLY_UNEXPECTED'
+            throw err
+          }
+        }
+      })
+      enforcer.use((err, req, res, next) => {
+        if (err.code === 'NOT_REALLY_UNEXPECTED') handledError = true
+        res.sendStatus(500)
+      })
+      const res = await helper.request(enforcer, { resolveWithFullResponse: true, simple: false })
+      expect(handledError).to.equal(true)
+      expect(res.statusCode).to.equal(500)
+    })
 
+    it('thrown middleware errors are passed to external error middleware', async () => {
+      let handledError = false
+      const definition = helper.definition.v3()
+      definition['x-controller'] = 'hasError'
+      definition.paths['/'].get['x-operation'] = 'hasError'
+      definition.paths['/'].get.responses.default = { description: '' }
+      const enforcer = Enforcer(definition)
+      enforcer.controllers({
+        hasError: {
+          hasError (req, res) {
+            const err = Error('Unexpected error')
+            err.code = 'NOT_REALLY_UNEXPECTED'
+            throw err
+          }
+        }
+      })
+
+      const { app, request, start, stop } = helper.server()
+      app.use(enforcer.middleware())
+      app.use((err, req, res, next) => {
+        if (err.code === 'NOT_REALLY_UNEXPECTED') handledError = true
+        res.sendStatus(500)
+      })
+
+      await start()
+      try {
+        await request(enforcer, { resolveWithFullResponse: true, simple: false })
+      } catch (err) {
+        console.error(err)
+      }
+      await stop()
+      expect(handledError).to.equal(true)
+    })
+
+    it('will produce 404 for path not found', async () => {
+      const definition = helper.definition.v3()
+      const enforcer = Enforcer(definition)
+      const res = await helper.request(enforcer, { uri: '/dne', resolveWithFullResponse: true, simple: false })
+      expect(res.statusCode).to.equal(404)
+    })
+
+    it('will produce 400 for invalid request', async () => {
+      const definition = helper.definition.v3()
+      const get = definition.paths['/'].get
+      get.parameters = [{
+        name: 'date',
+        in: 'query',
+        schema: {
+          type: 'string',
+          format: 'date'
+        }
+      }]
+      const enforcer = Enforcer(definition)
+      const res = await helper.request(enforcer, { uri: '/?date=abc', resolveWithFullResponse: true, simple: false })
+      console.log(res.body)
+      expect(res.statusCode).to.equal(400)
+    })
+
+    it('invalid request (400) response must be valid response', async () => {
+      const definition = helper.definition.v3()
+      const get = definition.paths['/'].get
+      get.parameters = [{
+        name: 'date',
+        in: 'query',
+        schema: {
+          type: 'string',
+          format: 'date'
+        }
+      }]
+      const enforcer = Enforcer(definition)
+      enforcer.use((err, req, res, next) => {
+        res.status(err.statusCode)
+        res.send(err.message)
+      })
+      const res = await helper.request(enforcer, { uri: '/?date=abc', resolveWithFullResponse: true, simple: false })
+      expect(res.statusCode).to.equal(500)
+    })
+
+    it.only('can process entire request successfully', async () => {
+      const definition = helper.definition.v2()
+      const get = {
+        'x-controller': 'dates',
+        'x-operation': 'startOf',
+        parameters: [{
+          name: 'date',
+          in: 'path',
+          type: 'string',
+          format: 'date'
+        }],
+        responses: {
+          200: {
+            description: '',
+            schema: {
+              type: 'string',
+              format: 'date-time'
+            }
+          }
+        }
+      }
+      definition.paths['/start-of/{date}'] = { get }
+
+      const enforcer = Enforcer(definition)
+      enforcer.controllers({
+        dates: {
+          startOf (req, res) {
+            res.send(req.params.date)
+          }
+        }
+      })
+
+      const res = await helper.request(enforcer, { uri: '/start-of/2000-01-01', resolveWithFullResponse: true, simple: false })
+      expect(res.statusCode).to.equal(200)
+      expect(res.body).to.equal('2000-01-01T00:00:00.000Z')
+    })
   })
 })
