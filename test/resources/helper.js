@@ -59,9 +59,9 @@ async function oneRequest (enforcer, options = {}) {
   const { app, request, start, stop } = server()
   app.use(enforcer.middleware())
   await start()
-  const res = await request(options)
+  const result = await request(options)
   await stop()
-  return res
+  return result
 }
 
 function server () {
@@ -71,10 +71,19 @@ function server () {
     app,
     request (options = {}) {
       const port = listener.address().port
-      return Request(Object.assign({
+      const opts = Object.assign({
+        resolveWithFullResponse: true,
+        simple: true,
         baseUrl: 'http://localhost:' + port,
         uri: '/'
-      }, options))
+      }, options)
+      return Request(opts)
+        .then(res => {
+          return { res, err: null }
+        })
+        .catch(err => {
+          return { res: null, err }
+        })
     },
     start () {
       return new Promise((resolve, reject) => {
