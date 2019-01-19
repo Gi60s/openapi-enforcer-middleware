@@ -274,7 +274,7 @@ describe('openapi-enforcer-middleware', () => {
       expect(res.statusCode).to.equal(500)
     })
 
-    it.only('can process entire request successfully', async () => {
+    it('can process entire request successfully', async () => {
       const definition = helper.definition.v2()
       const get = {
         'x-controller': 'dates',
@@ -309,6 +309,104 @@ describe('openapi-enforcer-middleware', () => {
       const res = await helper.request(enforcer, { uri: '/start-of/2000-01-01', resolveWithFullResponse: true, simple: false })
       expect(res.statusCode).to.equal(200)
       expect(res.body).to.equal('2000-01-01T00:00:00.000Z')
+    })
+  })
+
+  describe('run manual mocks', () => {
+    const schemaDef = {
+      type: 'integer',
+      minimum: 1,
+      maximum: 2
+    }
+    const v2Responses = {
+      200: {
+        description: '',
+        schema: schemaDef
+      }
+    }
+    const v3Responses = {
+      200: {
+        description: '',
+        content: { 'application/json': { schema: schemaDef } }
+      }
+    }
+
+    it('will not mock without specified request', async () => {
+      const definition = helper.definition.v3()
+      definition.paths['/'].get.responses = v3Responses
+      const enforcer = Enforcer(definition)
+      enforcer.mocks({}, false)
+      const { err } = await helper.request(enforcer)
+      expect(err.statusCode).to.equal(404)
+    })
+
+    describe('v2', () => {
+      it.only('can use default mock from query parameter', async () => {
+        const definition = helper.definition.v3()
+        definition.paths['/'].get.responses = v3Responses
+        const enforcer = Enforcer(definition)
+        enforcer.mocks({}, false)
+        const { res, err } = await helper.request(enforcer, { uri: '/?x-mock' })
+        expect(res).to.equal(404)
+      })
+
+      it('can use default mock from header', () => {
+        throw Error('todo')
+      })
+
+      it('can use specified status code mock from query parameter', () => {
+        throw Error('todo')
+      })
+
+      it('can use specified status code mock from header', () => {
+        throw Error('todo')
+      })
+
+      it('can mock from example', () => {
+        throw Error('todo')
+      })
+
+      it('can mock from randomly generated value', () => {
+        throw Error('todo')
+      })
+
+      it('can mock from mock controller', () => {
+        throw Error('todo')
+      })
+    })
+
+    describe('v3', () => {
+      it('can use default mock from query parameter', () => {
+        throw Error('todo')
+      })
+
+      it('can use default mock from header', () => {
+        throw Error('todo')
+      })
+
+      it('can use specified status code mock from query parameter', () => {
+        throw Error('todo')
+      })
+
+      it('can use specified status code mock from header', () => {
+        throw Error('todo')
+      })
+
+      it('can mock from example', () => {
+        throw Error('todo')
+      })
+
+      it('can mock from named example', () => {
+        throw Error('todo')
+      })
+
+      it('can mock from randomly generated value', () => {
+        throw Error('todo')
+      })
+
+      it('can mock from mock controller', () => {
+        throw Error('todo')
+      })
     })
   })
 })
