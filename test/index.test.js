@@ -345,13 +345,167 @@ describe('openapi-enforcer-middleware', () => {
       }
     }
 
-    it('will not mock without specified request', async () => {
+    it('will not mock without specified request without auto-mocking', async () => {
       const definition = helper.definition.v3()
       definition.paths['/'].get.responses = v3Responses
       const enforcer = Enforcer(definition)
       enforcer.mocks({}, false)
       const { res } = await helper.request(enforcer)
       expect(res.statusCode).to.equal(404)
+    })
+
+    it('will mock without specified request if auto-mocking', async () => {
+      const definition = helper.definition.v3()
+      definition.paths['/'].get.responses = v3Responses
+      const enforcer = Enforcer(definition)
+      enforcer.mocks({}, true)
+      const { res } = await helper.request(enforcer)
+      expect(res.statusCode).to.equal(200)
+    })
+
+    describe('v2', () => {
+      it('can use default mock from query parameter', async () => {
+        const definition = helper.definition.v2()
+        definition.paths['/'].get.responses = v2Responses
+        const enforcer = Enforcer(definition)
+        enforcer.mocks({}, false)
+        const { res } = await helper.request(enforcer, { uri: '/?x-mock', json: true })
+        expect(res.body).to.equal(2)
+        expect(res.statusCode).to.equal(200)
+      })
+
+      it('can use default mock from header', async () => {
+        const definition = helper.definition.v2()
+        definition.paths['/'].get.responses = v2Responses
+        const enforcer = Enforcer(definition)
+        enforcer.mocks({}, false)
+        const { res } = await helper.request(enforcer, { uri: '/', headers: { 'x-mock': '' }, json: true })
+        expect(res.body).to.equal(2)
+        expect(res.statusCode).to.equal(200)
+      })
+
+      it('can use specified status code mock from query parameter', async () => {
+        const definition = helper.definition.v2()
+        definition.paths['/'].get.responses = v2Responses
+        const enforcer = Enforcer(definition)
+        enforcer.mocks({}, false)
+        const { res } = await helper.request(enforcer, { uri: '/?x-mock=201', json: true })
+        expect(res.body).to.equal(10)
+        expect(res.statusCode).to.equal(201)
+      })
+
+      it('can use specified status code mock from header', async () => {
+        const definition = helper.definition.v2()
+        definition.paths['/'].get.responses = v2Responses
+        const enforcer = Enforcer(definition)
+        enforcer.mocks({}, false)
+        const { res } = await helper.request(enforcer, { uri: '/', headers: { 'x-mock': '201' }, json: true })
+        expect(res.body).to.equal(10)
+        expect(res.statusCode).to.equal(201)
+      })
+
+      it('can mock from examples mime type', async () => {
+        const definition = helper.definition.v2()
+        definition.paths['/'].get.produces = ['foo/cat', 'foo/dog']
+        definition.paths['/'].get.responses = {
+          200: {
+            description: '',
+            examples: {
+              'foo/cat': 'Mittens',
+              'foo/dog': 'Fido'
+            }
+          }
+        }
+        const enforcer = Enforcer(definition)
+        enforcer.mocks({}, false)
+        const { res } = await helper.request(enforcer, { uri: '/?x-mock', headers: { accept: 'foo/dog' } })
+        expect(res.body).to.equal('Fido')
+        expect(res.statusCode).to.equal(200)
+      })
+
+      it('can mock from schema example', async () => {
+        const definition = helper.definition.v2()
+        definition.paths['/'].get.responses = {
+          200: {
+            description: '',
+            schema: { type: 'string', example: 'Hello' }
+          }
+        }
+        const enforcer = Enforcer(definition)
+        enforcer.mocks({}, false)
+        const { res } = await helper.request(enforcer, { uri: '/?x-mock' })
+        expect(res.body).to.equal('Hello')
+        expect(res.statusCode).to.equal(200)
+      })
+
+      it('overwrites mock example with mock controller', async () => {
+        const definition = helper.definition.v2()
+        definition['x-controller'] = 'my-controller'
+        definition.paths['/'].get['x-operation'] = 'my-operation'
+        definition.paths['/'].get.responses = {
+          200: {
+            description: '',
+            schema: { type: 'string', example: 'Hello' }
+          }
+        }
+        const enforcer = Enforcer(definition)
+        enforcer.mocks({
+          'my-controller': {
+            'my-operation': (req, res) => {
+              res.send('mock controller')
+            }
+          }
+        }, false)
+        const { res } = await helper.request(enforcer, { uri: '/?x-mock' })
+        expect(res.body).to.equal('mock controller')
+        expect(res.statusCode).to.equal(200)
+      })
+
+      it('can specify to use mock example despite existing mock controller', async () => {
+        const definition = helper.definition.v2()
+        definition['x-controller'] = 'my-controller'
+        definition.paths['/'].get['x-operation'] = 'my-operation'
+        definition.paths['/'].get.responses = {
+          200: {
+            description: '',
+            schema: { type: 'string', example: 'Hello' }
+          }
+        }
+        const enforcer = Enforcer(definition)
+        enforcer.mocks({
+          'my-controller': {
+            'my-operation': (req, res) => {
+              res.send('mock controller')
+            }
+          }
+        }, false)
+        const { res } = await helper.request(enforcer, { uri: '/?x-mock=200,example' })
+        expect(res.body).to.equal('Hello')
+        expect(res.statusCode).to.equal(200)
+      })
+
+      it('can specify to use random despite existing mock controller and example', async () => {
+        const definition = helper.definition.v2()
+        definition['x-controller'] = 'my-controller'
+        definition.paths['/'].get['x-operation'] = 'my-operation'
+        definition.paths['/'].get.responses = {
+          200: {
+            description: '',
+            schema: { type: 'string', example: 'Hello' }
+          }
+        }
+        const enforcer = Enforcer(definition)
+        enforcer.mocks({
+          'my-controller': {
+            'my-operation': (req, res) => {
+              res.send('mock controller')
+            }
+          }
+        }, false)
+        const { res } = await helper.request(enforcer, { uri: '/?x-mock=200,random' })
+        expect(res.body).not.to.be.oneOf(['Hello', 'mock controller'])
+        expect(res.statusCode).to.equal(200)
+      })
     })
 
     describe('v3', () => {
@@ -395,51 +549,162 @@ describe('openapi-enforcer-middleware', () => {
         expect(res.statusCode).to.equal(201)
       })
 
-      it('can mock from example', () => {
-        throw Error('todo')
+      it('can mock from content example', async () => {
+        const definition = helper.definition.v3()
+        definition.paths['/'].get.responses = {
+          200: {
+            description: '',
+            content: {
+              'application/json': {
+                schema: { type: 'string' },
+                example: 'Hello'
+              }
+            }
+          }
+        }
+        const enforcer = Enforcer(definition)
+        enforcer.mocks({}, false)
+        const { res } = await helper.request(enforcer, { uri: '/?x-mock' })
+        expect(res.body).to.equal('Hello')
+        expect(res.statusCode).to.equal(200)
       })
 
-      it('can mock from named example', () => {
-        throw Error('todo')
+      it('can mock from named example', async () => {
+        const definition = helper.definition.v3()
+        definition.paths['/'].get.responses = {
+          200: {
+            description: '',
+            content: {
+              'application/json': {
+                schema: { type: 'string' },
+                examples: {
+                  cat: { value: 'Mittens' },
+                  dog: { value: 'Fido' }
+                }
+              }
+            }
+          }
+        }
+        const enforcer = Enforcer(definition)
+        enforcer.mocks({}, false)
+        const { res } = await helper.request(enforcer, { uri: '/?x-mock=200,example,dog' })
+        expect(res.body).to.equal('Fido')
+        expect(res.statusCode).to.equal(200)
       })
 
-      it('can mock from randomly generated value', () => {
-        throw Error('todo')
+      it('can mock from schema example', async () => {
+        const definition = helper.definition.v3()
+        definition.paths['/'].get.responses = {
+          200: {
+            description: '',
+            content: {
+              'application/json': {
+                schema: { type: 'string', example: 'Hello' }
+              }
+            }
+          }
+        }
+        const enforcer = Enforcer(definition)
+        enforcer.mocks({}, false)
+        const { res } = await helper.request(enforcer, { uri: '/?x-mock' })
+        expect(res.body).to.equal('Hello')
+        expect(res.statusCode).to.equal(200)
       })
 
-      it('can mock from mock controller', () => {
-        throw Error('todo')
-      })
-    })
-
-    describe('v2', () => {
-      it('can use default mock from query parameter', () => {
-        throw Error('todo')
-      })
-
-      it('can use default mock from header', () => {
-        throw Error('todo')
-      })
-
-      it('can use specified status code mock from query parameter', () => {
-        throw Error('todo')
-      })
-
-      it('can use specified status code mock from header', () => {
-        throw Error('todo')
-      })
-
-      it('can mock from example', () => {
-        throw Error('todo')
-      })
-
-      it('can mock from randomly generated value', () => {
-        throw Error('todo')
+      it('overwrites mock example with mock controller', async () => {
+        const definition = helper.definition.v3()
+        definition['x-controller'] = 'my-controller'
+        definition.paths['/'].get['x-operation'] = 'my-operation'
+        definition.paths['/'].get.responses = {
+          200: {
+            description: '',
+            content: {
+              'application/json': {
+                schema: { type: 'string', example: 'Hello' }
+              }
+            }
+          }
+        }
+        const enforcer = Enforcer(definition)
+        enforcer.mocks({
+          'my-controller': {
+            'my-operation': (req, res) => {
+              res.send('mock controller')
+            }
+          }
+        }, false)
+        const { res } = await helper.request(enforcer, { uri: '/?x-mock' })
+        expect(res.body).to.equal('mock controller')
+        expect(res.statusCode).to.equal(200)
       })
 
-      it('can mock from mock controller', () => {
-        throw Error('todo')
+      it('can specify to use mock example despite existing mock controller', async () => {
+        const definition = helper.definition.v3()
+        definition['x-controller'] = 'my-controller'
+        definition.paths['/'].get['x-operation'] = 'my-operation'
+        definition.paths['/'].get.responses = {
+          200: {
+            description: '',
+            content: {
+              'application/json': {
+                schema: { type: 'string', example: 'Hello' }
+              }
+            }
+          }
+        }
+        const enforcer = Enforcer(definition)
+        enforcer.mocks({
+          'my-controller': {
+            'my-operation': (req, res) => {
+              res.send('mock controller')
+            }
+          }
+        }, false)
+        const { res } = await helper.request(enforcer, { uri: '/?x-mock=200,example' })
+        expect(res.body).to.equal('Hello')
+        expect(res.statusCode).to.equal(200)
+      })
+
+      it('can specify to use random despite existing mock controller and example', async () => {
+        const definition = helper.definition.v3()
+        definition['x-controller'] = 'my-controller'
+        definition.paths['/'].get['x-operation'] = 'my-operation'
+        definition.paths['/'].get.responses = {
+          200: {
+            description: '',
+            content: {
+              'application/json': {
+                schema: { type: 'string', example: 'Hello' }
+              }
+            }
+          }
+        }
+        const enforcer = Enforcer(definition)
+        enforcer.mocks({
+          'my-controller': {
+            'my-operation': (req, res) => {
+              res.send('mock controller')
+            }
+          }
+        }, false)
+        const { res } = await helper.request(enforcer, { uri: '/?x-mock=200,random' })
+        expect(res.body).not.to.be.oneOf(['Hello', 'mock controller'])
+        expect(res.statusCode).to.equal(200)
       })
     })
   })
 })
+
+function copy (value) {
+  if (Array.isArray(value)) {
+    return value.map(copy)
+  } else if (value && typeof value === 'object') {
+    const result = {}
+    Object.keys(value).forEach(key => {
+      result[key] = copy(value[key])
+    })
+    return result
+  } else {
+    return value
+  }
+}

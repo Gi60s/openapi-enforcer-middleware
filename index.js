@@ -147,7 +147,7 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
 
             // if content type is not specified for openapi version >= 3 then derive it
             if (!headers['content-type'] && !v2) {
-              const [ types ] = operation.getResponseContentTypeMatches(code, req.headers.accepts || '*/*')
+              const [ types ] = operation.getResponseContentTypeMatches(code, req.headers.accept || '*/*')
               if (types) {
                 const type = types[0]
                 res.set('content-type', type)
@@ -163,7 +163,7 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
 
             Object.keys(response.headers).forEach(header => res.set(header, extractValue(response.headers[header])))
             response.hasOwnProperty('body')
-              ? res.send(code, extractValue(response.body))
+              ? res.send(+code, extractValue(response.body))
               : res.send()
           }
 
@@ -213,97 +213,175 @@ OpenApiEnforcerMiddleware.prototype.mocks = function (controllersTarget, automat
         const mockQueryKey = options.mockQuery
         let mock
         if (req.query.hasOwnProperty(mockQueryKey)) {
-          mock = {
-            source: 'query',
-            specified: req.query[mockQueryKey] !== '',
-            statusCode: req.query[mockHeaderKey] || responseCodes[0] || ''
-          }
+          mock = parseMockValue('query', responseCodes, req.query[mockQueryKey])
         } else if (req.headers.hasOwnProperty(mockHeaderKey)) {
-          mock = {
-            source: 'header',
-            specified: req.headers[mockHeaderKey] !== '',
-            statusCode: req.headers[mockHeaderKey] || responseCodes[0] || ''
-          }
+          mock = parseMockValue('header', responseCodes, req.headers[mockHeaderKey])
         } else if (automatic) {
           mock = {
-            source: 'automatic',
+            origin: 'automatic',
+            source: '',
             specified: false,
             statusCode: responseCodes[0] || ''
           }
         }
 
         // if skipping mock then call next middleware
-        if (!mock) {
-          next()
-        } else {
-          const version = _openapi.swagger ? 2 : +/^(\d+)/.exec(_openapi.openapi)[0]
-          const exception = new Enforcer.Exception('Unable to generate mock response')
-          exception.statusCode = 400
+        if (!mock) return next()
 
-          if (operation.responses.hasOwnProperty(mock.statusCode)) mock.response = operation.responses[mock.statusCode]
-          req[options.reqMockProperty] = mock
+        const version = _openapi.swagger ? 2 : +/^(\d+)/.exec(_openapi.openapi)[0]
+        const exception = new Enforcer.Exception('Unable to generate mock response')
+        exception.statusCode = 400
 
-          // if a controller is provided then call it
+        if (operation.responses.hasOwnProperty(mock.statusCode)) mock.response = operation.responses[mock.statusCode]
+        req[options.reqMockProperty] = mock
+
+        // if a controller is provided then call it
+        if (!mock.source || mock.source === 'controller') {
           if (controller) {
-            res.set(ENFORCER_HEADER, 'mock')
+            res.set(ENFORCER_HEADER, 'mock:controller')
             debug.controllers('executing mock controller')
             try {
               controller(req, res, next)
             } catch (err) {
               next(err)
             }
+            return
+          } else if (mock.source) {
+            exception.message('A mock controller is not defined')
+            return unableToMock(exception, next)
+          }
+        }
 
-            // if response code is not a listed response
-          } else if (!mock.response) {
-            debug.controllers('unable to generate mock for unlisted status code')
-            exception.message('No response is defined for status code: ' + mock.statusCode)
-            next(errorFromException(exception))
-          } else {
-            const response = mock.response
+        // if response code is not a listed response then we have a problem
+        const response = mock.response
+        if (!response) {
+          debug.controllers('unable to generate mock for unlisted status code')
+          exception.message('No response is defined for status code: ' + mock.statusCode)
+          return next(errorFromException(exception))
+        }
 
-            // v2 mock
-            if (version === 2 && response.schema) {
-              const [ value, err, warning ] = response.schema.random()
-              if (err) {
-                exception.push(err)
-                unableToMock(exception, next)
-              } else if (warning) {
-                exception.push(warning)
-                unableToMock(exception, next)
-              } else {
-                res.status(mock.statusCode)
-                res.send(value)
-              }
-
-              // v3 mock
-            } else if (version === 3 && response.content) {
-              const [ types, err ] = operation.getResponseContentTypeMatches(mock.statusCode, req.headers.accepts || '*/*')
-              if (err) {
-                exception.push(err)
-                unableToMock(exception, next)
-              } else {
+        // version 2
+        if (version === 2) {
+          if (!mock.source || mock.source === 'example') {
+            // to use content type specified example the produces must have example key
+            if (response.hasOwnProperty('examples')) {
+              const [ types ] = operation.getResponseContentTypeMatches(mock.statusCode, req.headers.accept || '*/*')
+              if (types) {
                 const type = types[0]
-                const schema = response.content[type].schema
-                if (schema) {
-                  const [ value, err, warning ] = schema.random()
-                  if (err) {
-                    exception.push(err)
-                    unableToMock(exception, next)
-                  } else if (warning) {
-                    exception.push(warning)
-                    unableToMock(exception, next)
-                  } else {
-                    res.set('Content-Type', type)
-                    if (mock.statusCode !== 'default') res.status(+mock.statusCode)
-                    res.send(value)
-                  }
-                } else {
-                  exception.message('No schema associated with response')
-                  unableToMock(exception, next)
+                if (response.examples.hasOwnProperty(type)) {
+                  res.status(mock.statusCode)
+                  return res.send(copy(response.examples[type]))
                 }
               }
+            }
+
+            // use schema example if set
+            if (response.schema && response.schema.hasOwnProperty('example')) {
+              res.status(mock.statusCode)
+              return res.send(copy(response.schema.example))
+            }
+
+            if (mock.source) {
+              exception.message('Cannot mock from example')
+              return unableToMock(exception, next)
+            }
+          }
+
+          if (!mock.source || mock.source === 'random') {
+            const schema = response.schema
+            if (schema) {
+              const [value, err, warning] = schema.random()
+              if (err) {
+                exception.push(err)
+                return unableToMock(exception, next)
+              }
+
+              if (warning) {
+                exception.push(warning)
+                return unableToMock(exception, next)
+              }
+
+              res.status(mock.statusCode)
+              return res.send(value)
             } else {
-              unableToMock(exception, next)
+              exception.message('No schema associated with response')
+              return unableToMock(exception, next)
+            }
+          }
+
+        // version 3
+        } else if (version === 3) {
+          const [ types, err ] = operation.getResponseContentTypeMatches(mock.statusCode, req.headers.accept || '*/*')
+
+          // if no content type matches then no possible mocked response
+          if (err) {
+            exception.push(err)
+            return unableToMock(exception, next)
+          }
+          const type = types[0]
+          const content = response.content[type]
+
+          if (!mock.source || mock.source === 'example') {
+            // named example requested
+            if (mock.name) {
+              if (content.examples && content.examples.hasOwnProperty(mock.name) && content.examples[mock.name].hasOwnProperty('value')) {
+                res.status(mock.statusCode)
+                return res.send(copy(content.examples[mock.name].value))
+              } else {
+                exception.message('There is no example value with the name specified: ' + mock.name)
+                return unableToMock(exception, next)
+              }
+            }
+
+            // select from a named example
+            const exampleNames = content.examples
+              ? Object.keys(content.examples).filter(name => content.examples[name].hasOwnProperty('value'))
+              : []
+            if (content.examples && exampleNames.length > 0) {
+              const index = Math.floor(Math.random() * exampleNames.length)
+              res.status(mock.statusCode)
+              return res.send(copy(content.examples[exampleNames[index]].value))
+            }
+
+            // select the example
+            if (content.hasOwnProperty('example')) {
+              res.status(mock.statusCode)
+              return res.send(copy(content.example))
+            }
+
+            // select schema example
+            if (content.schema && content.schema.hasOwnProperty('example')) {
+              res.status(mock.statusCode)
+              return res.send(copy(content.schema.example))
+            }
+
+            // unable to mock with requested source
+            if (mock.source) {
+              exception.message('A mock example is not defined')
+              return unableToMock(exception, next)
+            }
+          }
+
+          if (!mock.source || mock.source === 'random') {
+            const schema = response.content[type].schema
+            if (schema) {
+              const [ value, err, warning ] = schema.random()
+              if (err) {
+                exception.push(err)
+                return unableToMock(exception, next)
+              }
+
+              if (warning) {
+                exception.push(warning)
+                return unableToMock(exception, next)
+              }
+
+              res.set('Content-Type', type)
+              if (mock.statusCode !== 'default') res.status(+mock.statusCode)
+              return res.send(value)
+            } else {
+              exception.message('No schema associated with response')
+              return unableToMock(exception, next)
             }
           }
         }
@@ -317,6 +395,20 @@ OpenApiEnforcerMiddleware.prototype.mocks = function (controllersTarget, automat
 OpenApiEnforcerMiddleware.prototype.use = function (middleware) {
   if (typeof middleware !== 'function') throw Error('Invalid middleware. Value must be a function. Received: ' + middleware)
   this.options.middleware.push(middleware)
+}
+
+function copy (value) {
+  if (Array.isArray(value)) {
+    return value.map(copy)
+  } else if (value && typeof value === 'object') {
+    const result = {}
+    Object.keys(value).forEach(key => {
+      result[key] = copy(value[key])
+    })
+    return result
+  } else {
+    return value
+  }
 }
 
 function exceptionPushError (exception, error) {
@@ -491,9 +583,26 @@ function middlewareRunner (store, clearEnforcerHeader, req, res, next) {
   return run
 }
 
+function parseMockValue (origin, responseCodes, value) {
+  value = value.trim()
+  const result = {
+    origin,
+    source: '',
+    specified: value !== '',
+    statusCode: responseCodes[0] || ''
+  }
+  if (value.length) {
+    const ar = value.split(',')
+    if (ar.length > 0) result.statusCode = ar[0]
+    if (ar.length > 1) result.source = ar[1]
+    if (result.source === 'example' && ar.length > 2) result.name = ar[2]
+  }
+  return result
+}
+
 function unableToMock (exception, next) {
   debug.controllers('unable to generate automatic mock')
-  exception.message('Unable to generate mock response')
+  // exception.message('Unable to generate mock response')
   exception.statusCode = 501
 
   const err = errorFromException(exception)
