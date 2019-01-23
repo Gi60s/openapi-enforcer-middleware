@@ -23,7 +23,7 @@
     "debug": "^3.2.6"
   },
   "peerDependencies": {
-    "openapi-enforcer": ">= 1.0.5"
+    "openapi-enforcer": ">= 1.1.1"
   },
   "devDependencies": {
     "body-parser": "^1.18.3",
@@ -31,7 +31,7 @@
     "chai-as-promised": "^7.1.1",
     "express": "^4.16.4",
     "mocha": "^5.2.0",
-    "openapi-enforcer": "^1.0.2",
+    "openapi-enforcer": "^1.1.1",
     "request": "^2.88.0",
     "request-promise-native": "^1.0.5",
     "standard": "^12.0.1"
