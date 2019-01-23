@@ -73,7 +73,7 @@ function server () {
       const port = listener.address().port
       const opts = Object.assign({
         resolveWithFullResponse: true,
-        simple: true,
+        simple: false,
         baseUrl: 'http://localhost:' + port,
         uri: '/'
       }, options)
