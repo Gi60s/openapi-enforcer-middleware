@@ -38,11 +38,12 @@ function OpenApiEnforcerMiddleware (definition, options) {
 
   // get general settings
   const general = {
+    allowOtherQueryParameters: options.allowOtherQueryParameters || [],
     fallthrough: options.hasOwnProperty('fallthrough') ? options.fallthrough : true,
     middleware: [],
     mockHeader: options.mockHeader || 'x-mock',
     mockQuery: options.mockQuery || 'x-mock',
-    reqMockStatusCodeProperty: options.reqMockStatusCodeProperty || 'mockStatusCode',
+    reqMockProperty: options.reqMockProperty || 'mock',
     reqOpenApiProperty: options.reqOpenApiProperty || 'openapi',
     reqOperationProperty: options.reqOperationProperty || 'operation',
     xController: options.xController || 'x-controller',
@@ -50,14 +51,19 @@ function OpenApiEnforcerMiddleware (definition, options) {
   }
 
   // validate general settings and store them
+  if (typeof general.allowOtherQueryParameters !== 'boolean' && !isArrayOf(general.allowOtherQueryParameters, 'string')) throw Error('Configuration option "allowOtherQueryParameters" must be a boolean or an array of strings. Received: ' + general.allowOtherQueryParameters)
   if (typeof general.mockHeader !== 'string') throw Error('Configuration option "mockHeader" must be a string. Received: ' + general.mockHeader)
   if (typeof general.mockQuery !== 'string') throw Error('Configuration option "mockQuery" must be a string. Received: ' + general.mockQuery)
-  if (typeof general.reqMockStatusCodeProperty !== 'string') throw Error('Configuration option "reqMockStatusCodeProperty" must be a string. Received: ' + general.reqMockStatusCodeProperty)
+  if (typeof general.reqMockProperty !== 'string') throw Error('Configuration option "reqMockProperty" must be a string. Received: ' + general.reqMockProperty)
   if (typeof general.reqOpenApiProperty !== 'string') throw Error('Configuration option "reqOpenApiProperty" must be a string. Received: ' + general.reqOpenApiProperty)
   if (typeof general.reqOperationProperty !== 'string') throw Error('Configuration option "reqOperationProperty" must be a string. Received: ' + general.reqOperationProperty)
   if (typeof general.xController !== 'string') throw Error('Configuration option "xController" must be a string. Received: ' + general.xController)
   if (typeof general.xOperation !== 'string') throw Error('Configuration option "xOperation" must be a string. Received: ' + general.xOperation)
   this.options = general
+
+  // update allowOtherQueryParameters to allow the mockQuery parameter
+  if (general.allowOtherQueryParameters === false) general.allowOtherQueryParameters = []
+  if (Array.isArray(general.allowOtherQueryParameters)) general.allowOtherQueryParameters.push(general.mockQuery)
 
   // wait for the definition to be built
   this.promise = Enforcer(definition, { fullResult: true })
@@ -118,7 +124,7 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
           path: req.originalUrl.substr(req.baseUrl.length)
         }
         if (hasBody(req)) requestObj.body = req.body
-        const [ request, clientError ] = openapi.request(requestObj)
+        const [ request, clientError ] = openapi.request(requestObj, { allowOtherQueryParameters: this.options.allowOtherQueryParameters })
 
         // 404 renders this middleware useless so exit appropriately
         if (clientError && clientError.statusCode === 404) {
@@ -141,8 +147,9 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
 
             // if content type is not specified for openapi version >= 3 then derive it
             if (!headers['content-type'] && !v2) {
-              const [ type ] = operation.getResponseContentTypeMatches(code, req.headers.accepts || '*/*')
-              if (type) {
+              const [ types ] = operation.getResponseContentTypeMatches(code, req.headers.accepts || '*/*')
+              if (types) {
+                const type = types[0]
                 res.set('content-type', type)
                 headers['content-type'] = type
               }
@@ -156,7 +163,7 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
 
             Object.keys(response.headers).forEach(header => res.set(header, extractValue(response.headers[header])))
             response.hasOwnProperty('body')
-              ? res.send(extractValue(response.body))
+              ? res.send(code, extractValue(response.body))
               : res.send()
           }
 
@@ -205,16 +212,16 @@ OpenApiEnforcerMiddleware.prototype.mocks = function (controllersTarget, automat
         const mockHeaderKey = options.mockHeader
         const mockQueryKey = options.mockQuery
         let mock
-        if (req.headers.hasOwnProperty(mockHeaderKey)) {
+        if (req.query.hasOwnProperty(mockQueryKey)) {
+          mock = {
+            source: 'query',
+            specified: req.query[mockQueryKey] !== '',
+            statusCode: req.query[mockHeaderKey] || responseCodes[0] || ''
+          }
+        } else if (req.headers.hasOwnProperty(mockHeaderKey)) {
           mock = {
             source: 'header',
             specified: req.headers[mockHeaderKey] !== '',
-            statusCode: req.headers[mockHeaderKey] || responseCodes[0] || ''
-          }
-        } else if (req.headers.hasOwnProperty(mockQueryKey)) {
-          mock = {
-            source: 'query',
-            specified: req.headers[mockQueryKey] !== '',
             statusCode: req.headers[mockHeaderKey] || responseCodes[0] || ''
           }
         } else if (automatic) {
@@ -229,12 +236,12 @@ OpenApiEnforcerMiddleware.prototype.mocks = function (controllersTarget, automat
         if (!mock) {
           next()
         } else {
-          const version = _openapi.swagger ? 2 : /^(\d+)/.exec(_openapi.openapi)[0]
+          const version = _openapi.swagger ? 2 : +/^(\d+)/.exec(_openapi.openapi)[0]
           const exception = new Enforcer.Exception('Unable to generate mock response')
           exception.statusCode = 400
 
           if (operation.responses.hasOwnProperty(mock.statusCode)) mock.response = operation.responses[mock.statusCode]
-          req[options.reqMockStatusCodeProperty] = mock
+          req[options.reqMockProperty] = mock
 
           // if a controller is provided then call it
           if (controller) {
@@ -270,23 +277,30 @@ OpenApiEnforcerMiddleware.prototype.mocks = function (controllersTarget, automat
 
               // v3 mock
             } else if (version === 3 && response.content) {
-              const type = operation.getResponseContentTypeMatches(mock.statusCode, req.headers.accepts || '*/*')
-              const schema = response.content[type].schema
-              if (schema) {
-                const [ value, err, warning ] = schema.random()
-                if (err) {
-                  exception.push(err)
-                  unableToMock(exception, next)
-                } else if (warning) {
-                  exception.push(warning)
-                  unableToMock(exception, next)
-                } else {
-                  res.status(mock.statusCode)
-                  res.send(value)
-                }
-              } else {
-                exception.message('No schema associated with response')
+              const [ types, err ] = operation.getResponseContentTypeMatches(mock.statusCode, req.headers.accepts || '*/*')
+              if (err) {
+                exception.push(err)
                 unableToMock(exception, next)
+              } else {
+                const type = types[0]
+                const schema = response.content[type].schema
+                if (schema) {
+                  const [ value, err, warning ] = schema.random()
+                  if (err) {
+                    exception.push(err)
+                    unableToMock(exception, next)
+                  } else if (warning) {
+                    exception.push(warning)
+                    unableToMock(exception, next)
+                  } else {
+                    res.set('Content-Type', type)
+                    if (mock.statusCode !== 'default') res.status(+mock.statusCode)
+                    res.send(value)
+                  }
+                } else {
+                  exception.message('No schema associated with response')
+                  unableToMock(exception, next)
+                }
               }
             } else {
               unableToMock(exception, next)
@@ -329,6 +343,16 @@ function errorFromException (exception) {
 function hasBody (req) {
   return req.headers['transfer-encoding'] !== undefined ||
     !isNaN(req.headers['content-length'])
+}
+
+function isArrayOf (value, type) {
+  if (!Array.isArray(value)) return false
+  const length = value.length
+  for (let i = 0; i < length; i++) {
+    const t = typeof value[i]
+    if (t !== type) return false
+  }
+  return true
 }
 
 function isNonNullObject (value) {
