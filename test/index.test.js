@@ -164,8 +164,8 @@ describe('openapi-enforcer-middleware', () => {
         definition.paths['/'].get['x-operation'] = 'injected'
         const enforcer = Enforcer(definition)
         enforcer.controllers(path.resolve(__dirname, 'resources'), 1, 'b', false)
-        const res = await helper.request(enforcer, { json: true })
-        expect(res).to.deep.equal([1, 'b', false])
+        const { res } = await helper.request(enforcer, { json: true })
+        expect(res.body).to.deep.equal([1, 'b', false])
       })
     })
   })
@@ -191,7 +191,7 @@ describe('openapi-enforcer-middleware', () => {
         if (err.code === 'NOT_REALLY_UNEXPECTED') handledError = true
         res.sendStatus(500)
       })
-      const res = await helper.request(enforcer, { resolveWithFullResponse: true, simple: false })
+      const { res } = await helper.request(enforcer)
       expect(handledError).to.equal(true)
       expect(res.statusCode).to.equal(500)
     })
@@ -233,7 +233,7 @@ describe('openapi-enforcer-middleware', () => {
     it('will produce 404 for path not found', async () => {
       const definition = helper.definition.v3()
       const enforcer = Enforcer(definition)
-      const res = await helper.request(enforcer, { uri: '/dne', resolveWithFullResponse: true, simple: false })
+      const { res } = await helper.request(enforcer, { uri: '/dne' })
       expect(res.statusCode).to.equal(404)
     })
 
@@ -249,7 +249,7 @@ describe('openapi-enforcer-middleware', () => {
         }
       }]
       const enforcer = Enforcer(definition)
-      const res = await helper.request(enforcer, { uri: '/?date=abc', resolveWithFullResponse: true, simple: false })
+      const { res } = await helper.request(enforcer, { uri: '/?date=abc' })
       console.log(res.body)
       expect(res.statusCode).to.equal(400)
     })
@@ -270,7 +270,7 @@ describe('openapi-enforcer-middleware', () => {
         res.status(err.statusCode)
         res.send(err.message)
       })
-      const res = await helper.request(enforcer, { uri: '/?date=abc', resolveWithFullResponse: true, simple: false })
+      const { res } = await helper.request(enforcer, { uri: '/?date=abc' })
       expect(res.statusCode).to.equal(500)
     })
 
@@ -283,7 +283,8 @@ describe('openapi-enforcer-middleware', () => {
           name: 'date',
           in: 'path',
           type: 'string',
-          format: 'date'
+          format: 'date',
+          required: true
         }],
         responses: {
           200: {
@@ -306,28 +307,41 @@ describe('openapi-enforcer-middleware', () => {
         }
       })
 
-      const res = await helper.request(enforcer, { uri: '/start-of/2000-01-01', resolveWithFullResponse: true, simple: false })
+      const { res } = await helper.request(enforcer, { uri: '/start-of/2000-01-01' })
       expect(res.statusCode).to.equal(200)
       expect(res.body).to.equal('2000-01-01T00:00:00.000Z')
     })
   })
 
   describe('run manual mocks', () => {
-    const schemaDef = {
+    const schemaDef1 = {
       type: 'integer',
-      minimum: 1,
+      minimum: 2,
       maximum: 2
+    }
+    const schemaDef2 = {
+      type: 'integer',
+      minimum: 10,
+      maximum: 10
     }
     const v2Responses = {
       200: {
         description: '',
-        schema: schemaDef
+        schema: schemaDef1
+      },
+      201: {
+        description: '',
+        schema: schemaDef2
       }
     }
     const v3Responses = {
       200: {
         description: '',
-        content: { 'application/json': { schema: schemaDef } }
+        content: { 'application/json': { schema: schemaDef1 } }
+      },
+      201: {
+        description: '',
+        content: { 'application/json': { schema: schemaDef2 } }
       }
     }
 
@@ -336,33 +350,56 @@ describe('openapi-enforcer-middleware', () => {
       definition.paths['/'].get.responses = v3Responses
       const enforcer = Enforcer(definition)
       enforcer.mocks({}, false)
-      const { err } = await helper.request(enforcer)
-      expect(err.statusCode).to.equal(404)
+      const { res } = await helper.request(enforcer)
+      expect(res.statusCode).to.equal(404)
     })
 
-    describe('v2', () => {
-      it.only('can use default mock from query parameter', async () => {
+    describe('v3', () => {
+      it('can use default mock from query parameter', async () => {
         const definition = helper.definition.v3()
         definition.paths['/'].get.responses = v3Responses
         const enforcer = Enforcer(definition)
         enforcer.mocks({}, false)
-        const { res, err } = await helper.request(enforcer, { uri: '/?x-mock' })
-        expect(res).to.equal(404)
+        const { res } = await helper.request(enforcer, { uri: '/?x-mock', json: true })
+        expect(res.body).to.equal(2)
+        expect(res.statusCode).to.equal(200)
       })
 
-      it('can use default mock from header', () => {
-        throw Error('todo')
+      it('can use default mock from header', async () => {
+        const definition = helper.definition.v3()
+        definition.paths['/'].get.responses = v3Responses
+        const enforcer = Enforcer(definition)
+        enforcer.mocks({}, false)
+        const { res } = await helper.request(enforcer, { uri: '/', headers: { 'x-mock': '' }, json: true })
+        expect(res.body).to.equal(2)
+        expect(res.statusCode).to.equal(200)
       })
 
-      it('can use specified status code mock from query parameter', () => {
-        throw Error('todo')
+      it('can use specified status code mock from query parameter', async () => {
+        const definition = helper.definition.v3()
+        definition.paths['/'].get.responses = v3Responses
+        const enforcer = Enforcer(definition)
+        enforcer.mocks({}, false)
+        const { res } = await helper.request(enforcer, { uri: '/?x-mock=201', json: true })
+        expect(res.body).to.equal(10)
+        expect(res.statusCode).to.equal(201)
       })
 
-      it('can use specified status code mock from header', () => {
-        throw Error('todo')
+      it('can use specified status code mock from header', async () => {
+        const definition = helper.definition.v3()
+        definition.paths['/'].get.responses = v3Responses
+        const enforcer = Enforcer(definition)
+        enforcer.mocks({}, false)
+        const { res } = await helper.request(enforcer, { uri: '/', headers: { 'x-mock': '201' }, json: true })
+        expect(res.body).to.equal(10)
+        expect(res.statusCode).to.equal(201)
       })
 
       it('can mock from example', () => {
+        throw Error('todo')
+      })
+
+      it('can mock from named example', () => {
         throw Error('todo')
       })
 
@@ -375,7 +412,7 @@ describe('openapi-enforcer-middleware', () => {
       })
     })
 
-    describe('v3', () => {
+    describe('v2', () => {
       it('can use default mock from query parameter', () => {
         throw Error('todo')
       })
@@ -393,10 +430,6 @@ describe('openapi-enforcer-middleware', () => {
       })
 
       it('can mock from example', () => {
-        throw Error('todo')
-      })
-
-      it('can mock from named example', () => {
         throw Error('todo')
       })
 
