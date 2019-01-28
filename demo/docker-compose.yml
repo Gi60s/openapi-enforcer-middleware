@@ -1,13 +1,13 @@
 version: '3'
 
 services:
-#  api:
-#    build: server
-#    restart: always
-#    env_file:
-#      - .env
-#    ports:
-#      - 3000:3000
+  api:
+    build: server
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - 3000:3000
 
   adminer:
     image: adminer
