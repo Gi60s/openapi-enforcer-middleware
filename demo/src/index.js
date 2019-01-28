@@ -16,7 +16,7 @@
  **/
 'use strict'
 const express = require('express')
-const Enforcer = require('../')
+const Enforcer = require('../..')
 const path = require('path')
 
 const app = express()

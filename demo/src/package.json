@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "name": "openapi-enforcer-middleware-demo",
+  "version": "1.0.0",
+  "description": "A demo of the working server that uses the openapi-enforcer-middleware to handle requests",
+  "scripts": {
+    "start": "node index"
+  },
+  "author": "James Speirs <james.speirs@gmail.com>",
+  "license": "Apache-2.0"
+}
