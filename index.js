@@ -95,8 +95,9 @@ OpenApiEnforcerMiddleware.prototype.controllers = function (controllersTarget, .
       .catch(next)
   })
 
-  return promise.then(({ exception }) => {
+  return promise.then(({ controllers, exception }) => {
     if (exception) throw errorFromException(exception)
+    return controllers
   })
 }
 
@@ -391,8 +392,9 @@ OpenApiEnforcerMiddleware.prototype.mocks = function (controllersTarget, automat
       .catch(next)
   })
 
-  return promise.then(({ exception }) => {
+  return promise.then(({ controllers, exception }) => {
     if (exception) throw errorFromException(exception)
+    return controllers
   })
 }
 
