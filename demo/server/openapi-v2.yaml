@@ -60,8 +60,6 @@ paths:
       responses:
         204:
           description: Task deleted
-        404:
-          description: Not found
 definitions:
   Task:
     type: object

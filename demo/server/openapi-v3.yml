@@ -75,8 +75,6 @@ paths:
       responses:
         204:
           description: Task deleted
-        404:
-          description: Not found
 components:
   schemas:
     Task:
