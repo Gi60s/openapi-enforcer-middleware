@@ -6,7 +6,6 @@ This middlware has its own internal middleware that will enforce valid responses
 
 See the [Example](#example) below or [check out the demo](../demo/README.md) and then read up on how [controllers](./controllers.md) and [mocking](./mocking.md) work.
 
-
 ## Example
 
 **server.js**
