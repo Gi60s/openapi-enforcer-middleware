@@ -31,6 +31,7 @@
     "chai-as-promised": "^7.1.1",
     "express": "^4.16.4",
     "mocha": "^5.2.0",
+    "nyc": "^13.1.0",
     "openapi-enforcer": "^1.1.1",
     "request": "^2.88.0",
     "request-promise-native": "^1.0.5",
