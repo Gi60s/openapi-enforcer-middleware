@@ -10,6 +10,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "express": "^4.16.4",
+    "openapi-enforcer-middleware": "^1.0.0",
     "pg": "^7.8.0"
   }
 }
