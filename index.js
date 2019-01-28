@@ -81,7 +81,7 @@ OpenApiEnforcerMiddleware.prototype.controllers = function (controllersTarget, .
 
   this.use((req, res, next) => {
     promise
-      .then((controllers) => {
+      .then(({ controllers }) => {
         const operation = req[this.options.reqOperationProperty]
         const controller = controllers.get(operation)
         if (controller) {
@@ -95,7 +95,9 @@ OpenApiEnforcerMiddleware.prototype.controllers = function (controllersTarget, .
       .catch(next)
   })
 
-  return promise
+  return promise.then(({ exception }) => {
+    if (exception) throw errorFromException(exception)
+  })
 }
 
 OpenApiEnforcerMiddleware.prototype.middleware = function () {
@@ -203,7 +205,7 @@ OpenApiEnforcerMiddleware.prototype.mocks = function (controllersTarget, automat
 
   this.use((req, res, next) => {
     promise
-      .then(controllers => {
+      .then(({ controllers }) => {
         const operation = req[this.options.reqOperationProperty]
         const controller = controllers.get(operation)
         const responseCodes = Object.keys(operation.responses)
@@ -389,7 +391,9 @@ OpenApiEnforcerMiddleware.prototype.mocks = function (controllersTarget, automat
       .catch(next)
   })
 
-  return promise
+  return promise.then(({ exception }) => {
+    if (exception) throw errorFromException(exception)
+  })
 }
 
 OpenApiEnforcerMiddleware.prototype.use = function (middleware) {
@@ -556,8 +560,10 @@ function mapControllers (openapi, isMock, controllersTarget, dependencyInjection
     })
   })
 
-  if (exception.hasException) throw Error(exception.toString())
-  return map
+  return {
+    controllers: map,
+    exception: exception.hasException ? exception : null
+  }
 }
 
 function middlewareRunner (store, clearEnforcerHeader, req, res, next) {
