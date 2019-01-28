@@ -7,5 +7,8 @@
     "start": "node index"
   },
   "author": "James Speirs <james.speirs@gmail.com>",
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "dependencies": {
+    "pg": "^7.8.0"
+  }
 }
