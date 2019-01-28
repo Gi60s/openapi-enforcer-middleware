@@ -42,7 +42,7 @@ app.use((err, req, res, next) => {
   res.sendStatus(err.statusCode || 500)
 })
 
-const listener = app.listen(8080, err => {
+const listener = app.listen(3000, err => {
   if (err) return console.error(err.stack)
   console.log('Server listening on port ' + listener.address().port)
 })
