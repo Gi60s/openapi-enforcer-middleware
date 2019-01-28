@@ -438,7 +438,7 @@ function errorFromException (exception) {
 
 function hasBody (req) {
   return req.headers['transfer-encoding'] !== undefined ||
-    !isNaN(req.headers['content-length'])
+    (!isNaN(req.headers['content-length']) && req.headers['content-length'] > 0)
 }
 
 function isArrayOf (value, type) {
