@@ -4,7 +4,7 @@ This library uses the functionality of the [Open API Enforcer](https://www.npmjs
 
 This middlware has its own internal middleware that will enforce valid responses (as defined by the Open API document definition).
 
-See the [Example](#example) below or [check out the demo](../demo/README.md) and then read up on how [controllers](./controllers.md) and [mocking](./mocking.md) work.
+See the [Example](#example) below or [check out the demo](../demo) and then read up on how [controllers](./controllers.md) and [mocking](./mocking.md) work.
 
 ## Example
 
