@@ -1,18 +1,24 @@
 version: '3'
 
 services:
-  api:
-    build: src
+#  api:
+#    build: server
+#    restart: always
+#    env_file:
+#      - .env
+#    ports:
+#      - 3000:3000
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 5433:8080
+
+  db:
+    build: database
     restart: always
     env_file:
       - .env
     ports:
-      - 3000:3000
-
-  db:
-    image: postgres:11
-    restart: always
-    env_file:
-      - .env
-    volumes:
-      - ./sql:/var/lib/postgresql/data
+      - 5432:5432
