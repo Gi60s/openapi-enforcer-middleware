@@ -5,10 +5,7 @@ const Enforcer = require('openapi-enforcer-middleware')
 const path = require('path')
 
 const app = express()
-app.use((req, res, next) => {
-  const j = express.json()
-  j(req, res, next)
-})
+app.use(express.json())
 
 const enforcer = Enforcer(path.resolve(__dirname, 'openapi-v2.yaml'))
 
