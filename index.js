@@ -439,6 +439,7 @@ function errorFromException (exception) {
 }
 
 function hasBody (req) {
+  if (!req.hasOwnProperty('body')) return false
   return req.headers['transfer-encoding'] !== undefined ||
     (!isNaN(req.headers['content-length']) && req.headers['content-length'] > 0)
 }
