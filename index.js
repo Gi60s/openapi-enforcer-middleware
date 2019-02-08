@@ -273,7 +273,13 @@ OpenApiEnforcerMiddleware.prototype.mocks = function (controllersTarget, automat
                 const type = types[0]
                 if (response.examples.hasOwnProperty(type)) {
                   res.status(mock.statusCode)
-                  return res.send(copy(response.examples[type]))
+                  const example = deserializeExample(
+                    exception.nest('Unable to deserialize example'),
+                    response.examples[type],
+                    response.schema,
+                    next
+                  )
+                  return res.send(example)
                 }
               }
             }
@@ -329,7 +335,13 @@ OpenApiEnforcerMiddleware.prototype.mocks = function (controllersTarget, automat
             if (mock.name) {
               if (content.examples && content.examples.hasOwnProperty(mock.name) && content.examples[mock.name].hasOwnProperty('value')) {
                 res.status(mock.statusCode)
-                return res.send(copy(content.examples[mock.name].value))
+                const example = deserializeExample(
+                  exception.nest('Unable to deserialize example: ' + mock.name),
+                  content.examples[mock.name].value,
+                  content.schema,
+                  next
+                )
+                return res.send(example)
               } else {
                 exception.message('There is no example value with the name specified: ' + mock.name)
                 return unableToMock(exception, next)
@@ -343,7 +355,13 @@ OpenApiEnforcerMiddleware.prototype.mocks = function (controllersTarget, automat
             if (content.examples && exampleNames.length > 0) {
               const index = Math.floor(Math.random() * exampleNames.length)
               res.status(mock.statusCode)
-              return res.send(copy(content.examples[exampleNames[index]].value))
+              const example = deserializeExample(
+                exception.nest('Unable to deserialize example: ' + exampleNames[index]),
+                content.examples[exampleNames[index]].value,
+                content.schema,
+                next
+              )
+              return res.send(example)
             }
 
             // select the example
@@ -415,6 +433,20 @@ function copy (value) {
   } else {
     return value
   }
+}
+
+function deserializeExample (exception, example, schema, next) {
+  example = copy(example)
+  if (schema) {
+    const [ value, error ] = schema.deserialize(example)
+    if (error) {
+      exception.push(error)
+      return unableToMock(exception, next)
+    } else {
+      example = value
+    }
+  }
+  return example
 }
 
 function exceptionPushError (exception, error) {
