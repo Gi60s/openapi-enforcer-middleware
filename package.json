@@ -6,6 +6,10 @@
   "scripts": {
     "test": "mocha test"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/byu-oit/openapi-enforcer-middleware.git"
+  },
   "types": "index.d.ts",
   "keywords": [
     "openapi",
@@ -19,6 +23,10 @@
   ],
   "author": "James Speirs <james.speirs@gmail.com>",
   "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/byu-oit/openapi-enforcer-middleware/issues"
+  },
+  "homepage": "https://github.com/byu-oit/openapi-enforcer-middleware#readme",
   "dependencies": {
     "debug": "^3.2.6"
   },
