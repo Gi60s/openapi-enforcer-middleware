@@ -498,7 +498,7 @@ function isNonNullObject (value) {
 }
 
 function isWithinVersion (versionLow, versionHigh) {
-  const [c1, c2, c3] = enforcerVersion
+  const [c1, c2, c3] = enforcerVersion.split('.').map(v => +v)
   if (versionLow) {
     const [l1, l2, l3] = versionLow.split('.').map(v => +v)
     if (c1 < l1) return false
