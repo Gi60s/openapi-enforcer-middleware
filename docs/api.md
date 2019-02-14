@@ -2,7 +2,7 @@
 
 **Constructor**
 
-- [OpenApiEnforcerMiddleware](#openapienforcermiddlware)
+- [OpenApiEnforcerMiddleware](#openapienforcermiddleware)
 
 **Methods**
 
@@ -30,15 +30,15 @@ The constructor will create an instance of the Open API enforcer middleware.
 
 - *options* - An optional `object` with the following settings:
 
-  - *fallthrough* - When this middlware is run, if `fallthough` is set to `true` then the next middlware will be called, otherwise a `404` response will be sent. Defaults to `true`.
+  - *fallthrough* - When this middleware is run, if `fallthough` is set to `true` then the next middleware will be called, otherwise a `404` response will be sent. Defaults to `true`.
 
   - *mockHeader* - The name of the header to look for to specify an [explicit mock](./mocking.md#explicit-mocking) request. Defaults to `"x-mock"`.
 
   - *mockQuery* - The name of the query parameter to look for to specify an [explicit mock](./mocking.md#explicit-mocking) request. This query parameter does not need to be defined in your Open API document definition. Defaults to `"x-mock"`.
 
-  - *reqMockStatusCodeProperty* - The name of the property to attach the [Open API Enforcer's OpenAPI object](#) to on the request object. Defaults to `"openapi"`.
+  - *reqMockStatusCodeProperty* - The name of the property to attach the [Open API Enforcer's OpenAPI object](https://github.com/byu-oit/openapi-enforcer/blob/master/docs/components/openapi.md) to on the request object. Defaults to `"openapi"`.
 
-  - *reqOperationProperty* - The name of the property to attach the [Open API Enforcer's Operation object](#) to on the request object. Defaults to `"operation"`.
+  - *reqOperationProperty* - The name of the property to attach the [Open API Enforcer's Operation object](https://github.com/byu-oit/openapi-enforcer/blob/master/docs/components/operation.md) to on the request object. Defaults to `"operation"`.
 
   - *xController* - The name of the property to look for in your Open API document to define the name of the controller associated with an operation. Defaults to `"x-controller"`.
 
@@ -48,7 +48,7 @@ The constructor will create an instance of the Open API enforcer middleware.
 
 ## Controllers
 
-The OpenApiEnforcerMiddleware has its own internal middlware runner. Calling this function will define a [controllers group](./controllers.md) that will handle requests and add it as an internal middleware.
+The OpenApiEnforcerMiddleware has its own internal middleware runner. Calling this function will define a [controllers group](./controllers.md) that will handle requests and add it as an internal middleware.
 
 **Signature**
 
@@ -58,17 +58,17 @@ The OpenApiEnforcerMiddleware has its own internal middlware runner. Calling thi
 
 - *controllers* - The path the the controllers directory or a controllers definition map. See the [controllers documentation](./controllers.md) for more information.
 
-- *dependencyInjection* - You can add any number of parameters after the first parameter and these will be passed in to a controller that uses [dependency injection](./controllers.md#dependency-injection).
+- *dependencyInjection* - You can add any number of parameters after the first parameter and these will be passed in to a controller that uses [dependency injection](./controllers.md#controller-dependency-injection).
 
 **Returns** a `Promise` that resolves if successfully loaded.
 
 ## Middleware
 
-Call this function to return the middlware runner that will run the internal middlewares.
+Call this function to return the middleware runner that will run the internal middlewares.
 
 **Signature**
 
-`OpenAPIEnforcerMiddleware.prototype.middlware (): Function`
+`OpenAPIEnforcerMiddleware.prototype.middleware (): Function`
 
 **Parameters** None
 
@@ -76,7 +76,7 @@ Call this function to return the middlware runner that will run the internal mid
 
 ## Mocks
 
-The OpenApiEnforcerMiddleware has its own internal middlware runner. Calling this function will define a mock controllers group that will handle requests and add it as an internal middleware.
+The OpenApiEnforcerMiddleware has its own internal middleware runner. Calling this function will define a mock controllers group that will handle requests and add it as an internal middleware.
 
 **Signature**
 
@@ -84,17 +84,17 @@ The OpenApiEnforcerMiddleware has its own internal middlware runner. Calling thi
 
 **Parameters**
 
-- *controllers* - The path the the mock controllers directory or a controllers definition map. See the [controllers documentation](./controllers.md) for more information.
+- *controllers* - The path the the mock controllers directory or a controllers definition map. See the [controllers documentation](./controllers.md) for more information. This value can be set to `null` or `undefined` if you do not have any mock controller functions to run.
 
 - *isFallback* - A boolean indicating whether this is [fallback middleware](./mocking.md#fallback-mocking) or if it requires [explicit mock](./mocking.md#explicit-mocking) requests to run.
 
-- *dependencyInjection* - You can add any number of parameters after the first parameter and these will be passed in to a controller that uses [dependency injection](./controllers.md#dependency-injection).
+- *dependencyInjection* - You can add any number of parameters after the first parameter and these will be passed in to a controller that uses [dependency injection](./controllers.md#controller-dependency-injection).
 
-**Returns** A Promise that will resolve when the middlware loads correctly.
+**Returns** A Promise that will resolve when the middleware loads correctly.
 
 ## Use
 
-The OpenApiEnforcerMiddleware has its own internal middlware runner. Calling this function will add an internal middlware.
+The OpenApiEnforcerMiddleware has its own internal middleware runner. Calling this function will add an internal middleware.
 
 **Signature**
 
@@ -102,6 +102,6 @@ The OpenApiEnforcerMiddleware has its own internal middlware runner. Calling thi
 
 **Parameters**
 
-- *middleware* - The express middleware function to add to the internal enforcer's middlware. Any responses sent from within these middlwares will be validated against the Open API document definition prior to sending.
+- *middleware* - The express middleware function to add to the internal enforcer's middleware. Any responses sent from within these middlewares will be validated against the Open API document definition prior to sending.
 
 **Returns** nothing.
