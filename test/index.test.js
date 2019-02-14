@@ -345,7 +345,7 @@ describe('openapi-enforcer-middleware', () => {
       }
     }
 
-    it.only('will not mock without specified request without auto-mocking', async () => {
+    it('will not mock without specified request without auto-mocking', async () => {
       const definition = helper.definition.v3()
       definition.paths['/'].get.responses = v3Responses
       const enforcer = Enforcer(definition)
