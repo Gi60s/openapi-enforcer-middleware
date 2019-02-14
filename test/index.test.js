@@ -345,11 +345,11 @@ describe('openapi-enforcer-middleware', () => {
       }
     }
 
-    it('will not mock without specified request without auto-mocking', async () => {
+    it.only('will not mock without specified request without auto-mocking', async () => {
       const definition = helper.definition.v3()
       definition.paths['/'].get.responses = v3Responses
       const enforcer = Enforcer(definition)
-      enforcer.mocks({}, false)
+      enforcer.mocks(null, false)
       const { res } = await helper.request(enforcer)
       expect(res.statusCode).to.equal(404)
     })
@@ -358,7 +358,7 @@ describe('openapi-enforcer-middleware', () => {
       const definition = helper.definition.v3()
       definition.paths['/'].get.responses = v3Responses
       const enforcer = Enforcer(definition)
-      enforcer.mocks({}, true)
+      enforcer.mocks(undefined, true)
       const { res } = await helper.request(enforcer)
       expect(res.statusCode).to.equal(200)
     })
