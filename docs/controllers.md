@@ -61,7 +61,7 @@ A controller can either by an object or a function that returns an object.
   }
   ```
 
-- A controller as a funtion must return an object that looks like a controller object. The advantage of this method is that it allows for [dependency injection](#).
+- A controller as a function must return an object that looks like a controller object. The advantage of this method is that it allows for [dependency injection](#controller-dependency-injection).
 
   ```js
   function makeController () {
@@ -127,7 +127,7 @@ We can define where the controllers are one of two ways:
 
 ## Controller Dependency Injection
 
-If you are using controller files (see [Configuring Middleware](#configure-middlware)) then you may want to inject some data or functionality into the controller.
+If you are using controller files (see [Configuring Middleware](#configure-middleware)) then you may want to inject some data or functionality into the controller.
 
 ```js
 const EnforcerMiddleware = require('openapi-enforcer-middleware')
