@@ -4,9 +4,9 @@ export = OpenApiEnforcerMiddleware
 declare class OpenApiEnforcerMiddleware {
     constructor (definition: string|object, options?:OpenApiEnforcerMiddleware.Options );
 
-    controllers (controllersDirectoryPath: string, ...dependencyInjection: any): void;
+    controllers (controllersDirectoryPath: string|object, ...dependencyInjection: any): void;
     middleware (): OpenApiEnforcerMiddleware.MiddlewareFunction;
-    mocks (controllersDirectoryPath: string, automatic?: boolean, ...dependencyInjection: any): void;
+    mocks (controllersDirectoryPath: string|object|undefined, automatic?: boolean, ...dependencyInjection: any): void;
     use (middleware: OpenApiEnforcerMiddleware.MiddlewareFunction): void;
 
     promise: Promise<object>
