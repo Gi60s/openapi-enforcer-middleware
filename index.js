@@ -25,6 +25,7 @@ const debug = {
   request: Debug('openapi-enforcer-middleware:request'),
   response: Debug('openapi-enforcer-middleware:response')
 }
+const enforcerVersion = require(path.resolve(path.dirname(require.resolve('openapi-enforcer')), 'package.json')).version
 const ENFORCER_HEADER = 'x-openapi-enforcer'
 
 module.exports = OpenApiEnforcerMiddleware
@@ -438,17 +439,21 @@ function copy (value) {
 }
 
 function deserializeExample (exception, example, schema, next) {
-  example = copy(example)
-  if (schema) {
-    const [ value, error ] = schema.deserialize(example)
-    if (error) {
-      exception.push(error)
-      return unableToMock(exception, next)
-    } else {
-      example = value
+  if (isWithinVersion(null, '1.1.4')) {
+    example = copy(example)
+    if (schema) {
+      const [ value, error ] = schema.deserialize(example)
+      if (error) {
+        exception.push(error)
+        return unableToMock(exception, next)
+      } else {
+        example = value
+      }
     }
+    return example
+  } else if (isWithinVersion('1.1.5')) {
+    return example
   }
-  return example
 }
 
 function exceptionPushError (exception, error) {
@@ -490,6 +495,23 @@ function isArrayOf (value, type) {
 
 function isNonNullObject (value) {
   return value && typeof value === 'object'
+}
+
+function isWithinVersion (versionLow, versionHigh) {
+  const [c1, c2, c3] = enforcerVersion
+  if (versionLow) {
+    const [l1, l2, l3] = versionLow.split('.').map(v => +v)
+    if (c1 < l1) return false
+    if (c1 >= l1 && c2 < l2) return false
+    if (c1 >= l1 && c2 >= l2 && c3 < l3) return false
+  }
+  if (versionHigh) {
+    const [h1, h2, h3] = versionHigh.split('.').map(v => +v)
+    if (c1 > h1) return false
+    if (c1 <= h1 && c2 > h2) return false
+    if (c1 <= h1 && c2 <= h2 && c3 > h3) return false
+  }
+  return true
 }
 
 function mapControllers (openapi, isMock, controllersTarget, dependencyInjection, options) {
