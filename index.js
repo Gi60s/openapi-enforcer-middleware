@@ -203,7 +203,7 @@ OpenApiEnforcerMiddleware.prototype.mocks = function (controllersTarget, automat
       _openapi = openapi
       return controllersTarget
         ? mapControllers(openapi, true, controllersTarget, dependencyInjection, this.options)
-        : new Map()
+        : { controllers: new Map(), exception: null }
     })
 
   this.use((req, res, next) => {
