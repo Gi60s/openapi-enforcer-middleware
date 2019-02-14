@@ -18,15 +18,19 @@ const app = express()
 
 // create an enforcer instance
 const enforcer = EnforcerMiddleware('/path/to/openapi-definition.yml')
+enforcer.promise.catch(errorHandler)
 
 // check for explicit mock request
 enforcer.mocks('/path/to/mock-controllers-dir', false)
+  .catch(errorHandler)
 
 // call defined operation handlers
 enforcer.controllers('/path/to/controllers-dir')
+  .catch(errorHandler)
 
 // produce fallback mock responses
 enforcer.mocks('/path/to/mock-controllers-dir', true)
+  .catch(errorHandler)
 
 // tell express to run the internal open api enforcer middleware
 app.use(enforcer.middleware())
@@ -38,4 +42,9 @@ app.use((err, req, res, next) => {
 
 // start the server listening
 app.listen(3000)
+
+function errorHandler (err) {
+  console.error(err.stack)
+  if (app.get('env') !== 'development') process.exit(1)
+}
 ```
