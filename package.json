@@ -31,7 +31,7 @@
     "debug": "^3.2.6"
   },
   "peerDependencies": {
-    "openapi-enforcer": ">= 1.1.1"
+    "openapi-enforcer": ">= 1.1.11"
   },
   "devDependencies": {
     "body-parser": "^1.18.3",
@@ -40,9 +40,9 @@
     "express": "^4.16.4",
     "mocha": "^5.2.0",
     "nyc": "^13.3.0",
-    "openapi-enforcer": "^1.1.5",
+    "openapi-enforcer": "^1.1.11",
     "request": "^2.88.0",
-    "request-promise-native": "^1.0.5",
+    "request-promise-native": "^1.0.7",
     "standard": "^12.0.1"
   }
 }
