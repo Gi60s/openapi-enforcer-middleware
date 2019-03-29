@@ -311,6 +311,178 @@ describe('openapi-enforcer-middleware', () => {
       expect(res.statusCode).to.equal(200)
       expect(res.body).to.equal('2000-01-01T00:00:00.000Z')
     })
+
+    it('can handle number response for body', async () => {
+      const definition = helper.definition.v2()
+      const get = {
+        'x-controller': 'controller',
+        'x-operation': 'operation',
+        responses: {
+          200: {
+            description: '',
+            schema: {
+              type: 'number'
+            }
+          }
+        }
+      }
+      definition.paths['/'] = { get }
+
+      const enforcer = Enforcer(definition)
+      enforcer.controllers({
+        controller: {
+          operation (req, res) {
+            res.send(10)
+          }
+        }
+      })
+
+      const { res } = await helper.request(enforcer, { uri: '/' })
+      expect(res.statusCode).to.equal(200)
+      expect(res.body).to.equal('10')
+    })
+
+    it('can handle date response for body', async () => {
+      const definition = helper.definition.v2()
+      const get = {
+        'x-controller': 'controller',
+        'x-operation': 'operation',
+        responses: {
+          200: {
+            description: '',
+            schema: {
+              type: 'string',
+              format: 'date-time'
+            }
+          }
+        }
+      }
+      definition.paths['/'] = { get }
+
+      const enforcer = Enforcer(definition)
+      enforcer.controllers({
+        controller: {
+          operation (req, res) {
+            res.send(new Date('2000-01-02T03:04:05.678Z'))
+          }
+        }
+      })
+
+      const { res } = await helper.request(enforcer, { uri: '/' })
+      expect(res.statusCode).to.equal(200)
+      expect(res.body).to.equal('2000-01-02T03:04:05.678Z')
+    })
+
+    it('can handle object response for body', async () => {
+      const definition = helper.definition.v2()
+      const get = {
+        'x-controller': 'controller',
+        'x-operation': 'operation',
+        responses: {
+          200: {
+            description: '',
+            schema: {
+              type: 'object'
+            }
+          }
+        }
+      }
+      definition.paths['/'] = { get }
+
+      const enforcer = Enforcer(definition)
+      enforcer.controllers({
+        controller: {
+          operation (req, res) {
+            res.send({ a: 1 })
+          }
+        }
+      })
+
+      const { res } = await helper.request(enforcer, { uri: '/' })
+      expect(res.statusCode).to.equal(200)
+      expect(res.body).to.equal(JSON.stringify({ a: 1 }))
+    })
+
+    it('can handle number response for body when no schema', async () => {
+      const definition = helper.definition.v2()
+      const get = {
+        'x-controller': 'controller',
+        'x-operation': 'operation',
+        responses: {
+          200: {
+            description: ''
+          }
+        }
+      }
+      definition.paths['/'] = { get }
+
+      const enforcer = Enforcer(definition)
+      enforcer.controllers({
+        controller: {
+          operation (req, res) {
+            res.send(10)
+          }
+        }
+      })
+
+      const { res } = await helper.request(enforcer, { uri: '/' })
+      expect(res.statusCode).to.equal(200)
+      expect(res.body).to.equal('10')
+    })
+
+    it('can handle date response for body when no schema', async () => {
+      const definition = helper.definition.v2()
+      const get = {
+        'x-controller': 'controller',
+        'x-operation': 'operation',
+        responses: {
+          200: {
+            description: ''
+          }
+        }
+      }
+      definition.paths['/'] = { get }
+
+      const enforcer = Enforcer(definition)
+      enforcer.controllers({
+        controller: {
+          operation (req, res) {
+            res.send(new Date('2000-01-02T03:04:05.678Z'))
+          }
+        }
+      })
+
+      const { res } = await helper.request(enforcer, { uri: '/' })
+      expect(res.statusCode).to.equal(200)
+      expect(res.body).to.equal('"2000-01-02T03:04:05.678Z"')
+    })
+
+    it('can handle object response for body when no schema', async () => {
+      const definition = helper.definition.v2()
+      const get = {
+        'x-controller': 'controller',
+        'x-operation': 'operation',
+        responses: {
+          200: {
+            description: ''
+          }
+        }
+      }
+      definition.paths['/'] = { get }
+
+      const enforcer = Enforcer(definition)
+      enforcer.controllers({
+        controller: {
+          operation (req, res) {
+            res.send({ a: 1 })
+          }
+        }
+      })
+
+      const { res } = await helper.request(enforcer, { uri: '/' })
+      expect(res.statusCode).to.equal(200)
+      expect(res.body).to.equal(JSON.stringify({ a: 1 }))
+    })
   })
 
   describe('run manual mocks', () => {
@@ -694,17 +866,3 @@ describe('openapi-enforcer-middleware', () => {
     })
   })
 })
-
-function copy (value) {
-  if (Array.isArray(value)) {
-    return value.map(copy)
-  } else if (value && typeof value === 'object') {
-    const result = {}
-    Object.keys(value).forEach(key => {
-      result[key] = copy(value[key])
-    })
-    return result
-  } else {
-    return value
-  }
-}

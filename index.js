@@ -166,9 +166,14 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
             }
 
             Object.keys(response.headers).forEach(header => res.set(header, extractValue(response.headers[header])))
-            response.hasOwnProperty('body')
-              ? res.send(+code, extractValue(response.body))
-              : res.send()
+            if (response.hasOwnProperty('body')) {
+              const sendObject = response.schema
+                ? ['array', 'object'].indexOf(response.schema.type) !== -1
+                : typeof response.body === 'object'
+              res.send(sendObject ? response.body : String(response.body))
+            } else {
+              res.send()
+            }
           }
 
           // store openapi instance with request object
