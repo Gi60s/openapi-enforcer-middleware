@@ -24,16 +24,13 @@ declare namespace OpenApiEnforcerMiddleware {
     }
 
     export interface Options {
-        fallThrough: boolean;
-        mockHeader: string;
-        mockQuery: string;
-        reqMockStatusCodeProperty: string;
-        reqOpenApiProperty: string;
-        reqOperationProperty: string;
-        xController: string;
-        xOperation: string;
+        fallThrough?: boolean;
+        mockHeader?: string;
+        mockQuery?: string;
+        reqMockStatusCodeProperty?: string;
+        reqOpenApiProperty?: string;
+        reqOperationProperty?: string;
+        xController?: string;
+        xOperation?: string;
     }
-
-
-
 }
