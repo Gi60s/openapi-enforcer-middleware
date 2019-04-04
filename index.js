@@ -105,7 +105,7 @@ OpenApiEnforcerMiddleware.prototype.controllers = function (controllersTarget, .
 OpenApiEnforcerMiddleware.prototype.middleware = function () {
   const extractValue = Enforcer.v3_0.Schema.extractValue // v2 and v3 extractValue is the same
   const options = this.options
-  return (req, res, _next) => {
+  return (_req, res, _next) => {
     // store original send
     const send = res.send
 
@@ -118,7 +118,8 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
     this.promise
       .then(openapi => {
         // make a copy of the request to be used just within this middleware
-        req = Object.assign({}, req)
+        const req = Object.create(Object.getPrototypeOf(_req))
+        Object.assign(req, _req)
 
         // parse, serialize, and validate request
         debug.request('validating and parsing')
