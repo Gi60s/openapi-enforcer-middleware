@@ -108,6 +108,8 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
   return (_req, res, _next) => {
     // store original send
     const send = res.send
+    // store original json
+    const json = res.json
 
     function next (err) {
       res.send = send
@@ -175,6 +177,12 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
             } else {
               res.send()
             }
+          }
+
+          // overwrite res.json
+          res.json = function(body) {
+            res.json = json
+            res.send(JSON.parse(JSON.stringify(body)))
           }
 
           // store openapi instance with request object
