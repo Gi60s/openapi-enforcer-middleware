@@ -108,10 +108,8 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
   return (_req, res, _next) => {
     // store original send
     const send = res.send
-    const json = res.json
 
     function next (err) {
-      res.json = json
       res.send = send
       if (err) return _next(err)
       _next()
@@ -143,7 +141,7 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
           }
         } else {
           // overwrite the send
-          res.send = res.json = function (body) {
+          res.send = function (body) {
             res.send = send
 
             const code = res.statusCode || 200
@@ -510,14 +508,14 @@ function isWithinVersion (versionLow, versionHigh) {
   if (versionLow) {
     const [l1, l2, l3] = versionLow.split('.').map(v => +v)
     if (c1 < l1) return false
-    if (c1 >= l1 && c2 < l2) return false
-    if (c1 >= l1 && c2 >= l2 && c3 < l3) return false
+    if (c1 === l1 && c2 < l2) return false
+    if (c1 === l1 && c2 === l2 && c3 < l3) return false
   }
   if (versionHigh) {
     const [h1, h2, h3] = versionHigh.split('.').map(v => +v)
     if (c1 > h1) return false
-    if (c1 <= h1 && c2 > h2) return false
-    if (c1 <= h1 && c2 <= h2 && c3 > h3) return false
+    if (c1 === h1 && c2 > h2) return false
+    if (c1 === h1 && c2 === h2 && c3 > h3) return false
   }
   return true
 }
