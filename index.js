@@ -141,7 +141,7 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
           }
         } else {
           // overwrite the send
-          res.send = function (body) {
+          res.send = res.json = function (body) {
             res.send = send
 
             const code = res.statusCode || 200
