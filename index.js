@@ -108,8 +108,10 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
   return (_req, res, _next) => {
     // store original send
     const send = res.send
+    const json = res.json
 
     function next (err) {
+      res.json = json
       res.send = send
       if (err) return _next(err)
       _next()
