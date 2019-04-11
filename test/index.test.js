@@ -403,6 +403,55 @@ describe('openapi-enforcer-middleware', () => {
       expect(res.body).to.equal(JSON.stringify({ a: 1 }))
     })
 
+    it('can handle complex object for response for body', async () => {
+      const definition = helper.definition.v2()
+      const get = {
+        'x-controller': 'controller',
+        'x-operation': 'operation',
+        responses: {
+          200: {
+            description: '',
+            schema: {
+              type: 'object',
+              properties: {
+                name: { type: 'string' },
+                birthdate: { type: 'string', format: 'date' }
+              }
+            }
+          }
+        }
+      }
+      definition.paths['/'] = { get }
+
+      function Person (name, birthdate) {
+        this.name = name
+        this.birthdate = birthdate
+      }
+
+      Person.prototype.age = function () {
+        const diff = Date.now() - +this.birthdate
+        const date = new Date(diff)
+        return date.getUTCFullYear() - 1970
+      }
+
+      const enforcer = Enforcer(definition)
+      enforcer.controllers({
+        controller: {
+          operation (req, res) {
+            const bob = new Person('Bob', new Date('2000-01-01T00:00:00.000Z'))
+            res.send(bob)
+          }
+        }
+      })
+
+      const { res } = await helper.request(enforcer, { uri: '/' })
+      expect(res.statusCode).to.equal(200)
+      expect(res.body).to.equal(JSON.stringify({
+        name: 'Bob',
+        birthdate: '2000-01-01'
+      }))
+    })
+
     it('can handle number response for body when no schema', async () => {
       const definition = helper.definition.v2()
       const get = {
