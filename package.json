@@ -4,6 +4,8 @@
   "description": "An express middleware that makes it easy to write web services that follow an Open API specification.",
   "main": "index.js",
   "scripts": {
+    "docs:build": "markdown-docs build docs-src docs",
+    "docs:dev": "markdown-docs dev docs-src",
     "test": "mocha test"
   },
   "repository": {
@@ -34,13 +36,14 @@
     "openapi-enforcer": ">= 1.2.0"
   },
   "devDependencies": {
-    "body-parser": "^1.18.3",
+    "@gi60s/markdown-docs": "0.0.8",
+    "body-parser": "^1.19.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "express": "^4.16.4",
     "mocha": "^5.2.0",
-    "nyc": "^13.3.0",
-    "openapi-enforcer": "^1.2.1",
+    "nyc": "^14.1.0",
+    "openapi-enforcer": "^1.2.3",
     "request": "^2.88.0",
     "request-promise-native": "^1.0.7",
     "standard": "^12.0.1"
