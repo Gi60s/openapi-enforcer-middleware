@@ -35,8 +35,14 @@ app.use(enforcer.middleware())
 
 // add error catching middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack)
-  res.sendStatus(err.statusCode || 500)
+  if (err.statusCode >= 400 && err.statusCode < 500 && err.exception) {
+    res.set('Content-Type', 'text/plain')
+    res.status(err.statusCode)
+    res.send(err.message)
+  } else {
+    console.error(err.stack)
+    res.sendStatus(err.statusCode || 500)
+  }
 })
 
 const listener = app.listen(3000, err => {
