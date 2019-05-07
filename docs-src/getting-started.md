@@ -1,0 +1,150 @@
+---
+title: Getting Started
+toc: false
+---
+
+This guide covers how you can turn your Open API document into a working API through these steps:
+
+1. [Installing dependencies](#installing-dependencies)
+
+2. [Adding extensions to your Open API document](#adding-extensions-to-your-open-api-document)
+
+3. [Setting up your server](#setting-up-your-server)
+
+4. [Making requests](#making-requests)
+
+5. [Setting up controllers](#setting-up-controllers)
+
+## Installing Dependencies
+
+You need to install this package and the peer dependency `openapi-enforcer` for this to work.
+
+```bash
+npm install openapi-enforcer openapi-enforcer-middleware
+```
+
+## Adding Extensions to your Open API Document
+
+Any property within your Open API document that starts with a `x-` is known as an extension property. The Open API Enforcer Middleware uses two extensions (`x-controller` and `x-operation`) to link your Open API path operations to your NodeJS code.
+
+For now know that:
+
+- `x-controller` will map to file names inside of your controller or mock controller directories.
+
+- `x-operation` will map to the function name within your controller files.
+
+This example shows just one path in your Open API document with these properties defined. Note that it is possible to define an `x-controller` at path and root levels and you can read more about that on the [controllers page](./controllers.md).
+
+1. Save your Open API document into your project directory.
+
+2. Add `x-controller` and `x-operation` properties to each path operation.
+
+```yml
+paths:
+  /people:
+    get:
+      x-controller: people
+      x-operation: getList
+      summary: Get a list of people
+      responses:
+        200:
+          description: Get a list of people
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+```
+
+## Setting up your Server
+
+This package works as an [Express](https://expressjs.com) middleware, but it also has an interface for your to add your own middleware.
+
+The following example sets up the manual mock interface, controller interface, and fallback mock interface. Two directories `./controllers` and `./mock-controllers` are referenced as the place to run your code. For now leave this as is until we reach the [Setting up Controllers](#setting-up-controllers) section.
+
+1. Copy the example to your directory.
+
+2. Update the `pathToOpenApiDoc` reference to point to your Open API document's location.
+
+3. Start the server.
+
+4. At this point your server is ready to accept valid requests, but it will only provide automatically mocked responses. To customize the handling of requests and provide custom responses you'll need to [set up your controller files](#setting-up-controllers).
+
+```js
+'use strict'
+const express = require('express')
+const Enforcer = require('openapi-enforcer-middleware')
+const path = require('path')
+
+const app = express()
+app.use(express.json())
+
+const controllerDirectory = path.resolve(__dirname, 'controllers')
+const mockDirectory = path.resolve(__dirname, 'mock-controllers') 
+const pathToOpenApiDoc = path.resolve(__dirname, 'open-api-doc.yml')
+
+// Create an enforcer middleware instance
+const enforcer = Enforcer(pathToOpenApiDoc)
+
+// Add mocking middleware to the enforcer middleware.
+// This middleware will handle explicit mock requests.
+enforcer.mocks(mockDirectory, false)
+  .catch(console.error)
+
+// Add controller middleware to the enforcer middleware .
+// This middleware will handle requests for real data.
+enforcer.controllers(controllerDirectory)
+  .catch(console.error)
+
+// Add fallback mocking middleware to the enforcer middleware.
+// This middleware will automatically run mocking if the
+// controller could not produce a response.
+enforcer.mocks(mockDirectory, true)
+  .catch(() => {}) // Any errors will have already been reported by explicit mock middleware
+
+// Add the enforcer middleware runner to the express app.
+app.use(enforcer.middleware())
+
+// Add error handling middleware
+app.use((err, req, res, next) => {
+  // If the error was in the client's request then send back a detailed report
+  if (err.statusCode >= 400 && err.statusCode < 500 && err.exception) {
+    res.set('Content-Type', 'text/plain')
+    res.status(err.statusCode)
+    res.send(err.message)
+    
+  // If it's unsafe to send back detailed errors then send back limited error information
+  } else {
+    console.error(err.stack)
+    res.sendStatus(err.statusCode || 500)
+  }
+})
+
+const listener = app.listen(3000, err => {
+  if (err) return console.error(err.stack)
+  console.log('Server listening on port ' + listener.address().port)
+})
+```
+
+# Setting up Controllers
+
+Both controllers and mock controllers are mapped to using the `x-controller` and `x-operation` properties that you define in your Open API document in conjunction with where you told the enforcer middleware to find your controller files.
+
+In the examples above:
+ 
+1. The [Open API document](#adding-extensions-to-your-open-api-document) defines `x-controller: people` and `x-operation: getList`.
+
+2. The [Server](#setting-up-your-server) specifies that `controllerDirectory = '/path/to/controllers'`
+
+So within the controller directory we create our controller file `people.js` (pulled from the Open API document's `x-controller` value). The `people.js` file exports a function on the `getList` property (pulled from the Open API documents `x-operation` value). This function will be called whenever a request is made to `GET /people` (as defined in the Open API document).
+
+**File: `/path/to/controllers/people.js`**
+
+```js
+exports.getList = function (req, res, next) {
+  res.send('OK')
+}
+``` 
+
