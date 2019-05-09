@@ -1,6 +1,6 @@
 ---
 title: Open API Enforcer Middleware
-navOrder: second nested
+navOrder: getting-started api guide
 toc: false
 ---
 

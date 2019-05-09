@@ -36,7 +36,7 @@
     "openapi-enforcer": ">= 1.2.0"
   },
   "devDependencies": {
-    "@gi60s/markdown-docs": "0.0.8",
+    "@gi60s/markdown-docs": "0.0.10",
     "body-parser": "^1.19.0",
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",

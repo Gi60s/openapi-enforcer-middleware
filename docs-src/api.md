@@ -18,9 +18,9 @@ The constructor will create an instance of the Open API enforcer middleware.
 
   - *fallthrough* - When this middleware is run, if `fallthough` is set to `true` then the next middleware will be called, otherwise a `404` response will be sent. Defaults to `true`.
 
-  - *mockHeader* - The name of the header to look for to specify an [explicit mock](./mocking.md#explicit-mocking) request. Defaults to `"x-mock"`.
+  - *mockHeader* - The name of the header to look for to specify an [explicit mock](guide/mocking.md#explicit-mocking) request. Defaults to `"x-mock"`.
 
-  - *mockQuery* - The name of the query parameter to look for to specify an [explicit mock](./mocking.md#explicit-mocking) request. This query parameter does not need to be defined in your Open API document definition. Defaults to `"x-mock"`.
+  - *mockQuery* - The name of the query parameter to look for to specify an [explicit mock](guide/mocking.md#explicit-mocking) request. This query parameter does not need to be defined in your Open API document definition. Defaults to `"x-mock"`.
 
   - *reqMockStatusCodeProperty* - The name of the property to attach the [Open API Enforcer's OpenAPI object](https://github.com/byu-oit/openapi-enforcer/blob/master/docs/components/openapi.md) to on the request object. Defaults to `"openapi"`.
 
@@ -34,7 +34,7 @@ The constructor will create an instance of the Open API enforcer middleware.
 
 ## Controllers
 
-The OpenApiEnforcerMiddleware has its own internal middleware runner. Calling this function will define a [controllers group](./controllers.md) that will handle requests and add it as an internal middleware.
+The OpenApiEnforcerMiddleware has its own internal middleware runner. Calling this function will define a [controllers group](./guide/controllers.md) that will handle requests and add it as an internal middleware.
 
 **Signature**
 
@@ -42,9 +42,9 @@ The OpenApiEnforcerMiddleware has its own internal middleware runner. Calling th
 
 **Parameters**
 
-- *controllers* - The path the the controllers directory or a controllers definition map. See the [controllers documentation](./controllers.md) for more information.
+- *controllers* - The path the the controllers directory or a controllers definition map. See the [controllers documentation](./guide/controllers.md) for more information.
 
-- *dependencyInjection* - You can add any number of parameters after the first parameter and these will be passed in to a controller that uses [dependency injection](./controllers.md#controller-dependency-injection).
+- *dependencyInjection* - You can add any number of parameters after the first parameter and these will be passed in to a controller that uses [dependency injection](./guide/controllers.md#dependency-injection).
 
 **Returns** a `Promise` that resolves if successfully loaded.
 
@@ -70,11 +70,11 @@ The OpenApiEnforcerMiddleware has its own internal middleware runner. Calling th
 
 **Parameters**
 
-- *controllers* - The path the the mock controllers directory or a controllers definition map. See the [controllers documentation](./controllers.md) for more information. This value can be set to `null` or `undefined` if you do not have any mock controller functions to run.
+- *controllers* - The path the the mock controllers directory or a controllers definition map. See the [controllers guide](./guide/controllers.md) for more information. This value can be set to `null` or `undefined` if you do not have any mock controller functions to run.
 
-- *isFallback* - A boolean indicating whether this is [fallback middleware](./mocking.md#fallback-mocking) or if it requires [explicit mock](./mocking.md#explicit-mocking) requests to run.
+- *isFallback* - A boolean indicating whether this is [fallback middleware](guide/mocking.md#fallback-mocking) or if it requires [explicit mock](guide/mocking.md#explicit-mocking) requests to run.
 
-- *dependencyInjection* - You can add any number of parameters after the first parameter and these will be passed in to a controller that uses [dependency injection](./controllers.md#controller-dependency-injection).
+- *dependencyInjection* - You can add any number of parameters after the first parameter and these will be passed in to a controller that uses [dependency injection](./guide/controllers.md#dependency-injection).
 
 **Returns** A Promise that will resolve when the middleware loads correctly.
 
