@@ -75,21 +75,21 @@ function OpenApiEnforcerMiddleware (definition, options) {
   if (typeof general.reqOperationProperty !== 'string') throw Error('Configuration option "reqOperationProperty" must be a string. Received: ' + general.reqOperationProperty)
   if (typeof general.xController !== 'string') throw Error('Configuration option "xController" must be a string. Received: ' + general.xController)
   if (typeof general.xOperation !== 'string') throw Error('Configuration option "xOperation" must be a string. Received: ' + general.xOperation)
-  this.options = general;
+  this.options = general
 
-  let internalOptions = { requestBodyAllowedMethods: options.requestBodyAllowedMethods || null };
+  let internalOptions = { requestBodyAllowedMethods: options.requestBodyAllowedMethods || null }
 
   // update allowOtherQueryParameters to allow the mockQuery parameter
-  if (general.allowOtherQueryParameters === false) general.allowOtherQueryParameters = [];
-  if (Array.isArray(general.allowOtherQueryParameters)) general.allowOtherQueryParameters.push(general.mockQuery);
+  if (general.allowOtherQueryParameters === false) general.allowOtherQueryParameters = []
+  if (Array.isArray(general.allowOtherQueryParameters)) general.allowOtherQueryParameters.push(general.mockQuery)
 
   // wait for the definition to be built
   this.promise = Enforcer(definition, { fullResult: true, internalOptions: internalOptions })
     .then(result => {
-      const [ openapi, exception, warning ] = result;
-      if (exception) throw Error(exception.toString());
-      if (warning) console.warn(warning);
-      return openapi;
+      const [ openapi, exception, warning ] = result
+      if (exception) throw Error(exception.toString())
+      if (warning) console.warn(warning)
+      return openapi
     })
 }
 
