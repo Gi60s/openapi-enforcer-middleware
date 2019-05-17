@@ -30,6 +30,21 @@ const ENFORCER_HEADER = 'x-openapi-enforcer'
 
 module.exports = OpenApiEnforcerMiddleware
 
+/**
+ * Create an OpenApiEnforcerMiddleware.
+ * @param {string, object} definition
+ * @param {object} [options]
+ * @param {array} [options.allowOtherQueryParameters]
+ * @param {string} [options.mockHeader]
+ * @param {string} [options.mockQuery]
+ * @param {string} [options.reqMockProperty]
+ * @param {string} [options.reqOpenApiProperty]
+ * @param {string} [options.reqOperationProperty]
+ * @param {string} [options.xController]
+ * @param {string} [options.xOperation]
+ * @param {object} [options.requestBodyAllowedMethods]
+ * @returns {Promise<OpenApiEnforcer>}
+ */
 function OpenApiEnforcerMiddleware (definition, options) {
   if (!(this instanceof OpenApiEnforcerMiddleware)) return new OpenApiEnforcerMiddleware(definition, options)
 
@@ -62,12 +77,14 @@ function OpenApiEnforcerMiddleware (definition, options) {
   if (typeof general.xOperation !== 'string') throw Error('Configuration option "xOperation" must be a string. Received: ' + general.xOperation)
   this.options = general
 
+  let internalOptions = { requestBodyAllowedMethods: options.requestBodyAllowedMethods || null }
+
   // update allowOtherQueryParameters to allow the mockQuery parameter
   if (general.allowOtherQueryParameters === false) general.allowOtherQueryParameters = []
   if (Array.isArray(general.allowOtherQueryParameters)) general.allowOtherQueryParameters.push(general.mockQuery)
 
   // wait for the definition to be built
-  this.promise = Enforcer(definition, { fullResult: true })
+  this.promise = Enforcer(definition, { fullResult: true, internalOptions: internalOptions })
     .then(result => {
       const [ openapi, exception, warning ] = result
       if (exception) throw Error(exception.toString())
