@@ -16,6 +16,8 @@ The constructor will create an instance of the Open API enforcer middleware.
 
 - *options* - An optional `object` with the following settings:
 
+  - *componentOptions* - These options will passed directly on to the openapi-enforcer's components.
+
   - *fallthrough* - When this middleware is run, if `fallthough` is set to `true` then the next middleware will be called, otherwise a `404` response will be sent. Defaults to `true`.
 
   - *mockHeader* - The name of the header to look for to specify an [explicit mock](guide/mocking.md#explicit-mocking) request. Defaults to `"x-mock"`.

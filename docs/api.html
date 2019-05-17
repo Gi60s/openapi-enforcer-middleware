@@ -74,6 +74,8 @@
 </li>
 <li><p><em>options</em> - An optional <code>object</code> with the following settings:</p>
 <ul>
+<li><p><em>componentOptions</em> - These options will passed directly on to the openapi-enforcer&#39;s components.</p>
+</li>
 <li><p><em>fallthrough</em> - When this middleware is run, if <code>fallthough</code> is set to <code>true</code> then the next middleware will be called, otherwise a <code>404</code> response will be sent. Defaults to <code>true</code>.</p>
 </li>
 <li><p><em>mockHeader</em> - The name of the header to look for to specify an <a href="/openapi-enforcer-middleware/guide/mocking#explicit-mocking">explicit mock</a> request. Defaults to <code>&quot;x-mock&quot;</code>.</p>
