@@ -149,14 +149,16 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
         if (hasBody(req)) requestObj.body = req.body
         const [ request, clientError ] = openapi.request(requestObj, { allowOtherQueryParameters: this.options.allowOtherQueryParameters })
 
-        // 404 renders this middleware useless so exit appropriately
+        // 404 or 405 renders this middleware useless so exit appropriately
         if (clientError && clientError.statusCode === 404) {
           if (options.fallthrough) {
             debug.request('fallthrough')
             next()
           } else {
-            res.sendStatus(404)
+            res.sendStatus(clientError.statusCode)
           }
+        } else if (clientError && clientError.statusCode === 405) {
+          next(errorFromException(clientError))
         } else {
           // overwrite the send
           res.send = function (body) {
@@ -200,8 +202,8 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
 
           const runner = middlewareRunner(options.middleware, true, req, res, next)
           if (clientError) {
-            const [ value ] = openapi.path(requestObj.method, requestObj.path)
-            req[options.reqOperationProperty] = value.operation
+            const [ value, pathError ] = openapi.path(requestObj.method, requestObj.path)
+            req[options.reqOperationProperty] = pathError ? undefined : value.operation
             runner(errorFromException(clientError))
           } else {
             // store operation instance with request
