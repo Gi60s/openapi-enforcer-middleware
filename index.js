@@ -188,7 +188,7 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
 
             Object.keys(response.headers).forEach(header => res.set(header, extractValue(response.headers[header])))
             if (response.hasOwnProperty('body')) {
-              const sendObject = response.schema
+              const sendObject = response.schema && response.schema.type
                 ? ['array', 'object'].indexOf(response.schema.type) !== -1
                 : typeof response.body === 'object'
               res.send(sendObject ? response.body : String(response.body))
