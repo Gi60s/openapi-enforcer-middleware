@@ -24,4 +24,4 @@ npm install openapi-enforcer openapi-enforcer-middleware
 
 ## Documentation
 
-https://github.com/byu-oit/openapi-enforcer-middleware/tree/master/docs
+https://byu-oit.github.io/openapi-enforcer-middleware/
