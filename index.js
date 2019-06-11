@@ -575,7 +575,7 @@ function mapControllers (openapi, isMock, controllersTarget, dependencyInjection
     const pathItem = openapi.paths[pathKey]
     const pathController = pathItem[xController]
 
-    pathItem.methods.forEach(method => {
+    pathItem.methods.map(method => {
       const operation = pathItem && pathItem[method]
       const operationController = operation && operation[xController]
       const controllerName = operationController || pathController || rootController
@@ -586,23 +586,34 @@ function mapControllers (openapi, isMock, controllersTarget, dependencyInjection
 
         // load controller from file path
         if (controllerTargetIsString) {
-          const controllerPath = path.resolve(controllersTarget, controllerName)
+          let controllerPath
           try {
-            if (!loadedControllers[controllerPath]) {
-              let controller = require(controllerPath)
-              if (typeof controller === 'function') controller = controller.apply(controller, dependencyInjection)
-              loadedControllers[controllerPath] = controller
-            }
-            const controller = loadedControllers[controllerPath]
-            if (!controller.hasOwnProperty(operationName)) {
-              child.message('Operation not found: ' + operationName)
-            } else {
-              handler = controller[operationName]
-            }
+            controllerPath = require.resolve(path.resolve(controllersTarget, controllerName))
           } catch (err) {
             if (err.code === 'MODULE_NOT_FOUND') {
-              child.message('Controller file not found')
+              child.message(err.message)
             } else {
+              exceptionPushError(child, err)
+            }
+          }
+
+          // if not already loaded then load now
+          if (controllerPath && !loadedControllers.hasOwnProperty(controllerPath)) {
+            loadedControllers[controllerPath] = null
+            try {
+              let controller = require(controllerPath)
+              if (typeof controller === 'function') controller = controller.apply(controller, dependencyInjection)
+              if (!controller || typeof controller !== 'object') {
+                child.message('Controller file must export a non-null object or a function that when run returns a non-null object')
+              } else {
+                loadedControllers[controllerPath] = controller
+                if (!controller.hasOwnProperty(operationName)) {
+                  child.message('Operation not found: ' + operationName)
+                } else {
+                  handler = controller[operationName]
+                }
+              }
+            } catch (err) {
               exceptionPushError(child, err)
             }
           }

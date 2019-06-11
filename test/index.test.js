@@ -42,7 +42,16 @@ describe('openapi-enforcer-middleware', () => {
       definition.paths['/'].get['x-operation'] = 'dne'
       const enforcer = Enforcer(definition)
       const promise = enforcer.controllers(path.resolve(__dirname, 'resources'))
-      return expect(promise).to.be.rejectedWith(/at: dne\s+Controller file not found/)
+      return expect(promise).to.be.rejectedWith(/at: dne\s+Cannot find module/)
+    })
+
+    it('will produce exception for controller file that failed to be required', () => {
+      const definition = helper.definition.v3()
+      definition['x-controller'] = 'internal-error'
+      definition.paths['/'].get['x-operation'] = 'x'
+      const enforcer = Enforcer(definition)
+      const promise = enforcer.controllers(path.resolve(__dirname, 'resources'))
+      return expect(promise).to.be.rejectedWith(/Cannot find module/)
     })
 
     it('will produce exception for missing operation', () => {
