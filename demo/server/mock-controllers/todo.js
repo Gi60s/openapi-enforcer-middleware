@@ -37,11 +37,11 @@ exports.getTask = function (req, res) {
   // no need to validate the body because
   // the middleware has already validated the request
 
-  const task = findTask(req.params.id)
+  const task = findTask(req.params.task_id)
 
   // the response will be validated and serialized by the middleware
   if (task) {
-    res.send(store[index])
+    res.send(task)
   } else {
     res.sendStatus(404)
   }
