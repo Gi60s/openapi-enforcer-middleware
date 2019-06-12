@@ -575,7 +575,7 @@ function mapControllers (openapi, isMock, controllersTarget, dependencyInjection
     const pathItem = openapi.paths[pathKey]
     const pathController = pathItem[xController]
 
-    pathItem.methods.map(method => {
+    pathItem.methods.forEach(method => {
       const operation = pathItem && pathItem[method]
       const operationController = operation && operation[xController]
       const controllerName = operationController || pathController || rootController
@@ -607,14 +607,18 @@ function mapControllers (openapi, isMock, controllersTarget, dependencyInjection
                 child.message('Controller file must export a non-null object or a function that when run returns a non-null object')
               } else {
                 loadedControllers[controllerPath] = controller
-                if (!controller.hasOwnProperty(operationName)) {
-                  child.message('Operation not found: ' + operationName)
-                } else {
-                  handler = controller[operationName]
-                }
               }
             } catch (err) {
               exceptionPushError(child, err)
+            }
+          }
+
+          if (controllerPath && loadedControllers[controllerPath]) {
+            const controller = loadedControllers[controllerPath]
+            if (!controller.hasOwnProperty(operationName)) {
+              child.message('Operation not found: ' + operationName)
+            } else {
+              handler = controller[operationName]
             }
           }
 
