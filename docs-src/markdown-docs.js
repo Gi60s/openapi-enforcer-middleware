@@ -22,7 +22,7 @@ module.exports = {
     finePrint: '',
     footerLinks: [
       { title: 'Github', href: 'https://byu-oit.github.io/openapi-enforcer-middleware' },
-      { title: 'NPM', href: 'https://www.npmjs.com/package/@byu-oit/openapi-enforcer-middleware' }
+      { title: 'NPM', href: 'https://www.npmjs.com/package/openapi-enforcer-middleware' }
     ]
   }
 }
