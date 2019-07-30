@@ -21,7 +21,7 @@ module.exports = {
     favicon: '/favicon.png',
     finePrint: '',
     footerLinks: [
-      { title: 'Github', href: 'https://byu-oit.github.io/openapi-enforcer-middleware' },
+      { title: 'Github', href: 'https://github.com/byu-oit/openapi-enforcer-middleware' },
       { title: 'NPM', href: 'https://www.npmjs.com/package/openapi-enforcer-middleware' }
     ]
   }
