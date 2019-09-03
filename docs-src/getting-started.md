@@ -1,9 +1,9 @@
 ---
 title: Getting Started
-description: A quick start getting started guide for learning how to use the Open API Enforcer middleware package.
+description: A quick start getting started guide for learning how to use the OpenAPI Enforcer middleware package.
 ---
 
-This guide covers how you can turn your Open API document into a working API.
+This guide covers how you can turn your OpenAPI document into a working API.
 
 # Installing Dependencies
 
@@ -23,9 +23,9 @@ Please read this terminology list carefully so that the rest of this documentati
 
 # Setup
 
-Setting up your server to run an API using your Open API document involves
+Setting up your server to run an API using your OpenAPI document involves
 
-1. Adding extensions to your Open API document
+1. Adding extensions to your OpenAPI document
 
 2. Configuring your server's middleware
 
@@ -35,9 +35,9 @@ The following diagram shows briefly the relationships between these three compon
 
 ![Overview](overview.png)
 
-## Open API Document
+## OpenAPI Document
 
-Any property within your Open API document that starts with a `x-` is known as an extension property. The Open API Enforcer Middleware uses two extensions (`x-controller` and `x-operation`) to link your Open API path operations to your NodeJS code.
+Any property within your OpenAPI document that starts with a `x-` is known as an extension property. The OpenAPI Enforcer Middleware uses two extensions (`x-controller` and `x-operation`) to link your OpenAPI path operations to your NodeJS code.
 
 For now know that:
 
@@ -45,9 +45,9 @@ For now know that:
 
 - `x-operation` will map to the function name within your controllers.
 
-This example shows just one path in your Open API document with these properties defined. Note that it is possible to define an `x-controller` at path and root levels and you can read more about that in the [controllers guide](./guide/controllers.md).
+This example shows just one path in your OpenAPI document with these properties defined. Note that it is possible to define an `x-controller` at path and root levels and you can read more about that in the [controllers guide](./guide/controllers.md).
 
-1. Save your Open API document into your project directory.
+1. Save your OpenAPI document into your project directory.
 
 2. Add `x-controller` and `x-operation` properties to each path operation.
 
@@ -75,7 +75,7 @@ The following example sets up the manual mock interface, controller interface, a
 
 1. Copy the example to your directory.
 
-2. Update the `pathToOpenApiDoc` reference to point to your Open API document's location.
+2. Update the `pathToOpenApiDoc` reference to point to your OpenAPI document's location.
 
 3. Start the server.
 
@@ -138,15 +138,15 @@ const listener = app.listen(3000, err => {
 
 ## Controllers
 
-Both controllers and mock controllers are mapped to using the `x-controller` and `x-operation` properties that you define in your Open API document in conjunction with where you told the enforcer middleware to find your controller files.
+Both controllers and mock controllers are mapped to using the `x-controller` and `x-operation` properties that you define in your OpenAPI document in conjunction with where you told the enforcer middleware to find your controller files.
 
 In the examples above:
  
-1. The [Open API document](#open-api-document) defines `x-controller: people` and `x-operation: getList`.
+1. The [OpenAPI document](#openapi-document) defines `x-controller: people` and `x-operation: getList`.
 
 2. The [Server](#server) specifies that `controllerDirectory = '/path/to/controllers'`
 
-So within the controller directory we create our controller file `people.js` (pulled from the Open API document's `x-controller` value). The `people.js` file exports a function on the `getList` property (pulled from the Open API documents `x-operation` value). This function will be called whenever a request is made to `GET /people` (as defined in the Open API document).
+So within the controller directory we create our controller file `people.js` (pulled from the OpenAPI document's `x-controller` value). The `people.js` file exports a function on the `getList` property (pulled from the OpenAPI documents `x-operation` value). This function will be called whenever a request is made to `GET /people` (as defined in the OpenAPI document).
 
 **File: `/path/to/controllers/people.js`**
 

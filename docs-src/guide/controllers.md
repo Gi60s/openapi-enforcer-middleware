@@ -1,12 +1,12 @@
 ---
 title: Controllers
 subtitle: Guide
-description: A guide to setting up a controller files for the Open API Enforcer Middleware.
+description: A guide to setting up a controller files for the OpenAPI Enforcer Middleware.
 ---
 
 # Defining Controllers
 
-A controller is an object whose properties are functions. These functions will be called by the Open API Enforcer Middleware according to the `x-controller` and `x-operation` attributes you [specify in your Open API document](openapi-document.md). When these functions are called, they will receive the request, response, and next function as parameters.
+A controller is an object whose properties are functions. These functions will be called by the OpenAPI Enforcer Middleware according to the `x-controller` and `x-operation` attributes you [specify in your OpenAPI document](openapi-document.md). When these functions are called, they will receive the request, response, and next function as parameters.
 
 You can define your controller objects one of two ways:
  
@@ -16,7 +16,7 @@ You can define your controller objects one of two ways:
 
 ## Controller via an Object
 
-Define the object, naming the properties the same as those listed as the `x-operation` properties in your [Open API document](openapi-document.md).
+Define the object, naming the properties the same as those listed as the `x-operation` properties in your [OpenAPI document](openapi-document.md).
 
 ```js
 const myController = {
@@ -66,7 +66,7 @@ Dependency injection is when you pass dependencies (database connections, data, 
 
 For example, if you have a controller that requires a connection to the database to operate, you may want to pass that dependency in. This improves the testability of your code.
 
-Accomplishing dependency injection with the Open API Enforcer middleware is a two step process:
+Accomplishing dependency injection with the OpenAPI Enforcer middleware is a two step process:
 
 1. Define a controller via a function and add parameters to the function signature:
 
@@ -84,7 +84,7 @@ Accomplishing dependency injection with the Open API Enforcer middleware is a tw
     }
     ```
     
-2. When telling the Open API Enforcer Middleware where to find the controller, also specify the parameters to pass in:
+2. When telling the OpenAPI Enforcer Middleware where to find the controller, also specify the parameters to pass in:
 
     ```js
     const EnforcerMiddleware = require('openapi-enforcer-middleware')
@@ -105,7 +105,7 @@ Accomplishing dependency injection with the Open API Enforcer middleware is a tw
 
 # Referencing Controllers
 
-You know [how to define a controller](#defining-controllers). Here we cover how you can set up the Open API Enforcer middleware can call it.
+You know [how to define a controller](#defining-controllers). Here we cover how you can set up the OpenAPI Enforcer middleware can call it.
 
 ## Controllers in Files
 
@@ -115,9 +115,9 @@ Placing each unique controller in its own file is the recommended method. It sim
 
 1. Choose a directory where you'll put your controller files.
 
-2. Create files with the same names as the `x-controller` property in your [Open API document](openapi-document.md).
+2. Create files with the same names as the `x-controller` property in your [OpenAPI document](openapi-document.md).
 
-    For example, you will need a file named `people.js` if you have an Open API document with an `x-controller` set to `people`
+    For example, you will need a file named `people.js` if you have an OpenAPI document with an `x-controller` set to `people`
     
     ```yml
     paths:
@@ -141,9 +141,9 @@ Placing each unique controller in its own file is the recommended method. It sim
 
 ## Inline Controllers
 
-Inline controllers are defined as an object whose properties are the `x-controller` names and its values are a controller object. Below is a section of an Open API document and a section of how you would set up your server to use inline controllers.
+Inline controllers are defined as an object whose properties are the `x-controller` names and its values are a controller object. Below is a section of an OpenAPI document and a section of how you would set up your server to use inline controllers.
 
-**Open API Document**
+**OpenAPI Document**
 
 ```yml
 paths:

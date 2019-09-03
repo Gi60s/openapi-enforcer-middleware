@@ -1,10 +1,10 @@
 ---
 title: Server Setup
 subtitle: Guide
-description: The Open API Enforcer Middleware allows you to configure your server how you choose. This document provides some best practices.
+description: The OpenAPI Enforcer Middleware allows you to configure your server how you choose. This document provides some best practices.
 ---
 
-The Open API Enforcer Middleware allows you to configure your server how you choose. This document provides a best practice example that you can modify to meet your needs.
+The OpenAPI Enforcer Middleware allows you to configure your server how you choose. This document provides a best practice example that you can modify to meet your needs.
 
 ## Example
 
@@ -74,7 +74,7 @@ const app = express()
 app.use(express.json())
 ```
 
-The Open API Enforcer Middleware does not parse the body, so you will need to parse it yourself.
+The OpenAPI Enforcer Middleware does not parse the body, so you will need to parse it yourself.
 
 Recommended body parsers for common mime types:
 
@@ -84,7 +84,7 @@ Recommended body parsers for common mime types:
 
 - `multipart/form-data` is optimal for sending files can can use [openapi-enforcer-multer](https://www.npmjs.com/package/openapi-enforcer-multer)
 
-### Open API Document Parsing
+### OpenAPI Document Parsing
 
 ```js
 // Create an enforcer middleware instance
@@ -92,7 +92,7 @@ const enforcer = Enforcer(pathToOpenApiDoc)
 enforcer.promise.catch(console.error)
 ```
 
-Tell the Open API Enforcer Middleware where to find your Open API document. It will parse and validate it. Also, it is important to validate that no errors occurred during parsing, and that can be caught using the `enforcer.promse` property.
+Tell the OpenAPI Enforcer Middleware where to find your OpenAPI document. It will parse and validate it. Also, it is important to validate that no errors occurred during parsing, and that can be caught using the `enforcer.promse` property.
 
 ### Handling Explicit Mock Requests
 

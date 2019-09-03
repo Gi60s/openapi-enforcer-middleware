@@ -1,10 +1,10 @@
 ---
 title: Guide
-description: Learn how the Open API specification documentation and the Open API Enforcer Middleware work together to make creating honest API's easy.
+description: Learn how the OpenAPI specification documentation and the OpenAPI Enforcer Middleware work together to make creating honest API's easy.
 navOrder: server openapi-document controllers advanced
 ---
 
-This guide walks you through convert your Open API document into a working API that implements request and response validation, serialization, and deserialization.
+This guide walks you through convert your OpenAPI document into a working API that implements request and response validation, serialization, and deserialization.
 
 # High Level Overview
 
@@ -20,7 +20,7 @@ const Enforcer = require('openapi-enforcer-middleware')
 
 const app = express()
 
-// path to the open api document file
+// path to the OpenAPI document file
 const enforcer = Enforcer('/opt/webroot/openapi.yml')
 
 // path to directory holding controller files
@@ -31,7 +31,7 @@ app.use(enforcer.middleware())
 app.listen(3000)
 ```
 
-## Open API Document
+## OpenAPI Document
 
 **File path:** `/opt/webroot/openapi.yml`
 
@@ -72,6 +72,6 @@ The above is a very high level overview, now you can learn in depth about each o
 
 - [Server Setup](server.md)
 
-- [Open API Document](openapi-document.md)
+- [OpenAPI Document](openapi-document.md)
 
 - [Controllers](controllers.md)

@@ -7,8 +7,8 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Open API Enforcer Middleware | Getting Started</title>
-  <meta name="description" content="A quick start getting started guide for learning how to use the Open API Enforcer middleware package.">
+  <title>OpenAPI Enforcer Middleware | Getting Started</title>
+  <meta name="description" content="A quick start getting started guide for learning how to use the OpenAPI Enforcer middleware package.">
 
   <link rel="icon" href="/openapi-enforcer-middleware/favicon.png">
 
@@ -25,7 +25,7 @@
   <header class="site-header">
     <div class="wrapper">
       <a class="site-title" href="/openapi-enforcer-middleware">
-        Open API Enforcer Middleware
+        OpenAPI Enforcer Middleware
       </a>
 
       
@@ -47,7 +47,7 @@
 
     
     <div class="nav-screen"></div>
-    <nav class="nav-list"><ul><li><a href="/openapi-enforcer-middleware">Open API Enforcer Middleware</a></li><li><a href="/openapi-enforcer-middleware/getting-started" class="current-page">Getting Started</a></li><li><a href="/openapi-enforcer-middleware/api">API</a></li><li><a href="/openapi-enforcer-middleware/guide">Guide</a><ul><li><a href="/openapi-enforcer-middleware/guide/server">Server Setup</a></li><li><a href="/openapi-enforcer-middleware/guide/openapi-document">Open API Document</a></li><li><a href="/openapi-enforcer-middleware/guide/controllers">Controllers</a></li><li><a href="/openapi-enforcer-middleware/guide/mocking">Mocking</a></li></ul></li></ul></li></nav>
+    <nav class="nav-list"><ul><li><a href="/openapi-enforcer-middleware">OpenAPI Enforcer Middleware</a></li><li><a href="/openapi-enforcer-middleware/getting-started" class="current-page">Getting Started</a></li><li><a href="/openapi-enforcer-middleware/api">API</a></li><li><a href="/openapi-enforcer-middleware/guide">Guide</a><ul><li><a href="/openapi-enforcer-middleware/guide/server">Server Setup</a></li><li><a href="/openapi-enforcer-middleware/guide/openapi-document">OpenAPI Document</a></li><li><a href="/openapi-enforcer-middleware/guide/controllers">Controllers</a></li><li><a href="/openapi-enforcer-middleware/guide/mocking">Mocking</a></li></ul></li></ul></li></nav>
     
 
     <div class="page-content-main">
@@ -60,11 +60,11 @@
         
         <div>
           <p><strong>Page Content</strong></p>
-          <div class="section-nav"><ul class="toc"><li><a href="#installing-dependencies">Installing Dependencies</a></li><li><a href="#terminology">Terminology</a></li><li><a href="#setup">Setup</a><ul><li><a href="#open-api-document">Open API Document</a></li><li><a href="#server">Server</a></li><li><a href="#controllers">Controllers</a></li></ul></li></ul></div>
+          <div class="section-nav"><ul class="toc"><li><a href="#installing-dependencies">Installing Dependencies</a></li><li><a href="#terminology">Terminology</a></li><li><a href="#setup">Setup</a><ul><li><a href="#openapi-document">OpenAPI Document</a></li><li><a href="#server">Server</a></li><li><a href="#controllers">Controllers</a></li></ul></li></ul></div>
         </div>
         
 
-        <div class="post-content"><p>This guide covers how you can turn your Open API document into a working API.</p>
+        <div class="post-content"><p>This guide covers how you can turn your OpenAPI document into a working API.</p>
 <h1 id="installing-dependencies">Installing Dependencies</h1>
 <p>You need to install this package and the peer dependency <code>openapi-enforcer</code> for this to work.</p>
 <pre><code class="language-bash">npm install openapi-enforcer openapi-enforcer-middleware</code></pre>
@@ -77,9 +77,9 @@
 </li>
 </ul>
 <h1 id="setup">Setup</h1>
-<p>Setting up your server to run an API using your Open API document involves</p>
+<p>Setting up your server to run an API using your OpenAPI document involves</p>
 <ol>
-<li><p>Adding extensions to your Open API document</p>
+<li><p>Adding extensions to your OpenAPI document</p>
 </li>
 <li><p>Configuring your server&#39;s middleware</p>
 </li>
@@ -88,8 +88,8 @@
 </ol>
 <p>The following diagram shows briefly the relationships between these three components and details follow in subsequent sections.</p>
 <p><img src="/openapi-enforcer-middleware/overview.png" alt="Overview"></p>
-<h2 id="open-api-document">Open API Document</h2>
-<p>Any property within your Open API document that starts with a <code>x-</code> is known as an extension property. The Open API Enforcer Middleware uses two extensions (<code>x-controller</code> and <code>x-operation</code>) to link your Open API path operations to your NodeJS code.</p>
+<h2 id="openapi-document">OpenAPI Document</h2>
+<p>Any property within your OpenAPI document that starts with a <code>x-</code> is known as an extension property. The OpenAPI Enforcer Middleware uses two extensions (<code>x-controller</code> and <code>x-operation</code>) to link your OpenAPI path operations to your NodeJS code.</p>
 <p>For now know that:</p>
 <ul>
 <li><p><code>x-controller</code> will map to file names inside of your controller or mock controller directories.</p>
@@ -97,9 +97,9 @@
 <li><p><code>x-operation</code> will map to the function name within your controllers.</p>
 </li>
 </ul>
-<p>This example shows just one path in your Open API document with these properties defined. Note that it is possible to define an <code>x-controller</code> at path and root levels and you can read more about that in the <a href="/openapi-enforcer-middleware/guide/controllers">controllers guide</a>.</p>
+<p>This example shows just one path in your OpenAPI document with these properties defined. Note that it is possible to define an <code>x-controller</code> at path and root levels and you can read more about that in the <a href="/openapi-enforcer-middleware/guide/controllers">controllers guide</a>.</p>
 <ol>
-<li><p>Save your Open API document into your project directory.</p>
+<li><p>Save your OpenAPI document into your project directory.</p>
 </li>
 <li><p>Add <code>x-controller</code> and <code>x-operation</code> properties to each path operation.</p>
 </li>
@@ -123,7 +123,7 @@
 <ol>
 <li><p>Copy the example to your directory.</p>
 </li>
-<li><p>Update the <code>pathToOpenApiDoc</code> reference to point to your Open API document&#39;s location.</p>
+<li><p>Update the <code>pathToOpenApiDoc</code> reference to point to your OpenAPI document&#39;s location.</p>
 </li>
 <li><p>Start the server.</p>
 </li>
@@ -183,15 +183,15 @@ app.use(<span class="hljs-function">(<span class="hljs-params">err, req, res, ne
   <span class="hljs-built_in">console</span>.log(<span class="hljs-string">'Server listening on port '</span> + listener.address().port)
 })</code></pre>
 <h2 id="controllers">Controllers</h2>
-<p>Both controllers and mock controllers are mapped to using the <code>x-controller</code> and <code>x-operation</code> properties that you define in your Open API document in conjunction with where you told the enforcer middleware to find your controller files.</p>
+<p>Both controllers and mock controllers are mapped to using the <code>x-controller</code> and <code>x-operation</code> properties that you define in your OpenAPI document in conjunction with where you told the enforcer middleware to find your controller files.</p>
 <p>In the examples above:</p>
 <ol>
-<li><p>The <a href="/openapi-enforcer-middleware/getting-started#open-api-document">Open API document</a> defines <code>x-controller: people</code> and <code>x-operation: getList</code>.</p>
+<li><p>The <a href="/openapi-enforcer-middleware/getting-started#openapi-document">OpenAPI document</a> defines <code>x-controller: people</code> and <code>x-operation: getList</code>.</p>
 </li>
 <li><p>The <a href="/openapi-enforcer-middleware/getting-started#server">Server</a> specifies that <code>controllerDirectory = &#39;/path/to/controllers&#39;</code></p>
 </li>
 </ol>
-<p>So within the controller directory we create our controller file <code>people.js</code> (pulled from the Open API document&#39;s <code>x-controller</code> value). The <code>people.js</code> file exports a function on the <code>getList</code> property (pulled from the Open API documents <code>x-operation</code> value). This function will be called whenever a request is made to <code>GET /people</code> (as defined in the Open API document).</p>
+<p>So within the controller directory we create our controller file <code>people.js</code> (pulled from the OpenAPI document&#39;s <code>x-controller</code> value). The <code>people.js</code> file exports a function on the <code>getList</code> property (pulled from the OpenAPI documents <code>x-operation</code> value). This function will be called whenever a request is made to <code>GET /people</code> (as defined in the OpenAPI document).</p>
 <p><strong>File: <code>/path/to/controllers/people.js</code></strong></p>
 <pre><code class="language-js">exports.getList = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">req, res, next</span>) </span>{
   res.send(<span class="hljs-string">'OK'</span>)

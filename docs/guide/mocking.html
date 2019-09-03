@@ -7,7 +7,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Open API Enforcer Middleware | Mocking</title>
+  <title>OpenAPI Enforcer Middleware | Mocking</title>
   <meta name="description" content="This guide covers the different ways that API mocking can be produced as well as how it can be invoked.">
 
   <link rel="icon" href="/openapi-enforcer-middleware/favicon.png">
@@ -25,7 +25,7 @@
   <header class="site-header">
     <div class="wrapper">
       <a class="site-title" href="/openapi-enforcer-middleware">
-        Open API Enforcer Middleware
+        OpenAPI Enforcer Middleware
       </a>
 
       
@@ -47,7 +47,7 @@
 
     
     <div class="nav-screen"></div>
-    <nav class="nav-list"><ul><li><a href="/openapi-enforcer-middleware">Open API Enforcer Middleware</a></li><li><a href="/openapi-enforcer-middleware/getting-started">Getting Started</a></li><li><a href="/openapi-enforcer-middleware/api">API</a></li><li><a href="/openapi-enforcer-middleware/guide">Guide</a><ul><li><a href="/openapi-enforcer-middleware/guide/server">Server Setup</a></li><li><a href="/openapi-enforcer-middleware/guide/openapi-document">Open API Document</a></li><li><a href="/openapi-enforcer-middleware/guide/controllers">Controllers</a></li><li><a href="/openapi-enforcer-middleware/guide/mocking" class="current-page">Mocking</a></li></ul></li></ul></li></nav>
+    <nav class="nav-list"><ul><li><a href="/openapi-enforcer-middleware">OpenAPI Enforcer Middleware</a></li><li><a href="/openapi-enforcer-middleware/getting-started">Getting Started</a></li><li><a href="/openapi-enforcer-middleware/api">API</a></li><li><a href="/openapi-enforcer-middleware/guide">Guide</a><ul><li><a href="/openapi-enforcer-middleware/guide/server">Server Setup</a></li><li><a href="/openapi-enforcer-middleware/guide/openapi-document">OpenAPI Document</a></li><li><a href="/openapi-enforcer-middleware/guide/controllers">Controllers</a></li><li><a href="/openapi-enforcer-middleware/guide/mocking" class="current-page">Mocking</a></li></ul></li></ul></li></nav>
     
 
     <div class="page-content-main">
@@ -117,13 +117,13 @@ app.listen(<span class="hljs-number">3000</span>)</code></pre>
 <ul>
 <li><p><code>x-mock</code> - A value with an empty string, indicating that the default mock response should be returned.</p>
 </li>
-<li><p><code>x-mock=200</code> - Indicates that the 200 response code mock response should be returned. Any status code here is valid so long as it was defined in the Open API document as a valid response for that operation.</p>
+<li><p><code>x-mock=200</code> - Indicates that the 200 response code mock response should be returned. Any status code here is valid so long as it was defined in the OpenAPI document as a valid response for that operation.</p>
 </li>
 <li><p><code>x-mock=200,controller</code> - Indicates that the 200 response code should be used and that the mock controller should produce it. This will only work if a mock controller is defined for this operation.</p>
 </li>
 <li><p><code>x-mock=200,example</code> - Indicates that the 200 response code example should be used to produce the response for this operation.</p>
 </li>
-<li><p><code>x-mock=200,example,cat</code> - Indicates that the 200 response code example named <code>cat</code> should be used to produce the response for this operation. This only works for Open API specification 3.</p>
+<li><p><code>x-mock=200,example,cat</code> - Indicates that the 200 response code example named <code>cat</code> should be used to produce the response for this operation. This only works for OpenAPI specification 3.</p>
 </li>
 <li><p><code>x-mock=200,random</code> - Indicates that the 200 response code schema should be used to generate a random value that adheres to the schema.</p>
 </li>

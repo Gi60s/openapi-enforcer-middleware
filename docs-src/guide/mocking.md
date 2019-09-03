@@ -62,13 +62,13 @@ The default mock query parameter or mock header parameter is set to `x-mock` but
 
 - `x-mock` - A value with an empty string, indicating that the default mock response should be returned.
 
-- `x-mock=200` - Indicates that the 200 response code mock response should be returned. Any status code here is valid so long as it was defined in the Open API document as a valid response for that operation.
+- `x-mock=200` - Indicates that the 200 response code mock response should be returned. Any status code here is valid so long as it was defined in the OpenAPI document as a valid response for that operation.
 
 - `x-mock=200,controller` - Indicates that the 200 response code should be used and that the mock controller should produce it. This will only work if a mock controller is defined for this operation.
 
 - `x-mock=200,example` - Indicates that the 200 response code example should be used to produce the response for this operation.
 
-- `x-mock=200,example,cat` - Indicates that the 200 response code example named `cat` should be used to produce the response for this operation. This only works for Open API specification 3.
+- `x-mock=200,example,cat` - Indicates that the 200 response code example named `cat` should be used to produce the response for this operation. This only works for OpenAPI specification 3.
 
 - `x-mock=200,random` - Indicates that the 200 response code schema should be used to generate a random value that adheres to the schema.
 

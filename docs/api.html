@@ -7,7 +7,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Open API Enforcer Middleware | API</title>
+  <title>OpenAPI Enforcer Middleware | API</title>
   
 
   <link rel="icon" href="/openapi-enforcer-middleware/favicon.png">
@@ -25,7 +25,7 @@
   <header class="site-header">
     <div class="wrapper">
       <a class="site-title" href="/openapi-enforcer-middleware">
-        Open API Enforcer Middleware
+        OpenAPI Enforcer Middleware
       </a>
 
       
@@ -47,7 +47,7 @@
 
     
     <div class="nav-screen"></div>
-    <nav class="nav-list"><ul><li><a href="/openapi-enforcer-middleware">Open API Enforcer Middleware</a></li><li><a href="/openapi-enforcer-middleware/getting-started">Getting Started</a></li><li><a href="/openapi-enforcer-middleware/api" class="current-page">API</a></li><li><a href="/openapi-enforcer-middleware/guide">Guide</a><ul><li><a href="/openapi-enforcer-middleware/guide/server">Server Setup</a></li><li><a href="/openapi-enforcer-middleware/guide/openapi-document">Open API Document</a></li><li><a href="/openapi-enforcer-middleware/guide/controllers">Controllers</a></li><li><a href="/openapi-enforcer-middleware/guide/mocking">Mocking</a></li></ul></li></ul></li></nav>
+    <nav class="nav-list"><ul><li><a href="/openapi-enforcer-middleware">OpenAPI Enforcer Middleware</a></li><li><a href="/openapi-enforcer-middleware/getting-started">Getting Started</a></li><li><a href="/openapi-enforcer-middleware/api" class="current-page">API</a></li><li><a href="/openapi-enforcer-middleware/guide">Guide</a><ul><li><a href="/openapi-enforcer-middleware/guide/server">Server Setup</a></li><li><a href="/openapi-enforcer-middleware/guide/openapi-document">OpenAPI Document</a></li><li><a href="/openapi-enforcer-middleware/guide/controllers">Controllers</a></li><li><a href="/openapi-enforcer-middleware/guide/mocking">Mocking</a></li></ul></li></ul></li></nav>
     
 
     <div class="page-content-main">
@@ -65,12 +65,12 @@
         
 
         <div class="post-content"><h2 id="openapienforcermiddleware">OpenApiEnforcerMiddleware</h2>
-<p>The constructor will create an instance of the Open API enforcer middleware.</p>
+<p>The constructor will create an instance of the OpenAPI enforcer middleware.</p>
 <p><strong>Signature</strong> </p>
 <p><code>OpenApiEnforcerMiddleware (definition: string [, options: object ])</code></p>
 <p><strong>Parameters</strong></p>
 <ul>
-<li><p><em>definition</em> - A <code>string</code> indicating the path the the Open API document definition or an <code>object</code> that is the Open API definition. If a <code>string</code> is specified then the document will be loaded and will resolve all <code>$ref</code> properties.</p>
+<li><p><em>definition</em> - A <code>string</code> indicating the path the the OpenAPI document definition or an <code>object</code> that is the Open API definition. If a <code>string</code> is specified then the document will be loaded and will resolve all <code>$ref</code> properties.</p>
 </li>
 <li><p><em>options</em> - An optional <code>object</code> with the following settings:</p>
 <ul>
@@ -80,20 +80,20 @@
 </li>
 <li><p><em>mockHeader</em> - The name of the header to look for to specify an <a href="/openapi-enforcer-middleware/guide/mocking#explicit-mocking">explicit mock</a> request. Defaults to <code>&quot;x-mock&quot;</code>.</p>
 </li>
-<li><p><em>mockQuery</em> - The name of the query parameter to look for to specify an <a href="/openapi-enforcer-middleware/guide/mocking#explicit-mocking">explicit mock</a> request. This query parameter does not need to be defined in your Open API document definition. Defaults to <code>&quot;x-mock&quot;</code>.</p>
+<li><p><em>mockQuery</em> - The name of the query parameter to look for to specify an <a href="/openapi-enforcer-middleware/guide/mocking#explicit-mocking">explicit mock</a> request. This query parameter does not need to be defined in your OpenAPI document definition. Defaults to <code>&quot;x-mock&quot;</code>.</p>
 </li>
-<li><p><em>reqMockStatusCodeProperty</em> - The name of the property to attach the <a href="https://github.com/byu-oit/openapi-enforcer/blob/master/docs/components/openapi.md">Open API Enforcer&#39;s OpenAPI object</a> to on the request object. Defaults to <code>&quot;openapi&quot;</code>.</p>
+<li><p><em>reqMockStatusCodeProperty</em> - The name of the property to attach the <a href="https://github.com/byu-oit/openapi-enforcer/blob/master/docs/components/openapi.md">OpenAPI Enforcer&#39;s OpenAPI object</a> to on the request object. Defaults to <code>&quot;openapi&quot;</code>.</p>
 </li>
-<li><p><em>reqOperationProperty</em> - The name of the property to attach the <a href="https://github.com/byu-oit/openapi-enforcer/blob/master/docs/components/operation.md">Open API Enforcer&#39;s Operation object</a> to on the request object. Defaults to <code>&quot;operation&quot;</code>.</p>
+<li><p><em>reqOperationProperty</em> - The name of the property to attach the <a href="https://github.com/byu-oit/openapi-enforcer/blob/master/docs/components/operation.md">OpenAPI Enforcer&#39;s Operation object</a> to on the request object. Defaults to <code>&quot;operation&quot;</code>.</p>
 </li>
-<li><p><em>xController</em> - The name of the property to look for in your Open API document to define the name of the controller associated with an operation. Defaults to <code>&quot;x-controller&quot;</code>.</p>
+<li><p><em>xController</em> - The name of the property to look for in your OpenAPI document to define the name of the controller associated with an operation. Defaults to <code>&quot;x-controller&quot;</code>.</p>
 </li>
-<li><p><em>xOperation</em> - The name of the property to look for in your Open API document to define the name of the operation within the controller that is associated with the operation. Defaults to <code>&quot;x-operation&quot;</code>.</p>
-</li>
-</ul>
+<li><p><em>xOperation</em> - The name of the property to look for in your OpenAPI document to define the name of the operation within the controller that is associated with the operation. Defaults to <code>&quot;x-operation&quot;</code>.</p>
 </li>
 </ul>
-<p><strong>Returns</strong> an Open API Enforer Middleware instance</p>
+</li>
+</ul>
+<p><strong>Returns</strong> an OpenAPI Enforcer Middleware instance</p>
 <h2 id="controllers">Controllers</h2>
 <p>The OpenApiEnforcerMiddleware has its own internal middleware runner. Calling this function will define a <a href="/openapi-enforcer-middleware/guide/controllers">controllers group</a> that will handle requests and add it as an internal middleware.</p>
 <p><strong>Signature</strong></p>
@@ -132,7 +132,7 @@
 <p><code>OpenAPIEnforcerMiddleware.prototype.use (middleware: Function): undefined</code></p>
 <p><strong>Parameters</strong></p>
 <ul>
-<li><em>middleware</em> - The express middleware function to add to the internal enforcer&#39;s middleware. Any responses sent from within these middlewares will be validated against the Open API document definition prior to sending.</li>
+<li><em>middleware</em> - The express middleware function to add to the internal enforcer&#39;s middleware. Any responses sent from within these middlewares will be validated against the OpenAPI document definition prior to sending.</li>
 </ul>
 <p><strong>Returns</strong> nothing.</p>
 </div>

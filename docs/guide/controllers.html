@@ -7,8 +7,8 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Open API Enforcer Middleware | Controllers</title>
-  <meta name="description" content="A guide to setting up a controller files for the Open API Enforcer Middleware.">
+  <title>OpenAPI Enforcer Middleware | Controllers</title>
+  <meta name="description" content="A guide to setting up a controller files for the OpenAPI Enforcer Middleware.">
 
   <link rel="icon" href="/openapi-enforcer-middleware/favicon.png">
 
@@ -25,7 +25,7 @@
   <header class="site-header">
     <div class="wrapper">
       <a class="site-title" href="/openapi-enforcer-middleware">
-        Open API Enforcer Middleware
+        OpenAPI Enforcer Middleware
       </a>
 
       
@@ -47,7 +47,7 @@
 
     
     <div class="nav-screen"></div>
-    <nav class="nav-list"><ul><li><a href="/openapi-enforcer-middleware">Open API Enforcer Middleware</a></li><li><a href="/openapi-enforcer-middleware/getting-started">Getting Started</a></li><li><a href="/openapi-enforcer-middleware/api">API</a></li><li><a href="/openapi-enforcer-middleware/guide">Guide</a><ul><li><a href="/openapi-enforcer-middleware/guide/server">Server Setup</a></li><li><a href="/openapi-enforcer-middleware/guide/openapi-document">Open API Document</a></li><li><a href="/openapi-enforcer-middleware/guide/controllers" class="current-page">Controllers</a></li><li><a href="/openapi-enforcer-middleware/guide/mocking">Mocking</a></li></ul></li></ul></li></nav>
+    <nav class="nav-list"><ul><li><a href="/openapi-enforcer-middleware">OpenAPI Enforcer Middleware</a></li><li><a href="/openapi-enforcer-middleware/getting-started">Getting Started</a></li><li><a href="/openapi-enforcer-middleware/api">API</a></li><li><a href="/openapi-enforcer-middleware/guide">Guide</a><ul><li><a href="/openapi-enforcer-middleware/guide/server">Server Setup</a></li><li><a href="/openapi-enforcer-middleware/guide/openapi-document">OpenAPI Document</a></li><li><a href="/openapi-enforcer-middleware/guide/controllers" class="current-page">Controllers</a></li><li><a href="/openapi-enforcer-middleware/guide/mocking">Mocking</a></li></ul></li></ul></li></nav>
     
 
     <div class="page-content-main">
@@ -65,7 +65,7 @@
         
 
         <div class="post-content"><h1 id="defining-controllers">Defining Controllers</h1>
-<p>A controller is an object whose properties are functions. These functions will be called by the Open API Enforcer Middleware according to the <code>x-controller</code> and <code>x-operation</code> attributes you <a href="/openapi-enforcer-middleware/guide/openapi-document">specify in your Open API document</a>. When these functions are called, they will receive the request, response, and next function as parameters.</p>
+<p>A controller is an object whose properties are functions. These functions will be called by the OpenAPI Enforcer Middleware according to the <code>x-controller</code> and <code>x-operation</code> attributes you <a href="/openapi-enforcer-middleware/guide/openapi-document">specify in your OpenAPI document</a>. When these functions are called, they will receive the request, response, and next function as parameters.</p>
 <p>You can define your controller objects one of two ways:</p>
 <ol>
 <li><p>As an <code>object</code>.</p>
@@ -74,7 +74,7 @@
 </li>
 </ol>
 <h2 id="controller-via-an-object">Controller via an Object</h2>
-<p>Define the object, naming the properties the same as those listed as the <code>x-operation</code> properties in your <a href="/openapi-enforcer-middleware/guide/openapi-document">Open API document</a>.</p>
+<p>Define the object, naming the properties the same as those listed as the <code>x-operation</code> properties in your <a href="/openapi-enforcer-middleware/guide/openapi-document">OpenAPI document</a>.</p>
 <pre><code class="language-js"><span class="hljs-keyword">const</span> myController = {
   <span class="hljs-attr">addPerson</span>: <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">req, res, next</span>) </span>{
     <span class="hljs-keyword">await</span> savePersonToDatabase(req.body)
@@ -112,7 +112,7 @@
 <h2 id="dependency-injection">Dependency Injection</h2>
 <p>Dependency injection is when you pass dependencies (database connections, data, functionality, etc.) into a function so that it can use the dependencies to accomplish its task.</p>
 <p>For example, if you have a controller that requires a connection to the database to operate, you may want to pass that dependency in. This improves the testability of your code.</p>
-<p>Accomplishing dependency injection with the Open API Enforcer middleware is a two step process:</p>
+<p>Accomplishing dependency injection with the OpenAPI Enforcer middleware is a two step process:</p>
 <ol>
 <li><p>Define a controller via a function and add parameters to the function signature:</p>
 <pre><code class="language-js"> <span class="hljs-keyword">const</span> myController = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">databaseConnection, someData</span>) </span>{
@@ -127,7 +127,7 @@
    <span class="hljs-keyword">return</span> controller
  }</code></pre>
 </li>
-<li><p>When telling the Open API Enforcer Middleware where to find the controller, also specify the parameters to pass in:</p>
+<li><p>When telling the OpenAPI Enforcer Middleware where to find the controller, also specify the parameters to pass in:</p>
 <pre><code class="language-js"> <span class="hljs-keyword">const</span> EnforcerMiddleware = <span class="hljs-built_in">require</span>(<span class="hljs-string">'openapi-enforcer-middleware'</span>)
  <span class="hljs-keyword">const</span> express = <span class="hljs-built_in">require</span>(<span class="hljs-string">'express'</span>)
 
@@ -145,15 +145,15 @@
 </li>
 </ol>
 <h1 id="referencing-controllers">Referencing Controllers</h1>
-<p>You know <a href="/openapi-enforcer-middleware/guide/controllers#defining-controllers">how to define a controller</a>. Here we cover how you can set up the Open API Enforcer middleware can call it.</p>
+<p>You know <a href="/openapi-enforcer-middleware/guide/controllers#defining-controllers">how to define a controller</a>. Here we cover how you can set up the OpenAPI Enforcer middleware can call it.</p>
 <h2 id="controllers-in-files">Controllers in Files</h2>
 <p>Placing each unique controller in its own file is the recommended method. It simplifies code and makes it easily testable.</p>
 <p><img src="/openapi-enforcer-middleware/overview.png" alt="Overview"></p>
 <ol>
 <li><p>Choose a directory where you&#39;ll put your controller files.</p>
 </li>
-<li><p>Create files with the same names as the <code>x-controller</code> property in your <a href="/openapi-enforcer-middleware/guide/openapi-document">Open API document</a>.</p>
-<p> For example, you will need a file named <code>people.js</code> if you have an Open API document with an <code>x-controller</code> set to <code>people</code></p>
+<li><p>Create files with the same names as the <code>x-controller</code> property in your <a href="/openapi-enforcer-middleware/guide/openapi-document">OpenAPI document</a>.</p>
+<p> For example, you will need a file named <code>people.js</code> if you have an OpenAPI document with an <code>x-controller</code> set to <code>people</code></p>
 <pre><code class="language-yml"><span class="hljs-attr"> paths:</span>
    <span class="hljs-string">/people:</span>
 <span class="hljs-attr">     get:</span>
@@ -170,8 +170,8 @@
 </li>
 </ol>
 <h2 id="inline-controllers">Inline Controllers</h2>
-<p>Inline controllers are defined as an object whose properties are the <code>x-controller</code> names and its values are a controller object. Below is a section of an Open API document and a section of how you would set up your server to use inline controllers.</p>
-<p><strong>Open API Document</strong></p>
+<p>Inline controllers are defined as an object whose properties are the <code>x-controller</code> names and its values are a controller object. Below is a section of an OpenAPI document and a section of how you would set up your server to use inline controllers.</p>
+<p><strong>OpenAPI Document</strong></p>
 <pre><code class="language-yml"><span class="hljs-attr">paths:</span>
   <span class="hljs-string">/people/{id}:</span>
 <span class="hljs-attr">    get:</span>

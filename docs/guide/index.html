@@ -7,8 +7,8 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Open API Enforcer Middleware | Guide</title>
-  <meta name="description" content="Learn how the Open API specification documentation and the Open API Enforcer Middleware work together to make creating honest API&#39;s easy.">
+  <title>OpenAPI Enforcer Middleware | Guide</title>
+  <meta name="description" content="Learn how the OpenAPI specification documentation and the OpenAPI Enforcer Middleware work together to make creating honest API&#39;s easy.">
 
   <link rel="icon" href="/openapi-enforcer-middleware/favicon.png">
 
@@ -25,7 +25,7 @@
   <header class="site-header">
     <div class="wrapper">
       <a class="site-title" href="/openapi-enforcer-middleware">
-        Open API Enforcer Middleware
+        OpenAPI Enforcer Middleware
       </a>
 
       
@@ -47,7 +47,7 @@
 
     
     <div class="nav-screen"></div>
-    <nav class="nav-list"><ul><li><a href="/openapi-enforcer-middleware">Open API Enforcer Middleware</a></li><li><a href="/openapi-enforcer-middleware/getting-started">Getting Started</a></li><li><a href="/openapi-enforcer-middleware/api">API</a></li><li><a href="/openapi-enforcer-middleware/guide" class="current-page">Guide</a><ul><li><a href="/openapi-enforcer-middleware/guide/server">Server Setup</a></li><li><a href="/openapi-enforcer-middleware/guide/openapi-document">Open API Document</a></li><li><a href="/openapi-enforcer-middleware/guide/controllers">Controllers</a></li><li><a href="/openapi-enforcer-middleware/guide/mocking">Mocking</a></li></ul></li></ul></li></nav>
+    <nav class="nav-list"><ul><li><a href="/openapi-enforcer-middleware">OpenAPI Enforcer Middleware</a></li><li><a href="/openapi-enforcer-middleware/getting-started">Getting Started</a></li><li><a href="/openapi-enforcer-middleware/api">API</a></li><li><a href="/openapi-enforcer-middleware/guide" class="current-page">Guide</a><ul><li><a href="/openapi-enforcer-middleware/guide/server">Server Setup</a></li><li><a href="/openapi-enforcer-middleware/guide/openapi-document">OpenAPI Document</a></li><li><a href="/openapi-enforcer-middleware/guide/controllers">Controllers</a></li><li><a href="/openapi-enforcer-middleware/guide/mocking">Mocking</a></li></ul></li></ul></li></nav>
     
 
     <div class="page-content-main">
@@ -60,11 +60,11 @@
         
         <div>
           <p><strong>Page Content</strong></p>
-          <div class="section-nav"><ul class="toc"><li><a href="#high-level-overview">High Level Overview</a><ul><li><a href="#server-setup">Server Setup</a></li><li><a href="#open-api-document">Open API Document</a></li><li><a href="#controller-setup">Controller Setup</a></li></ul></li><li><a href="#keep-learning">Keep Learning</a></li></ul></div>
+          <div class="section-nav"><ul class="toc"><li><a href="#high-level-overview">High Level Overview</a><ul><li><a href="#server-setup">Server Setup</a></li><li><a href="#openapi-document">OpenAPI Document</a></li><li><a href="#controller-setup">Controller Setup</a></li></ul></li><li><a href="#keep-learning">Keep Learning</a></li></ul></div>
         </div>
         
 
-        <div class="post-content"><p>This guide walks you through convert your Open API document into a working API that implements request and response validation, serialization, and deserialization.</p>
+        <div class="post-content"><p>This guide walks you through convert your OpenAPI document into a working API that implements request and response validation, serialization, and deserialization.</p>
 <h1 id="high-level-overview">High Level Overview</h1>
 <h2 id="server-setup">Server Setup</h2>
 <p><strong>File path:</strong> <code>/opt/webroot/server.js</code></p>
@@ -74,7 +74,7 @@
 
 <span class="hljs-keyword">const</span> app = express()
 
-<span class="hljs-comment">// path to the open api document file</span>
+<span class="hljs-comment">// path to the OpenAPI document file</span>
 <span class="hljs-keyword">const</span> enforcer = Enforcer(<span class="hljs-string">'/opt/webroot/openapi.yml'</span>)
 
 <span class="hljs-comment">// path to directory holding controller files</span>
@@ -83,7 +83,7 @@ enforcer.controllers(<span class="hljs-string">'/opt/webroot/controllers'</span>
 app.use(enforcer.middleware())
 
 app.listen(<span class="hljs-number">3000</span>)</code></pre>
-<h2 id="open-api-document">Open API Document</h2>
+<h2 id="openapi-document">OpenAPI Document</h2>
 <p><strong>File path:</strong> <code>/opt/webroot/openapi.yml</code></p>
 <p>Notice that extension properties <code>x-controller</code> and <code>x-operation</code> that together tell the server that an API request to <code>GET /people</code> should execute the <code>getList</code> function in the <code>people.js</code> file. The server finds the <code>people.js</code> file at <code>/opt/webroot/controllers</code> as defined in the <code>server.js</code> file.</p>
 <pre><code class="language-yml"><span class="hljs-attr">openapi:</span> <span class="hljs-string">'3.0.0'</span>
@@ -111,7 +111,7 @@ app.listen(<span class="hljs-number">3000</span>)</code></pre>
 <ul>
 <li><p><a href="/openapi-enforcer-middleware/guide/server">Server Setup</a></p>
 </li>
-<li><p><a href="/openapi-enforcer-middleware/guide/openapi-document">Open API Document</a></p>
+<li><p><a href="/openapi-enforcer-middleware/guide/openapi-document">OpenAPI Document</a></p>
 </li>
 <li><p><a href="/openapi-enforcer-middleware/guide/controllers">Controllers</a></p>
 </li>

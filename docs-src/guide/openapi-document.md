@@ -1,10 +1,10 @@
 ---
-title: Open API Document
+title: OpenAPI Document
 subtitle: Guide
-description: This guide covers how to use Open API extensions to link your Open API document to your code.
+description: This guide covers how to use OpenAPI extensions to link your OpenAPI document to your code.
 ---
 
-Take the following Open API document:
+Take the following OpenAPI document:
 
 ```yml
 openapi: '3.0.0'

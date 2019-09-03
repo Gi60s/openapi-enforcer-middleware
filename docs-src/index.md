@@ -1,10 +1,10 @@
 ---
-title: Open API Enforcer Middleware
+title: OpenAPI Enforcer Middleware
 navOrder: getting-started api guide
 toc: false
 ---
 
-An express middleware that makes it easy to write web services that follow an [Open API specification](https://swagger.io/docs/specification/about/) by leveraging the tools provided in the [openapi-enforcer](https://www.npmjs.com/package/openapi-enforcer) package.
+An express middleware that makes it easy to write web services that follow an [OpenAPI specification](https://swagger.io/docs/specification/about/) by leveraging the tools provided in the [openapi-enforcer](https://www.npmjs.com/package/openapi-enforcer) package.
 
 ## Features
 
