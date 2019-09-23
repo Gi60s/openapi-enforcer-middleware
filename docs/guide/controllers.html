@@ -75,7 +75,7 @@
 </ol>
 <h2 id="controller-via-an-object">Controller via an Object</h2>
 <p>Define the object, naming the properties the same as those listed as the <code>x-operation</code> properties in your <a href="/openapi-enforcer-middleware/guide/openapi-document">OpenAPI document</a>.</p>
-<pre><code class="language-js"><span class="hljs-keyword">const</span> myController = {
+<pre><code class="language-js"><span class="hljs-built_in">module</span>.exports = {
   <span class="hljs-attr">addPerson</span>: <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">req, res, next</span>) </span>{
     <span class="hljs-keyword">await</span> savePersonToDatabase(req.body)
     res.sendStatus(<span class="hljs-number">201</span>)
@@ -92,7 +92,7 @@
 }</code></pre>
 <h2 id="controller-via-a-function">Controller via a Function</h2>
 <p>When creating a controller via a function, the function must return an object that looks like a controller object. The advantage of this method is that it allows for <a href="/openapi-enforcer-middleware/guide/controllers#dependency-injection">dependency injection</a>.</p>
-<pre><code class="language-js"><span class="hljs-keyword">const</span> myController = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+<pre><code class="language-js"><span class="hljs-built_in">module</span>.exports = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
   <span class="hljs-keyword">return</span> {
     <span class="hljs-attr">addPerson</span>: <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">req, res, next</span>) </span>{
       <span class="hljs-keyword">await</span> savePersonToDatabase(req.body)
@@ -115,7 +115,7 @@
 <p>Accomplishing dependency injection with the OpenAPI Enforcer middleware is a two step process:</p>
 <ol>
 <li><p>Define a controller via a function and add parameters to the function signature:</p>
-<pre><code class="language-js"> <span class="hljs-keyword">const</span> myController = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">databaseConnection, someData</span>) </span>{
+<pre><code class="language-js"> <span class="hljs-built_in">module</span>.exports = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">databaseConnection, someData</span>) </span>{
    <span class="hljs-keyword">const</span> controller = {}
 
    controller.addPerson = <span class="hljs-keyword">async</span> <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">req, res, next</span>) </span>{

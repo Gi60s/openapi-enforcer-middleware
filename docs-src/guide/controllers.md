@@ -19,7 +19,7 @@ You can define your controller objects one of two ways:
 Define the object, naming the properties the same as those listed as the `x-operation` properties in your [OpenAPI document](openapi-document.md).
 
 ```js
-const myController = {
+module.exports = {
   addPerson: async function (req, res, next) {
     await savePersonToDatabase(req.body)
     res.sendStatus(201)
@@ -41,7 +41,7 @@ const myController = {
 When creating a controller via a function, the function must return an object that looks like a controller object. The advantage of this method is that it allows for [dependency injection](#dependency-injection).
 
 ```js
-const myController = function () {
+module.exports = function () {
   return {
     addPerson: async function (req, res, next) {
       await savePersonToDatabase(req.body)
@@ -71,7 +71,7 @@ Accomplishing dependency injection with the OpenAPI Enforcer middleware is a two
 1. Define a controller via a function and add parameters to the function signature:
 
     ```js
-    const myController = function (databaseConnection, someData) {
+    module.exports = function (databaseConnection, someData) {
       const controller = {}
     
       controller.addPerson = async function (req, res, next) {
