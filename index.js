@@ -36,6 +36,7 @@ module.exports = OpenApiEnforcerMiddleware
  * @param {object} [options]
  * @param {array} [options.allowOtherQueryParameters]
  * @param {object} [options.componentOptions]
+ * @param {boolean} [options.fallthrough=true]
  * @param {string} [options.mockHeader]
  * @param {string} [options.mockQuery]
  * @param {string} [options.reqMockProperty]
@@ -43,7 +44,6 @@ module.exports = OpenApiEnforcerMiddleware
  * @param {string} [options.reqOperationProperty]
  * @param {string} [options.xController]
  * @param {string} [options.xOperation]
- * @returns {Promise<OpenApiEnforcer>}
  */
 function OpenApiEnforcerMiddleware (definition, options) {
   if (!(this instanceof OpenApiEnforcerMiddleware)) return new OpenApiEnforcerMiddleware(definition, options)
