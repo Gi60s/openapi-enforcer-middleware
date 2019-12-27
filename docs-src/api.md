@@ -27,6 +27,10 @@ The constructor will create an instance of the OpenAPI enforcer middleware.
   - *reqMockStatusCodeProperty* - The name of the property to attach the [OpenAPI Enforcer's OpenAPI object](https://github.com/byu-oit/openapi-enforcer/blob/master/docs/components/openapi.md) to on the request object. Defaults to `"openapi"`.
 
   - *reqOperationProperty* - The name of the property to attach the [OpenAPI Enforcer's Operation object](https://github.com/byu-oit/openapi-enforcer/blob/master/docs/components/operation.md) to on the request object. Defaults to `"operation"`.
+  
+  - *resSerialize* - A boolean indicating whether to serialize responses. If you disable this response serialization you may need to serialize your own responses, depending on what data you are sending back to the client. Defaults to `true`.
+  
+  - *resValidate* - A boolean indicating whether to validate responses. Responses that are invalid might not serialize. Defaults to `true`.
 
   - *xController* - The name of the property to look for in your OpenAPI document to define the name of the controller associated with an operation. Defaults to `"x-controller"`.
 

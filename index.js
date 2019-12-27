@@ -42,6 +42,8 @@ module.exports = OpenApiEnforcerMiddleware
  * @param {string} [options.reqMockProperty]
  * @param {string} [options.reqOpenApiProperty]
  * @param {string} [options.reqOperationProperty]
+ * @param {boolean} [options.resSerialize=true]
+ * @param {boolean} [options.resValidate=true]
  * @param {string} [options.xController]
  * @param {string} [options.xOperation]
  */
@@ -62,6 +64,8 @@ function OpenApiEnforcerMiddleware (definition, options) {
     reqMockProperty: options.reqMockProperty || 'mock',
     reqOpenApiProperty: options.reqOpenApiProperty || 'openapi',
     reqOperationProperty: options.reqOperationProperty || 'operation',
+    resSerialize: options.hasOwnProperty('resSerialize') ? !!options.resSerialize : true,
+    resValidate: options.hasOwnProperty('resValidate') ? !!options.resValidate : true,
     xController: options.xController || 'x-controller',
     xOperation: options.xOperation || 'x-operation'
   }
@@ -180,7 +184,11 @@ OpenApiEnforcerMiddleware.prototype.middleware = function () {
               }
             }
 
-            const [ response, exception ] = operation.response(code, body, Object.assign({}, headers))
+            const bodyValue = openapi.enforcerData.context.Schema.Value(body, {
+              serialize: options.resSerialize,
+              validate: options.resValidate
+            })
+            const [ response, exception ] = operation.response(code, bodyValue, Object.assign({}, headers))
             if (exception) {
               res.status(500)
               return next(errorFromException(exception))

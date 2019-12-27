@@ -32,6 +32,8 @@ declare namespace OpenApiEnforcerMiddleware {
         reqMockProperty?: string;
         reqOpenApiProperty?: string;
         reqOperationProperty?: string;
+        resSerialize?: boolean;
+        resValidate?: boolean;
         xController?: string;
         xOperation?: string;
     }

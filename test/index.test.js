@@ -541,6 +541,37 @@ describe('openapi-enforcer-middleware', () => {
       expect(res.statusCode).to.equal(200)
       expect(res.body).to.equal(JSON.stringify({ a: 1 }))
     })
+
+    it('can handle object response for body when no schema', async () => {
+      const definition = helper.definition.v2()
+      const get = {
+        'x-controller': 'controller',
+        'x-operation': 'operation',
+        responses: {
+          200: {
+            description: '',
+            schema: {
+              type: 'object',
+              additionalProperties: { type: 'number' }
+            }
+          }
+        }
+      }
+      definition.paths['/'] = { get }
+
+      const enforcer = Enforcer(definition, { resSerialize: false, resValidate: false })
+      enforcer.controllers({
+        controller: {
+          operation (req, res) {
+            res.send({ a: 'hello' })
+          }
+        }
+      })
+
+      const { res } = await helper.request(enforcer, { uri: '/' })
+      expect(res.statusCode).to.equal(200)
+      expect(res.body).to.equal(JSON.stringify({ a: 'hello' }))
+    })
   })
 
   describe('run manual mocks', () => {
