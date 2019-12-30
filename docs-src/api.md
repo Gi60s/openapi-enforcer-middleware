@@ -24,9 +24,9 @@ The constructor will create an instance of the OpenAPI enforcer middleware.
 
   - *mockQuery* - The name of the query parameter to look for to specify an [explicit mock](guide/mocking.md#explicit-mocking) request. This query parameter does not need to be defined in your OpenAPI document definition. Defaults to `"x-mock"`.
 
-  - *reqMockStatusCodeProperty* - The name of the property to attach the [OpenAPI Enforcer's OpenAPI object](https://github.com/byu-oit/openapi-enforcer/blob/master/docs/components/openapi.md) to on the request object. Defaults to `"openapi"`.
+  - *reqMockStatusCodeProperty* - The name of the property to attach the [OpenAPI Enforcer's OpenAPI object](https://byu-oit.github.io/openapi-enforcer/api/components/operation) to on the request object. Defaults to `"openapi"`.
 
-  - *reqOperationProperty* - The name of the property to attach the [OpenAPI Enforcer's Operation object](https://github.com/byu-oit/openapi-enforcer/blob/master/docs/components/operation.md) to on the request object. Defaults to `"operation"`.
+  - *reqOperationProperty* - The name of the property to attach the [OpenAPI Enforcer's Operation object](https://byu-oit.github.io/openapi-enforcer/api/components/operation) to on the request object. Defaults to `"operation"`.
   
   - *resSerialize* - A boolean indicating whether to serialize responses. If you disable this response serialization you may need to serialize your own responses, depending on what data you are sending back to the client. Defaults to `true`.
   
