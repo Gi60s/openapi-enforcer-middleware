@@ -110,7 +110,10 @@ OpenApiEnforcerMiddleware.prototype.controllers = function (controllersTarget, .
         if (controller) {
           res.set(ENFORCER_HEADER, 'controller')
           debug.controllers('executing controller')
-          controller(req, res, next)
+          // return controller result for async error handling in express 5 and router 2.x
+          // https://github.com/expressjs/express/releases/tag/5.0.0-alpha.7
+          // https://github.com/pillarjs/router/tree/2.0#middleware
+          return controller(req, res, next)
         } else {
           next()
         }

@@ -239,6 +239,40 @@ describe('openapi-enforcer-middleware', () => {
       expect(handledError).to.equal(true)
     })
 
+    it('thrown async middleware errors are passed to external error middleware', async () => {
+      let handledError = false
+      const definition = helper.definition.v3()
+      definition['x-controller'] = 'hasError'
+      definition.paths['/'].get['x-operation'] = 'hasError'
+      definition.paths['/'].get.responses.default = { description: '' }
+      const enforcer = Enforcer(definition)
+      enforcer.controllers({
+        hasError: {
+          hasError (req, res) {
+            const err = Error('Unexpected async error')
+            err.code = 'NOT_REALLY_UNEXPECTED'
+            return Promise.reject(err);
+          }
+        }
+      })
+
+      const { app, request, start, stop } = helper.server()
+      app.use(enforcer.middleware())
+      app.use((err, req, res, next) => {
+        if (err.code === 'NOT_REALLY_UNEXPECTED') handledError = true
+        res.sendStatus(500)
+      })
+
+      await start()
+      try {
+        await request(enforcer, { resolveWithFullResponse: true, simple: false })
+      } catch (err) {
+        console.error(err)
+      }
+      await stop()
+      expect(handledError).to.equal(true)
+    })
+
     it('will produce 404 for path not found', async () => {
       const definition = helper.definition.v3()
       const enforcer = Enforcer(definition)
