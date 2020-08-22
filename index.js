@@ -15,40 +15,50 @@
  *    limitations under the License.
  **/
 'use strict'
-const Debug = require('debug')
+const debug = require('debug')('openapi-enforcer-middleware')
 const Enforcer = require('openapi-enforcer')
+const express = require('express')
 const path = require('path')
 
-const debug = {
-  controllers: Debug('openapi-enforcer-middleware:controllers'),
-  mock: Debug('openapi-enforcer-middleware:mock'),
-  request: Debug('openapi-enforcer-middleware:request'),
-  response: Debug('openapi-enforcer-middleware:response')
-}
 const enforcerVersion = require(path.resolve(path.dirname(require.resolve('openapi-enforcer')), 'package.json')).version
 const ENFORCER_HEADER = 'x-openapi-enforcer'
+const mapFilePaths = []
+const mapObjects = new WeakMap()
 
 module.exports = OpenApiEnforcerMiddleware
+
+// overwrite express dispatch that is called at the end of route chains to restore original
+// property values on the request and response objects
+const dispatch = express.Route.prototype.dispatch
+express.Route.prototype.dispatch = function (req, res, done) {
+  console.log('dispatch')
+  const enforcerMiddleware = req._openapiEnforcerMiddleware
+  if (enforcerMiddleware) {
+    const key = enforcerMiddleware.reqProperty
+    if (key in req && req[key].operation) {
+      const data = req[key]
+      req[key] = { openapi: data.openapi }
+      res.send = enforcerMiddleware.send
+    }
+  }
+  dispatch.call(this, req, res, done)
+}
 
 /**
  * Create an OpenApiEnforcerMiddleware.
  * @param {string, object} definition
  * @param {object} [options]
- * @param {array} [options.allowOtherQueryParameters]
- * @param {object} [options.componentOptions]
- * @param {boolean} [options.fallthrough=true]
- * @param {string} [options.mockHeader]
- * @param {string} [options.mockQuery]
- * @param {string} [options.reqMockProperty]
- * @param {string} [options.reqOpenApiProperty]
- * @param {string} [options.reqOperationProperty]
- * @param {boolean} [options.resSerialize=true]
- * @param {boolean} [options.resValidate=true]
- * @param {string} [options.xController]
- * @param {string} [options.xOperation]
+ * @param {boolean} [options.allowClientErrors] If the client made in invalid request it can still be handled by the user's code.
+ * @param {array|boolean} [options.allowOtherQueryParameters] Specify what other query parameters are allowed beyond what the openapi document specifies for an operation.
+ * @param {object} [options.basePath='/'] The base path to remove from the original url to match paths to the openapi document's paths
+ * @param {object} [options.componentOptions] Component options to pass to the openapi enforcer instance.
+ * @param {string} [options.mockHeader='x-mock'] The header to look for for manual mocking. Set to falsy to disable manual mocking via header.
+ * @param {string} [options.mockQuery='x-mock'] The query parameter to look for for manual mocking. Set to falsy to disable manual mocking via query parameter.
+ * @param {string} [options.reqProperty='enforcer'] The property to place deserialized and validated request data, as well as enforcer components.
+ * @param {boolean} [options.resSerialize=true] Set to true to serialize responses automatically.
+ * @param {boolean} [options.resValidate=true] Set to true to validate responses automatically.
  */
 function OpenApiEnforcerMiddleware (definition, options) {
-  if (!(this instanceof OpenApiEnforcerMiddleware)) return new OpenApiEnforcerMiddleware(definition, options)
 
   // validate and normalize options
   if (options !== undefined && (!options || typeof options !== 'object')) throw Error('Invalid option specified. Expected an object. Received: ' + options)
@@ -56,30 +66,22 @@ function OpenApiEnforcerMiddleware (definition, options) {
 
   // get general settings
   const general = {
+    allowClientErrors: options.hasOwnProperty('allowClientErrors') ? !!options.allowClientErrors : false,
     allowOtherQueryParameters: options.allowOtherQueryParameters || [],
-    fallthrough: options.hasOwnProperty('fallthrough') ? options.fallthrough : true,
-    middleware: [],
-    mockHeader: options.mockHeader || 'x-mock',
-    mockQuery: options.mockQuery || 'x-mock',
-    reqMockProperty: options.reqMockProperty || 'mock',
-    reqOpenApiProperty: options.reqOpenApiProperty || 'openapi',
-    reqOperationProperty: options.reqOperationProperty || 'operation',
+    basePath: options.basePath || '',
+    mockHeader: options.mockHeader || 'x-mock', // set to falsy to disable manual mocks via header
+    mockQuery: options.mockQuery || 'x-mock', // set to falsy to disable manual mocks via query parameter
+    reqProperty: options.reqProperty || 'enforcer',
     resSerialize: options.hasOwnProperty('resSerialize') ? !!options.resSerialize : true,
     resValidate: options.hasOwnProperty('resValidate') ? !!options.resValidate : true,
-    xController: options.xController || 'x-controller',
-    xOperation: options.xOperation || 'x-operation'
+    sendClientError: options.hasOwnProperty('sendClientError') ? !!options.sendClientError : true
   }
 
   // validate general settings and store them
   if (typeof general.allowOtherQueryParameters !== 'boolean' && !isArrayOf(general.allowOtherQueryParameters, 'string')) throw Error('Configuration option "allowOtherQueryParameters" must be a boolean or an array of strings. Received: ' + general.allowOtherQueryParameters)
-  if (typeof general.mockHeader !== 'string') throw Error('Configuration option "mockHeader" must be a string. Received: ' + general.mockHeader)
-  if (typeof general.mockQuery !== 'string') throw Error('Configuration option "mockQuery" must be a string. Received: ' + general.mockQuery)
-  if (typeof general.reqMockProperty !== 'string') throw Error('Configuration option "reqMockProperty" must be a string. Received: ' + general.reqMockProperty)
-  if (typeof general.reqOpenApiProperty !== 'string') throw Error('Configuration option "reqOpenApiProperty" must be a string. Received: ' + general.reqOpenApiProperty)
-  if (typeof general.reqOperationProperty !== 'string') throw Error('Configuration option "reqOperationProperty" must be a string. Received: ' + general.reqOperationProperty)
-  if (typeof general.xController !== 'string') throw Error('Configuration option "xController" must be a string. Received: ' + general.xController)
-  if (typeof general.xOperation !== 'string') throw Error('Configuration option "xOperation" must be a string. Received: ' + general.xOperation)
-  this.options = general
+  if (typeof general.mockHeader !== 'string' && general.mockHeader) throw Error('Configuration option "mockHeader" must be a string or a falsy value. Received: ' + general.mockHeader)
+  if (typeof general.mockQuery !== 'string' && general.mockQuery) throw Error('Configuration option "mockQuery" must be a string or a falsy value. Received: ' + general.mockQuery)
+  if (typeof general.reqProperty !== 'string' || !general.reqProperty) throw Error('Configuration option "reqProperty" must be a non-empty string. Received: ' + general.reqOpenApiProperty)
 
   const componentOptions = options.hasOwnProperty('componentOptions') ? options.componentOptions : {}
   if (!componentOptions || typeof componentOptions !== 'object') throw Error('Configuration option "componentOptions" must be a non-null object. Received: ' + componentOptions)
@@ -88,14 +90,120 @@ function OpenApiEnforcerMiddleware (definition, options) {
   if (general.allowOtherQueryParameters === false) general.allowOtherQueryParameters = []
   if (Array.isArray(general.allowOtherQueryParameters)) general.allowOtherQueryParameters.push(general.mockQuery)
 
-  // wait for the definition to be built
-  this.promise = Enforcer(definition, { fullResult: true, componentOptions })
+  const promise = Enforcer(definition, { fullResult: true, componentOptions })
     .then(result => {
       const [ openapi, exception, warning ] = result
       if (exception) throw Error(exception.toString())
       if (warning) console.warn(warning)
       return openapi
     })
+
+  return function (req, res, next) {
+    promise
+      .then(openapi => {
+        // store openapi instance with request object
+        const reqKey = general.reqProperty
+        req[reqKey] = {
+          [openapi.swagger ? 'swagger' : 'openapi']: openapi
+        }
+
+        // use static property to store internal data
+        req._openapiEnforcerMiddleware = {
+          reqProperty: general.reqOpenApiProperty
+        }
+
+        // if base path doesn't match then call next
+        const basePath = (openapi.basePath || general.basePath).replace(/\/$/, '')
+        if (basePath && req.originalUrl.indexOf(basePath) !== 0) {
+          debug.request('base path does not match: ' + basePath + ' vs ' + req.originalUrl)
+          return general.fallthrough ? next() : next('route')
+        }
+
+        // convert express request into OpenAPI Enforcer request
+        const relativePath = ('/' + req.originalUrl.substring(req.baseUrl.length)).replace(/^\/{2}/, '/')
+        const reqHasBody = hasBody(req)
+        const requestObj = {
+          headers: req.headers,
+          method: req.method,
+          path: relativePath // takes in and processes query parameters here
+        }
+        if (reqHasBody) requestObj.body = req.body
+        const [ request, error ] = openapi.request(requestObj, { allowOtherQueryParameters: general.allowOtherQueryParameters })
+
+        // probably a client error
+        if (error) {
+          if (error.statusCode === 404 || error.statusCode === 405) {
+            general.fallthrough ? next() : next('route')
+          } else if (!error.statusCode || (error.statusCode >= 400 && error.statusCode < 500)) {
+            if (general.sendClientError) {
+              res.status(error.statusCode || 400)
+              res.set('content-type', 'text/plain')
+              res.send(error.toString())
+            } else {
+              next(errorFromException(error))
+            }
+          } else {
+            next(errorFromException(error))
+          }
+
+        // request match found
+        } else {
+          const { body, cookie, headers, operation, path, query, response } = request
+
+          // make deserialized request values accessible along with openapi, operation, and a response function
+          if (reqHasBody) req[reqKey].body = body
+          req[reqKey].cookies = cookie
+          req[reqKey].headers = headers
+          req[reqKey].operation = operation
+          req[reqKey].params = path
+          req[reqKey].query = query
+
+          req._openapiEnforcerMiddleware.response = response
+          req._openapiEnforcerMiddleware.send = res.send
+
+          res.send = function (body) {
+            res.send = req._openapiEnforcerMiddleware.send
+
+            const code = res.statusCode || 200
+            const headers = res.getHeaders()
+            const v2 = openapi.hasOwnProperty('swagger')
+
+            // if content type is not specified for openapi version >= 3 then derive it
+            if (!headers['content-type'] && !v2) {
+              const [ types ] = operation.getResponseContentTypeMatches(code, req.headers.accept || '*/*')
+              if (types) {
+                const type = types[0]
+                res.set('content-type', type)
+                headers['content-type'] = type
+              }
+            }
+
+            const bodyValue = openapi.enforcerData.context.Schema.Value(body, {
+              serialize: options.resSerialize,
+              validate: options.resValidate
+            })
+            const [ response, exception ] = operation.response(code, bodyValue, Object.assign({}, headers))
+            if (exception) {
+              res.status(500)
+              return next(errorFromException(exception))
+            }
+
+            Object.keys(response.headers).forEach(header => res.set(header, extractValue(response.headers[header])))
+            if (response.hasOwnProperty('body')) {
+              const sendObject = response.schema && response.schema.type
+                ? ['array', 'object'].indexOf(response.schema.type) !== -1
+                : typeof response.body === 'object'
+              res.send(sendObject ? response.body : String(response.body))
+            } else {
+              res.send()
+            }
+          }
+
+          next()
+        }
+      })
+      .catch(next)
+  }
 }
 
 OpenApiEnforcerMiddleware.prototype.controllers = function (controllersTarget, ...dependencyInjection) {
@@ -454,6 +562,35 @@ OpenApiEnforcerMiddleware.prototype.mocks = function (controllersTarget, automat
     if (exception) throw errorFromException(exception)
     return controllers
   })
+}
+
+/**
+ * Create a path specific middleware.
+ * @param {object} options
+ * @param {string} options.operation The x-operation or operationId value to match
+ * @param {string} [options.controller] The x-controller option to filter on if more than one x-operation has the same value.
+ */
+OpenApiEnforcerMiddleware.prototype.path = function (options) {
+  const xControllerKey = this.options.xController
+  const xOperationKey = this.options.xOperation
+
+  if (!options || typeof options !== 'object') throw Error('Missing require options object.')
+  if (!options.operation) throw Error('Required property "operation" must be a non-empty string')
+
+  const promise = this.promise
+    .then(openapi => {
+      const rootController = openapi && openapi[xControllerKey]
+
+      const pathKeys = Object.keys(openapi.paths)
+      const pathsCount = pathKeys.length
+      for (let i = 0; i < pathsCount; i++) {
+
+      }
+    })
+
+  return function (req, res, next) {
+
+  }
 }
 
 OpenApiEnforcerMiddleware.prototype.use = function (middleware) {

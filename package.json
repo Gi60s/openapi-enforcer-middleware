@@ -31,9 +31,12 @@
   },
   "homepage": "https://github.com/byu-oit/openapi-enforcer-middleware#readme",
   "dependencies": {
+    "@types/express": "^4.17.7",
+    "@types/node": "^14.0.27",
     "debug": "^3.2.6"
   },
   "peerDependencies": {
+    "express": ">= 4.0.0",
     "openapi-enforcer": ">= 1.2.0"
   },
   "devDependencies": {
