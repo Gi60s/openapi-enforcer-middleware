@@ -62,3 +62,35 @@ app.listen(3000, (err) => {
   console.log('Listening on port 3000')
 })
 ```
+
+**Mock with Sessions**
+
+The store makes it easy to store data related to a specific client who is making requests, simplifying more realisitic mocks.
+
+The default store uses cookies and local memory.
+
+```js
+// ...
+
+app.get('/', async (req, res) => {
+  // mock request
+  if (req.enforcer.mockMode) {
+    const data = await req.enforcer.mockStore.getData(req, res)
+    const list = data.list || []
+    res.send(list)
+  } else {
+    // code here for non-mock
+  }
+})
+
+app.post('/', async (req, res) => {
+  // mock request
+  if (req.enforcer.mockMode) {
+    const body = req.body
+    await req.enforcer.mockStore.setData(req, res, body)
+    res.sendStatus(201)
+  } else {
+    // code here for non-mock
+  }
+})
+```
