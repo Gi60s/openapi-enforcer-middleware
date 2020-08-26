@@ -3,11 +3,12 @@ import Enforcer from 'openapi-enforcer'
 import Express from 'express'
 import * as I from './interfaces'
 import { handleRequestError, normalizeOptions, optionValidators, reqHasBody, sender } from "./util2"
-import {getMockMode, mockHandler} from "./mock";
+import { getMockMode, mockHandler } from "./mock";
+import cookieStore from "./cookie-store";
 
-const { validatorBoolean, validatorNonEmptyString, validatorQueryParams } = optionValidators
+const { validatorBoolean, validatorString, validatorNonEmptyString, validatorQueryParams } = optionValidators
 
-export function routeEnforcer (enforcerPromise: Promise<Enforcer>, options?: I.MiddlewareOptions): I.Middleware {
+export function init (enforcerPromise: Promise<Enforcer>, options?: I.MiddlewareOptions): I.Middleware {
     const opts: I.MiddlewareOptions = normalizeOptions(options, {
         defaults: {
             allowOtherQueryParameters: false,
@@ -17,9 +18,9 @@ export function routeEnforcer (enforcerPromise: Promise<Enforcer>, options?: I.M
             handleMethodNotAllowed: true,
             mockHeader: 'x-mock',
             mockQuery: 'x-mock',
-            resSerialize: true,
-            resValidate: true,
+            mockStore: cookieStore(),
             xController: 'x-controller',
+            xMockIdentity: 'x-mock-identity',
             xOperation: 'x-operation'
         },
         required: [],
@@ -29,11 +30,11 @@ export function routeEnforcer (enforcerPromise: Promise<Enforcer>, options?: I.M
             handleBadResponse: validatorBoolean,
             handleNotFound: validatorBoolean,
             handleMethodNotAllowed: validatorBoolean,
-            mockHeader: validatorNonEmptyString,
-            mockQuery: validatorNonEmptyString,
-            resSerialize: validatorBoolean,
-            resValidate: validatorBoolean,
+            mockHeader: validatorString,
+            mockQuery: validatorString,
+            mockStore: (v: any) => typeof v === 'function' ? '' : 'Expected a function',
             xController: validatorNonEmptyString,
+            xMockIdentity: validatorNonEmptyString,
             xOperation: validatorNonEmptyString
         }
     })!
@@ -82,7 +83,16 @@ export function routeEnforcer (enforcerPromise: Promise<Enforcer>, options?: I.M
 
                     const mockMode = getMockMode(req)
                     if (mockMode) {
-                        mockHandler(req, res, next, mockMode)
+                        // store mock data
+                        req.enforcer.mockMode = mockMode
+                        req.enforcer.mockStore = opts.mockStore
+
+                        // if operation identifies as having operable mock code to execute then don't run auto mock response handler
+                        if (!operation[opts.xMockIdentity]) {
+                            mockHandler(req, res, next, mockMode)
+                        } else {
+                            next()
+                        }
                     } else {
                         next()
                     }

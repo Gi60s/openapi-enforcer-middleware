@@ -24,18 +24,30 @@ export function errorFromException (exception: any): I.StatusError {
 
 export function handleRequestError (opts: I.MiddlewareOptions, error: I.StatusError, res: Express.Response, next: Express.NextFunction) {
     const statusCode = error.statusCode
-    if (statusCode === 404 && opts.handleNotFound) {
-        res.status(404)
-        res.set('content-type', 'text/plain')
-        res.send(error.toString())
-    } else if (statusCode === 405 && opts.handleMethodNotAllowed) {
-        res.status(404)
-        res.set('content-type', 'text/plain')
-        res.send(error.toString())
-    } else if (!statusCode || statusCode < 500 || opts.handleBadRequest) {
-        res.status(statusCode || 400)
-        res.set('content-type', 'text/plain')
-        res.send(error.toString())
+    if (statusCode === 404) {
+        if (opts.handleNotFound) {
+            res.status(404)
+            res.set('content-type', 'text/plain')
+            res.send(error.toString())
+        } else {
+            next()
+        }
+    } else if (statusCode === 405) {
+        if (opts.handleMethodNotAllowed) {
+            res.status(405)
+            res.set('content-type', 'text/plain')
+            res.send(error.toString())
+        } else {
+            next()
+        }
+    } else if (!statusCode || statusCode < 500) {
+        if (opts.handleBadRequest) {
+            res.status(statusCode || 400)
+            res.set('content-type', 'text/plain')
+            res.send(error.toString())
+        } else {
+            next()
+        }
     } else {
         next(errorFromException(error))
     }
@@ -100,10 +112,7 @@ export function sender (opts: I.MiddlewareOptions, req: Express.Request, res: Ex
             }
         }
 
-        const bodyValue = openapi.enforcerData.context.Schema.Value(body, {
-            serialize: opts.resSerialize,
-            validate: opts.resValidate
-        })
+        const bodyValue = openapi.enforcerData.context.Schema.Value(body)
         const [ response, exception ] = operation.response(code, bodyValue, Object.assign({}, headers))
         if (exception) {
             res.status(500)
@@ -133,7 +142,8 @@ export function sender (opts: I.MiddlewareOptions, req: Express.Request, res: Ex
 export const optionValidators = {
     validatorQueryParams,
     validatorBoolean,
-    validatorNonEmptyString
+    validatorNonEmptyString,
+    validatorString
 }
 
 function isArrayOf (value: any, type: string) {
@@ -157,4 +167,8 @@ function validatorBoolean (v: any): string {
 
 function validatorNonEmptyString (v: any): string {
     return (!v || typeof v !== 'string') ? 'Expected a non-empty string' : ''
+}
+
+function validatorString (v: any): string {
+    return typeof v !== 'string' ? 'Expected a string' : ''
 }

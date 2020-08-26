@@ -3,151 +3,68 @@ const express = require('express')
 const http = require('http')
 const Middleware = require('../dist')
 
-
-exports.openapi = function (version) {
-  const store = {
-    paths: []
-  }
-
-  function build () {
-    const result = {
-      info: { title: '', version: '' },
-      paths: {}
-    }
-    if (version === 2) {
-      result.swagger = '2.0'
-    } else {
-      result.openapi = '3.0.0'
-    }
-
-    store.paths.forEach(path => {
-      result.paths[path.path] = path.build()
-    })
-
-    return result
-  }
-
-  return {
-    addPath (path) {
-      const p = {
-        path,
-        parameters: [],
-        operations: [],
-        build () {
-          const result = {}
-          this.parameters.forEach(param => {
-            if (!result.parameters) result.parameters = []
-            result.parameters.push(createParameter(param))
-          })
-          this.operations.forEach(operation => {
-            result[operation.method] = operation.build()
-          })
-          return result
-        }
-      }
-      store.paths.push(p)
-      const pathFactory = {
-        addParameter (name, inPos, schema) {
-          p.parameters.push({ name, in: inPos, schema })
-          return pathFactory
-        },
-        addOperation (method) {
-          const o = {
-            body: null,
-            method,
-            parameters: [],
-            responses: {},
-            build () {
-              const result = { responses: {} }
-              this.parameters.forEach(param => {
-                if (!result.parameters) result.parameters = []
-                result.parameters.push(createParameter(param))
-              })
-
-              const codes = Object.keys(this.responses)
-              if (!codes.length) {
-                result.responses[200] = { description: '' }
-              } else {
-                codes.forEach(code => {
-                  const builtResponse = { description: '' }
-                  if (version === 2) {
-                    const { schema, example } = this.responses[code]
-                    if (schema) builtResponse.schema = schema
-                    if (example) builtResponse.example = example
-                  } else {
-                    const types = Object.keys(this.responses[code])
-                    builtResponse.content = {}
-                    types.forEach(type => {
-                      const { schema, example } = this.responses[code]
-                      const builtContent = {}
-                      if (example) builtContent.example = example
-                      if (schema) builtContent.schema = schema
-                      builtResponse.content[type] = builtContent
-                    })
-                  }
-                })
-              }
-              return result
-            }
-          }
-          p.operations.push(o)
-          const operationFactory = {
-            addParameter (name, inPos, schema) {
-              o.parameters.push({ name, in: inPos, schema })
-              return operationFactory
-            },
-            addBody (schema) {
-              o.body = schema
-              return operationFactory
-            },
-            addResponse (code, schema, example, contentType = 'application/json') {
-              if (version === 2) {
-                o.responses[code] = { example, schema }
-              } else {
-                if (!o.responses.hasOwnProperty(code)) o.responses[code] = {}
-                o.responses[code][contentType] = { example, schema }
-              }
-              return operationFactory
-            },
-            build,
-            path: pathFactory
-          }
-          return operationFactory
-        },
-        build
-      }
-      return pathFactory
-    },
-    build
-  }
-
-  function createParameter (param) {
-    const result = {
-      name: param.name,
-      in: param.in,
-      schema: param.schema
-    }
-    if (param.in === 'path') param.required = true
-    return result
+exports.ok = () => {
+  return function (req, res) {
+    res.send('ok')
   }
 }
 
+exports.spec = {
+  openapi (opts) {
+    opts = standardizeSpecOptions(opts)
+    const result = {
+      openapi: '3.0.0',
+      info: { title: '', version: '' },
+      paths: {}
+    }
+    return buildPaths(result, opts, 3)
+  },
+
+  swagger () {
+    opts = standardizeSpecOptions(opts)
+    const result = {
+      swagger: '2.0',
+      info: { title: '', version: '' },
+      paths: {}
+    }
+    return buildPaths(result, opts, 2)
+  }
+}
+
+exports.test = async function (options, handler) {
+  const server = exports.server(options)
+  await server.start()
+  await handler(server.request, server)
+  server.stop()
+}
+
+/**
+ *
+ * @param {object} options
+ * @param {object} options.doc
+ * @param {boolean|object} options.initEnforcer
+ * @param {boolean} options.mock
+ * @param {function} options.routeHook
+ * @returns {{ app: Express, request: function, stop: function, start: function }}
+ */
 exports.server = function (options) {
   const app = express()
   let listener
 
   if (!options) options = {}
   if (!options.doc) throw Error('Missing require options.doc property')
-  if (!options.hasOwnProperty('initEnforcer')) options.initEnforcer = {}
+  if (!options.hasOwnProperty('initEnforcer') || options.initEnforcer === true) options.initEnforcer = {}
 
   const enforcerPromise = Enforcer(options.doc)
 
   app.use(express.json())
   if (options.initEnforcer) app.use(Middleware.init(enforcerPromise, options.initEnforcer))
+  if (options.routeHook) options.routeHook(app, Middleware)
+  if (options.mock) app.use(Middleware.mock())
 
   function request (options) {
     if (!options) return Promise.reject(Error('Missing required options parameter'))
-    if (!options.method) return Promise.reject(Error('Missing required options.method property'))
+    if (!options.method) options.method = 'get'
     if (!options.path) return Promise.reject(Error('Missing required options.path property'))
 
     return new Promise((resolve, reject) => {
@@ -228,4 +145,65 @@ exports.server = function (options) {
     start,
     stop
   }
+}
+
+
+
+function buildPaths (doc, opts, version) {
+  opts.forEach(opt => {
+    if (!doc.paths[opt.path]) doc.paths[opt.path] = {}
+    const path = doc.paths[opt.path]
+
+    if (!path[opt.method]) path[opt.method] = {}
+    const operation = path[opt.method]
+
+    if (opt.parameters) operation.parameters = opt.parameters
+    if (opt.responses) {
+      if (!operation.responses) operation.responses = {}
+      const responses = operation.responses
+      opt.responses.forEach(res => {
+        const response = responses[res.code] = { description: '' }
+        if (version === 2) {
+          if (res.example) {
+            response.examples = {
+              [res.type || 'application/json']: res.example
+            }
+          } else if (res.examples) {
+            response.examples = res.examples
+          }
+          if (res.headers) response.headers = res.headers
+          if (res.schema) response.schema = res.schema
+        } else if (version === 3) {
+          if (res.schema || res.example || res.examples || res.headers) {
+            const content = response.content = {}
+            const type = content[res.type || 'application/json'] = {}
+            if (res.example) type.example = res.example
+            if (res.examples) type.examples = res.examples
+            if (res.headers) type.headers = res.headers
+            if (res.schema) type.schema = res.schema
+          }
+        }
+      })
+    } else {
+      operation.responses = { 200: { description: '' } }
+    }
+  })
+  return doc
+}
+
+function standardizeSpecOptions (opts) {
+  if (!opts) opts = []
+  if (opts.length === 0) opts[0] = {}
+  opts.forEach(opt => {
+    if (!opt.path) opt.path = '/'
+    if (!opt.method) opt.method = 'get'
+    // if (!opt.responses) opt.responses = []
+    // if (opt.responses.length === 0) opt.responses[0] = {}
+    // opt.responses.forEach(res => {
+    //
+    // })
+  })
+  if (!opts.path) opts.path = '/'
+  if (!opts.method) opts.method = 'get'
+  return opts
 }

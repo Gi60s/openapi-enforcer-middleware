@@ -27,7 +27,7 @@ interface GetOperationConfig {
     xOperation: string
 }
 
-export function controller (dirPath: string, options?: I.ControllerOptions) {
+export function routeBuilder (dirPath: string, options?: I.ControllerOptions) {
     const opts: I.ControllerOptions = normalizeOptions(options, {
         defaults: {
             dependencies: [],

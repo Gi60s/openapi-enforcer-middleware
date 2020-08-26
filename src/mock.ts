@@ -24,6 +24,7 @@ export function getMockMode (req: Express.Request): I.MockMode | void {
     }
 }
 
+// fallback mocking middleware - supports specifying response code, example, or schema derived value
 export function mockHandler (req: Express.Request, res: Express.Response, next: Express.NextFunction, mock: I.MockMode) {
     const { openapi, operation, options } = req.enforcer!
 
@@ -33,23 +34,6 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
 
     let response
     if (operation.responses.hasOwnProperty(mock.statusCode)) response = operation.responses[mock.statusCode]
-
-    // if a controller is provided then call it
-    // if (!mock.source || mock.source === 'controller') {
-    //     if (controller) {
-    //         res.set(ENFORCER_HEADER, 'mock:controller')
-    //         debug.controllers('executing mock controller')
-    //         try {
-    //             controller(req, res, next)
-    //         } catch (err) {
-    //             next(err)
-    //         }
-    //         return
-    //     } else if (mock.source) {
-    //         exception.message('A mock controller is not defined')
-    //         return unableToMock(exception, next)
-    //     }
-    // }
 
     // if unable to make a mocked response then exit
     if (!response) {
@@ -81,7 +65,7 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
                             next
                         )
                         res.set(ENFORCER_HEADER, 'mock: response example')
-                        return res.send(example)
+                        return res.enforcer!.send(example)
                     }
                 }
             }
@@ -90,7 +74,7 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
             if (response.schema && response.schema.hasOwnProperty('example')) {
                 res.status(+mock.statusCode)
                 res.set(ENFORCER_HEADER, 'mock: schema example')
-                return res.send(copy(response.schema.example))
+                return res.enforcer!.send(copy(response.schema.example))
             }
 
             if (mock.source) {
@@ -115,7 +99,7 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
 
                 res.status(+mock.statusCode)
                 res.set(ENFORCER_HEADER, 'mock: schema example')
-                return res.send(value)
+                return res.enforcer!.send(value)
             } else {
                 exception.message('No schema associated with response')
                 return unableToMock(exception, next)
@@ -146,7 +130,7 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
                         next
                     )
                     res.set(ENFORCER_HEADER, 'mock: response example')
-                    return res.send(example)
+                    return res.enforcer!.send(example)
                 } else {
                     exception.message('There is no example value with the name specified: ' + mock.name)
                     return unableToMock(exception, next)
@@ -167,21 +151,21 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
                     next
                 )
                 res.set(ENFORCER_HEADER, 'mock: response example')
-                return res.send(example)
+                return res.enforcer!.send(example)
             }
 
             // select the example
             if (content.hasOwnProperty('example')) {
                 res.status(+mock.statusCode)
                 res.set(ENFORCER_HEADER, 'mock: response example')
-                return res.send(copy(content.example))
+                return res.enforcer!.send(copy(content.example))
             }
 
             // select schema example
             if (content.schema && content.schema.hasOwnProperty('example')) {
                 res.status(+mock.statusCode)
                 res.set(ENFORCER_HEADER, 'mock: response example')
-                return res.send(copy(content.schema.example))
+                return res.enforcer!.send(copy(content.schema.example))
             }
 
             // unable to mock with requested source
@@ -208,7 +192,7 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
                 res.set('Content-Type', type)
                 if (mock.statusCode !== 'default') res.status(+mock.statusCode)
                 res.set(ENFORCER_HEADER, 'mock: random value')
-                return res.send(value)
+                return res.enforcer!.send(value)
             } else {
                 exception.message('No schema associated with response')
                 return unableToMock(exception, next)

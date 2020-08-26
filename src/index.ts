@@ -1,17 +1,15 @@
-import { controller } from './controller'
-import { routeEnforcer } from "./route-enforcer"
+import { routeBuilder as fnRouteBuilder } from './route-builder'
+import { init as fnInit } from "./init"
 import { mockMiddleware } from "./mock"
 
 export default {
-    buildRoutes: controller,
-    init: routeEnforcer,
-    mock
+    routeBuilder: fnRouteBuilder,
+    init: fnInit,
+    mock: mockMiddleware
 }
 
-export const buildRoutes = controller
+export const routeBuilder = fnRouteBuilder
 
-export const init = routeEnforcer
+export const init = fnInit
 
-export function mock () {
-    return mockMiddleware
-}
+export const mock = mockMiddleware

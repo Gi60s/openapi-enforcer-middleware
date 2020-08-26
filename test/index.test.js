@@ -27,30 +27,371 @@ const expect = chai.expect
 chai.use(chaiAsPromised)
 
 const Server = utils.server
+const { ok, spec, test } = utils
+
 
 
 /* global describe it */
 describe('openapi-enforcer-middleware', () => {
 
-  describe('routes', function () {
-    const doc = new Builder(2)
-      .addPath('/')
-      .addParameter('filter', 'query', { type: 'string' })
-      .addOperation('get')
-      .addParameter('foo', 'query', { type: 'number" '})
+  describe('options', () => {
 
-    // const doc = utils.openapi(2)
-    //   .addPath('/')
-    //   .addParameter('filter', 'query', { type: 'string' })
-    //   .addOperation('get')
-    //   .addParameter('foo', 'query', { type: 'number' })
-    //   .addResponse(200, { type: 'string' }, 'OK')
+    describe('allowOtherQueryParameters', () => {
+      it('will not allow other query parameters by default', async function () {
+        const doc = spec.openapi([{
+          parameters: [{ name: 'x', in: 'query', schema: { type: 'string' } }]
+        }])
 
-    it('validates request', function () {
-      // const server = Server()
+        function routeHook (app) {
+          app.get('/', ok())
+        }
 
-      console.log(JSON.stringify(doc.build(), null, 2))
+        await test({ doc, routeHook }, async (request) => {
+          let res = await request({ path: '/?x=1' })
+          expect(res.statusCode).to.equal(200)
 
+          res = await request({ path: '/?y=1' })
+          expect(res.statusCode).to.equal(400)
+          expect(res.body).to.match(/unexpected parameter: y/i)
+        })
+      })
+
+      it('will allow specifying specific additional query parameters', async function () {
+        const doc = spec.openapi()
+
+        function routeHook (app) {
+          app.get('/', ok())
+        }
+
+        const initEnforcer = { allowOtherQueryParameters: ['foo'] }
+
+        await test({ doc, routeHook, initEnforcer }, async (request) => {
+          let res = await request({ path: '/?foo=1' })
+          expect(res.statusCode).to.equal(200)
+
+          res = await request({ path: '/?bar=1' })
+          expect(res.statusCode).to.equal(400)
+          expect(res.body).to.match(/unexpected parameter: bar/i)
+        })
+      })
+
+      it('will allow specifying any additional query parameters', async function () {
+        const doc = spec.openapi()
+
+        function routeHook (app) {
+          app.get('/', ok())
+        }
+
+        const initEnforcer = { allowOtherQueryParameters: true }
+
+        await test({ doc, routeHook, initEnforcer }, async (request) => {
+          let res = await request({ path: '/?foo=1' })
+          expect(res.statusCode).to.equal(200)
+
+          res = await request({ path: '/?bar=1' })
+          expect(res.statusCode).to.equal(200)
+        })
+      })
+    })
+
+    describe('handleBadRequest', () => {
+      it('will automatically handle bad requests by default', async () => {
+        const doc = spec.openapi([{
+          path: '/{num}',
+          parameters: [{ name: 'num', in: 'path', required: true, schema: { type: 'number' } }],
+        }])
+
+        function routeHook (app) {
+          app.get('/:num', ok())
+        }
+
+        await test({ doc, routeHook }, async (request) => {
+          let res = await request({ path: '/123' })
+          expect(res.statusCode).to.equal(200)
+
+          res = await request({ path: '/hello' })
+          expect(res.statusCode).to.equal(400)
+          expect(res.body).to.match(/expected a number/i)
+        })
+      })
+
+
+      it('can be configured to ignore bad requests', async () => {
+        const doc = spec.openapi([{
+          path: '/{num}',
+          parameters: [{ name: 'num', in: 'path', required: true, schema: { type: 'number' } }],
+        }])
+
+        let visitedRoute = 0
+        function routeHook (app) {
+          app.get('/:num', (req, res) => {
+            //expect(req.enforcer).to.be.undefined
+            visitedRoute++
+            res.sendStatus(200)
+          })
+        }
+
+        const initEnforcer = { handleBadRequest: false }
+
+        await test({ doc, routeHook, initEnforcer }, async (request) => {
+          let res = await request({ path: '/123' })
+          expect(res.statusCode).to.equal(200)
+
+          res = await request({ path: '/hello' })
+          expect(res.statusCode).to.equal(200)
+        })
+
+        expect(visitedRoute).to.equal(2)
+      })
+    })
+
+    describe('handleNotFound', () => {
+
+      it('will automatically handle 404 not found by default', async () => {
+        const doc = spec.openapi([{ path: '/foo' }])
+
+        function routeHook (app) {
+          app.get('/bar', (req, res) => {
+            res.sendStatus(200)
+          })
+        }
+
+        await test({ doc, routeHook }, async (request) => {
+          let res = await request({ path: '/bar' })
+          expect(res.statusCode).to.equal(404)
+        })
+      })
+
+      it('can be configured to ignore 404 not found', async () => {
+        const doc = spec.openapi([{ path: '/foo' }])
+
+        function routeHook (app) {
+          app.get('/bar', (req, res) => {
+            res.send('bar')
+          })
+        }
+
+        const initEnforcer = { handleNotFound: false }
+
+        await test({ doc, routeHook, initEnforcer }, async (request) => {
+          let res = await request({ path: '/bar' })
+          expect(res.statusCode).to.equal(200)
+          expect(res.body).to.equal('bar')
+        })
+      })
+    })
+
+    describe('handleMethodNotAllowed', () => {
+      function routeHook (app) {
+        app.get('/', ok())
+
+        app.put('/', (req, res) => {
+          res.sendStatus(418)
+        })
+      }
+
+      it('will automatically handle 405 method not allowed by default', async () => {
+        const doc = spec.openapi()
+
+        await test({ doc, routeHook }, async (request) => {
+          // get method works
+          let res = await request({ path: '/' })
+          expect(res.statusCode).to.equal(200)
+
+          // put method not defined in openapi spec
+          res = await request({ method: 'put', path: '/' })
+          expect(res.statusCode).to.equal(405)
+        })
+      })
+
+      it('can be configured to ignore 405 method not allowed', async () => {
+        const doc = spec.openapi()
+
+        const initEnforcer = { handleMethodNotAllowed: false }
+
+        await test({ doc, routeHook, initEnforcer }, async (request) => {
+          let res = await request({ method: 'put', path: '/' })
+          expect(res.statusCode).to.equal(418)
+        })
+      })
+    })
+  })
+
+  describe.only('mocks', function () {
+    it('allow mock header request by default', async () => {
+      const doc = spec.openapi([{
+        responses: [
+          { code: 200, schema: { type: 'number', minimum: 0, maximum: 5 } }
+        ]
+      }])
+
+      function routeHook (app) {
+        app.get('/', (req, res) => {
+          res.sendStatus(418)
+        })
+      }
+
+      await test({ doc, routeHook }, async (request) => {
+        // no mock request header and route implemented
+        let res = await request({ path: '/' })
+        expect(res.statusCode).to.equal(418)
+
+        // mock request header so ignore implemented route
+        res = await request({ path: '/', headers: { 'x-mock': '' } })
+        expect(+res.body).to.be.at.least(0)
+        expect(+res.body).to.be.at.most(5)
+        expect(res.statusCode).to.equal(200)
+      })
+    })
+
+    it('can disable mock header request', async () => {
+      const doc = spec.openapi([{
+        responses: [
+          { code: 200, schema: { type: 'number', minimum: 0, maximum: 5 } }
+        ]
+      }])
+
+      function routeHook (app) {
+        app.get('/', (req, res) => {
+          res.sendStatus(418)
+        })
+      }
+
+      await test({ doc, routeHook, initEnforcer: { mockHeader: '' } }, async (request) => {
+        // no mock request header and route implemented
+        let res = await request({ path: '/', headers: { 'x-mock': 200 } })
+        expect(res.statusCode).to.equal(418)
+
+        // mock request header disabled
+        res = await request({ path: '/', headers: { 'x-mock': 200 } })
+        expect(res.statusCode).to.equal(418)
+      })
+    })
+
+    it('allow mock query request by default', async () => {
+      const doc = spec.openapi([{
+        responses: [
+          { code: 200, schema: { type: 'number', minimum: 0, maximum: 5 } }
+        ]
+      }])
+
+      function routeHook (app) {
+        app.get('/', (req, res) => {
+          res.sendStatus(418)
+        })
+      }
+
+      await test({ doc, routeHook }, async (request) => {
+        // no mock request header and route implemented
+        let res = await request({ path: '/' })
+        expect(res.statusCode).to.equal(418)
+
+        // mock request header so ignore impelemented route
+        res = await request({ path: '/?x-mock' })
+        expect(+res.body).to.be.at.least(0)
+        expect(+res.body).to.be.at.most(5)
+        expect(res.statusCode).to.equal(200)
+      })
+    })
+
+    it('can disable mock query request', async () => {
+      const doc = spec.openapi([{
+        responses: [
+          { code: 200, schema: { type: 'number', minimum: 0, maximum: 5 } }
+        ]
+      }])
+
+      function routeHook (app) {
+        app.get('/', (req, res) => {
+          res.sendStatus(418)
+        })
+      }
+
+      await test({ doc, routeHook, initEnforcer: { allowOtherQueryParameters: true, mockQuery: '' } }, async (request) => {
+        // no mock request and route implemented
+        let res = await request({ path: '/' })
+        expect(res.statusCode).to.equal(418)
+
+        // mock query request disabled
+        res = await request({ path: '/?x-mock' })
+        expect(res.statusCode).to.equal(418)
+      })
+    })
+
+    describe('mock result priority', function () {
+
+    })
+  })
+
+
+
+  describe('response enforcer', () => {
+
+    it('can validate bad responses and automatically send a 500 error', async () => {
+      const doc = spec.openapi([{
+        path: '/',
+        parameters: [{ name: 'validate', in: 'query', schema: { type: 'boolean' } }],
+        responses: [
+          { code: 200, schema: { type: 'number' }}
+        ]
+      }])
+
+      let caughtError = false
+      function routeHook (app) {
+        app.get('/', (req, res) => {
+          const { validate } = req.enforcer.query
+          if (validate) {
+            res.enforcer.send(true)
+          } else {
+            res.send(true)
+          }
+        })
+
+        app.use((err, req, res, next) => {
+          caughtError = true
+          res.sendStatus(418)
+        })
+      }
+
+      await test({ doc, routeHook }, async (request) => {
+        // non-validated response
+        let res = await request({ path: '/?validate=false' })
+        expect(res.statusCode).to.equal(200)
+        expect(res.body).to.equal('true')
+
+        // invalid validated response
+        res = await request({ path: '/?validate=true' })
+        expect(res.statusCode).to.equal(500)
+        expect(res.body).to.match(/Internal server error/i)
+
+        // invalid response not caught
+        expect(caughtError).to.equal(false)
+      })
+    })
+
+    it('can catch bad response if handleBadResponse is false', async () => {
+      const doc = spec.openapi([{
+        responses: [{ code: 200, schema: { type: 'number' }}]
+      }])
+
+      let caughtError = false
+      function routeHook (app) {
+        app.get('/', (req, res) => {
+          res.enforcer.send('hello')
+        })
+
+        app.use((err, req, res, next) => {
+          caughtError = true
+          res.sendStatus(418)
+        })
+      }
+
+      await test({ doc, routeHook, initEnforcer: { handleBadResponse: false } }, async (request) => {
+        // invalid response validated and caught
+        let res = await request({ path: '/' })
+        expect(res.statusCode).to.equal(418)
+        expect(caughtError).to.equal(true)
+      })
     })
   })
 
