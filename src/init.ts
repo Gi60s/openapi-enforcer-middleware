@@ -20,8 +20,8 @@ export function init (enforcerPromise: Promise<Enforcer>, options?: I.Middleware
             mockQuery: 'x-mock',
             mockStore: cookieStore(),
             xController: 'x-controller',
-            xMockIdentity: 'x-mock-identity',
-            xOperation: 'x-operation'
+            xOperation: 'x-operation',
+            xMockSessions: 'x-mock-sessions'
         },
         required: [],
         validators: {
@@ -34,8 +34,8 @@ export function init (enforcerPromise: Promise<Enforcer>, options?: I.Middleware
             mockQuery: validatorString,
             mockStore: (v: any) => typeof v === 'function' ? '' : 'Expected a function',
             xController: validatorNonEmptyString,
-            xMockIdentity: validatorNonEmptyString,
-            xOperation: validatorNonEmptyString
+            xOperation: validatorNonEmptyString,
+            xMockSessions: validatorNonEmptyString
         }
     })!
 
@@ -88,7 +88,7 @@ export function init (enforcerPromise: Promise<Enforcer>, options?: I.Middleware
                         req.enforcer.mockStore = opts.mockStore
 
                         // if operation identifies as having operable mock code to execute then don't run auto mock response handler
-                        if (!operation[opts.xMockIdentity]) {
+                        if (!operation[opts.xMockSessions]) {
                             mockHandler(req, res, next, mockMode)
                         } else {
                             next()

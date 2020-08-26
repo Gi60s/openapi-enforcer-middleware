@@ -75,7 +75,7 @@ export interface MiddlewareOptions {
     mockQuery?: string                              // if true then manual mocking via query is enabled
     mockStore?: MockStore                           // this mock store to use if the request is a mock request
     xController?: string                            // the name of the OpenAPI extension property that will define the API controller file
-    xMockIdentity?: string                          // the name of the OpenAPI extension property that identifies if the operation has mock sessions
+    xMockSessions?: string                          // the name of the OpenAPI extension property that identifies if the operation has mock sessions
     xOperation?: string                             // the name of the OpenAPI extension property that will define the operation name within the controller file
 }
 
