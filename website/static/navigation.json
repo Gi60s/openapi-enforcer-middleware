@@ -1,0 +1,42 @@
+{
+  "1.x": [
+    {
+      "title": "Guide",
+      "path": "/guide",
+      "children": [
+        { "title": "Introduction", "path": "/guide" },
+        { "title": "Getting Started", "path": "/guide/getting-started" },
+        { "title": "Server Setup", "path": "/guide/server" },
+        { "title": "OpenAPI Document", "path": "/guide/openapi-document" },
+        { "title": "Controllers", "path": "/guide/controllers" },
+        { "title": "Mocking", "path": "/guide/mocking" }
+      ]
+    },
+    { "title": "API", "path": "/api" },
+    { "title": "Examples", "path": "/examples" }
+  ],
+  "2.x": [
+    {
+      "title": "Guide 2",
+      "path": "/guide",
+      "children": [
+        { "title": "Getting Started", "path": "/guide/getting-started" },
+        { "title": "Server Setup", "path": "/guide/server" },
+        { "title": "OpenAPI Document", "path": "/guide/openapi-document" },
+        { "title": "Controllers", "path": "/guide/controllers" },
+        { "title": "Mocking", "path": "/guide/mocking" }
+      ]
+    },
+    { "title": "API 2", "path": "/api" },
+    {
+      "title": "Examples",
+      "path": "/examples",
+      "children": [
+        { "title": "Enforce Express Routes", "path":  "/examples/express-routes" },
+        { "title": "Skip Express Routes", "path":  "/examples/skip-routes" },
+        { "title": "Mocking", "path":  "/examples/mocking" }
+      ]
+    }
+  ]
+}
+
