@@ -217,7 +217,7 @@ describe('openapi-enforcer-middleware', () => {
     })
   })
 
-  describe.only('mocks', function () {
+  describe('mocks', function () {
     it('allow mock header request by default', async () => {
       const doc = spec.openapi([{
         responses: [

@@ -32,7 +32,13 @@ export function init (enforcerPromise: Promise<Enforcer>, options?: I.Middleware
             handleMethodNotAllowed: validatorBoolean,
             mockHeader: validatorString,
             mockQuery: validatorString,
-            mockStore: (v: any) => typeof v === 'function' ? '' : 'Expected a function',
+            mockStore: (v: any) => {
+                const message = 'Expected an object with the properties getData and setData as functions.'
+                if (!v || typeof v !== 'object') return message
+                if (typeof v.getData !== 'function') return message
+                if (typeof v.setData !== 'function') return message
+                return ''
+            },
             xController: validatorNonEmptyString,
             xOperation: validatorNonEmptyString,
             xMockSessions: validatorNonEmptyString
