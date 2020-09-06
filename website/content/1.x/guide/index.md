@@ -68,7 +68,5 @@ exports.getList = function (req, res, next) {
 The above is a very high level overview, now you can learn in depth about each of these components:
 
 - [Server Setup](server.md)
-
 - [OpenAPI Document](openapi-document.md)
-
 - [Controllers](controllers.md)

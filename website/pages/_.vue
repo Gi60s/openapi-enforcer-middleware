@@ -1,37 +1,39 @@
 <template>
   <div class='page'>
+    <div class="overlay" :class="{ 'show-overlay': overlay }" @click="overlay = false"></div>
+
     <div class='header'>
       <div class="center">
         <!-- site title / header -->
         <div class="site-header">
-          <nuxt-link to="/">
+          <nuxt-link :to="'/' + version">
             <h1>OpenAPI Enforcer Middleware</h1>
           </nuxt-link>
         </div>
         <div class="spacer"></div>
 
         <!-- mobile view menu button -->
-        <el-button class="mobile-menu-button" icon="el-icon-menu"></el-button>
+        <el-button class="mobile-menu-button" icon="el-icon-menu" @click="overlay = !overlay"></el-button>
 
         <div class="site-navigation">
-          <search :version="navigation.selected.version" />
+          <search :search-function="runSearch" :version="version" />
 
           <!-- top menu -->
-          <el-menu :default-active="navigation.selected.top" mode="horizontal" @select="navSelectPage">
+          <el-menu mode="horizontal">
             <!-- <el-menu-item v-for="item in navigation.menu" :key="item.path" :index="item.path">{{ item.title }}</el-menu-item> -->
             <el-submenu index="ecosystem">
               <template slot="title">Ecosystem</template>
               <el-menu-item v-for="item in navigation.ecosystem" :key="item.url" :index="item.url">
-                <a :href="item.url" target="_blank">{{ item.title }}</a>
+                <a class="ecosystem" :href="item.url" target="_blank">{{ item.title }}</a>
               </el-menu-item>
             </el-submenu>
           </el-menu>
 
           <!-- version menu -->
-          <el-menu :default-active="navigation.selected.version" mode="horizontal" @select="navSelectVersion">
+          <el-menu :default-active="version" mode="horizontal" @select="navSelectVersion">
             <el-submenu index="version-menu" class="version-menu">
-              <template slot="title">{{ navigation.selected.version }}</template>
-              <el-menu-item v-for="version in navigation.versions" :key="version" :index="version">{{ version }}</el-menu-item>
+              <template slot="title">{{ version }}</template>
+              <el-menu-item v-for="ver in navigation.versions" :key="ver" :index="ver">{{ ver }}</el-menu-item>
             </el-submenu>
           </el-menu>
         </div>
@@ -41,13 +43,73 @@
     <div class='body center'>
 
       <!-- left navigation -->
-      <div class='aside-left'>
-        <ul>
-          <li v-for="navItem in navigation.menu[navigation.selected.version]" :key="navItem.path" :class="navItemClass(navItem, null)">
-            <nuxt-link :to="navItem.path">{{ navItem.title }}</nuxt-link>
-            <ul v-if="navItem.children && navigation.selected.top === navItem.path">
+      <div class='aside-left' :class="{ 'show-navigation': overlay }">
+
+        <!-- mobile navigation -->
+        <div class="mobile-content">
+
+          <!-- mobile search -->
+          <div class="mobile-menu-group" :class="{ 'active-menu': mobileMenu === 'Search' }">
+            <div class="mobile-menu-button" @click="setMobileMenu('Search')">Search</div>
+            <div class="mobile-menu-group-content mobile-menu-search">
+              <el-input id="mobile-search-input" placeholder="Search" v-model="mobileSearch" clearable></el-input>
+              <div class="mobile-search-content">
+                <p v-if="mobileSearch === ''">Search above.</p>
+                <p v-if="mobileSearch !== '' && mobileSearchResults.length === 0">No results.</p>
+                <div class="mobile-search-result" @click="$router.push(item.path)" v-for="(item, index) in mobileSearchResults" :key="index">
+                  <div class="mobile-search-result-title">{{item.title}}</div>
+                  <div class="mobile-search-result-blurb">{{item.blurb}}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- mobile site navigation -->
+          <div class="mobile-menu-group" :class="{ 'active-menu': mobileMenu === 'Site Navigation' }">
+            <div class="mobile-menu-button" @click="setMobileMenu('Site Navigation')">Site Navigation</div>
+            <div class="mobile-menu-group-content">
+              <ul>
+                <li v-for="navItem in navigation.menu[version]" :key="navItem.path" :class="navItemClass(navItem, null)">
+                  <nuxt-link :to="'/' + version + navItem.path">{{ navItem.title }}</nuxt-link>
+                  <!--        <ul v-if="navItem.children && navigation.selected.top === navItem.path">-->
+                  <ul v-if="navItem.children">
+                    <li v-for="child in navItem.children" :key="child.path" :class="navItemClass(child, navItem)">
+                      <nuxt-link :to="'/' + version + child.path">{{ child.title }}</nuxt-link>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- mobile table of contents -->
+          <div v-if="doc && doc.toc && !doc.noRightColum && doc.toc.length" class="mobile-menu-group" :class="{ 'active-menu': mobileMenu === 'Page Content' }">
+            <div class="mobile-menu-button" @click="setMobileMenu('Page Content')">Page Content</div>
+            <div class="mobile-menu-group-content">
+              <ul>
+                <li v-for="link of doc.toc" :key="link.id" :class="{ 'toc2': link.depth === 2, 'toc3': link.depth === 3 }">
+                  <NuxtLink :to="link.id">{{ link.text }}</NuxtLink>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- mobile ecosystem -->
+          <div class="mobile-menu-group" :class="{ 'active-menu': mobileMenu === 'Ecosystem' }">
+            <div class="mobile-menu-button" @click="setMobileMenu('Ecosystem')">Ecosystem</div>
+            <div class="mobile-menu-group-content">
+              <a class="ecosystem" v-for="item in navigation.ecosystem" :key="item.url" :href="item.url" target="_blank">{{ item.title }}</a>
+            </div>
+          </div>
+        </div>
+
+        <ul class="site-navigation">
+          <li v-for="navItem in navigation.menu[version]" :key="navItem.path" :class="navItemClass(navItem, null)">
+            <nuxt-link :to="'/' + version + navItem.path">{{ navItem.title }}</nuxt-link>
+<!--        <ul v-if="navItem.children && navigation.selected.top === navItem.path">-->
+            <ul v-if="navItem.children">
               <li v-for="child in navItem.children" :key="child.path" :class="navItemClass(child, navItem)">
-                <nuxt-link :to="child.path">{{ child.title }}</nuxt-link>
+                <nuxt-link :to="'/' + version + child.path">{{ child.title }}</nuxt-link>
               </li>
             </ul>
           </li>
@@ -55,12 +117,32 @@
       </div>
 
       <div class='content'>
-<!--        <el-alert v-if="error" :title="error.title" type="error" :description="error.description" show-icon :closable="false">-->
-<!--        </el-alert>-->
+
+        <!-- out of date docs warning -->
+        <el-alert v-if="version !== '2.x'" title="There is a Newer Version!" type="warning" :closable="false">
+          There is a new version of this library available with new documentation. If you are looking
+          for documentation for version {{ version }} then you are in the right place,
+          otherwise check out the
+          <span class="page-link" @click="navSelectVersion('2.x')">latest documentation</span>.
+        </el-alert>
+
         <h1 v-if="doc">{{ doc.title }}</h1>
+
         <nuxt-content :document="doc" />
       </div>
-      <!--<div class='aside-right'>Aside</div>-->
+
+      <div class='aside-right' v-if="doc && doc.toc && !doc.noRightColumn">
+        <div v-if="doc.toc.length">
+          <h4>Page Content</h4>
+          <div class="toc">
+            <ul>
+              <li v-for="link of doc.toc" :key="link.id" :class="{ 'toc2': link.depth === 2, 'toc3': link.depth === 3 }">
+                <NuxtLink :to="link.id">{{ link.text }}</NuxtLink>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="footer">
@@ -108,10 +190,16 @@ export default {
     Search
   },
 
-  // async beforeRouteEnter  (to, from, next) {
-  //   await this.loadPageData(to.path)
-  //   next()
-  // },
+  async beforeRouteEnter  (to, from, next) {
+    if (to.fullPath === '/') {
+      const version = store.get('version') || '2.x'
+      next('/' + version)
+    } else {
+      next()
+    }
+    // console.log('Before enter', to, from)
+    next()
+  },
 
   // async beforeRouteUpdate (to, from, next) {
   //   await loadPageData(this, this.$content, to.path)
@@ -120,13 +208,14 @@ export default {
 
   async asyncData({$content, params}) {
     console.info('INIT')
+    const [ version, ...path ] = params.pathMatch.split('/')
 
     const navigation = {
       drawer: true,
       selected: {
         path: '',
         top: '',
-        version: store.get('version') || '1.x'
+        version
       },
       ecosystem: [
         { title: 'OpenAPI Enforcer (core)', url: 'https://byu-oit.github.io/openapi-enforcer' },
@@ -145,35 +234,25 @@ export default {
       doc: null,
       err: null,
       navigation,
+      mobileMenu: 'Site Navigation',
+      mobileSearch: '',
+      mobileSearchResults: [],
+      overlay: false,
       query: ''
     }
 
     const { data } = await axios.get('/navigation.json')
     navigation.menu = data
 
-    await loadPageData(context, $content, '/' + params.pathMatch)
+    await loadPageData(context, version, $content, '/' + path.join('/'))
 
     return context
-
-    // try {
-    //   const doc = await $content(params.pathMatch || 'index').fetch()
-    //   return {
-    //     doc,
-    //     err: null,
-    //     navigation,
-    //     query: ''
-    //   }
-    // } catch (err) {
-    //   return {
-    //     doc: null,
-    //     err,
-    //     navigation,
-    //     query: ''
-    //   }
-    // }
   },
 
   computed: {
+    version () {
+      return getVersion(this.$route)
+    }
   },
 
   methods: {
@@ -204,12 +283,89 @@ export default {
 
       return classes.join(' ')
     },
-    navSelectPage(key, keyPath) {
-      this.$router.push(key)
-    },
     navSelectVersion(key, keyPath) {
-      this.navigation.selected.version = key
+      this.$router.push('/' + key)
       store.set('version', key)
+    },
+    setMobileMenu(key) {
+      this.mobileMenu = key
+      if (key === 'Search') {
+        setTimeout(() => document.getElementById('mobile-search-input').focus(), 50)
+      } else {
+        this.mobileSearch = ''
+      }
+    },
+    async runSearch (query, callback) {
+      if (!query) {
+        return callback([])
+      } else {
+        const startsWith = '/' + this.version + '/'
+        let results = await this.$content(null, { deep: true })
+          .search(query)
+          // .only(['title', 'description', 'path'])
+          .fetch()
+
+        // filter results to the current version
+        results = results.filter(v => v.path.indexOf(startsWith) === 0)
+
+        // score search results and create blurbs
+        const q = query.toLowerCase()
+        results.forEach(result => {
+          let score = 0
+          let blurb = ''
+          let realPath = result.path
+
+          // extra points if it's the page title
+          const title = result.title.toLowerCase()
+          const index = title.indexOf(q)
+          if (title === q) {
+            score += 6
+          } else if (index !== -1) {
+            score += 4
+          }
+          if (index === 0 || title[index - 1] === ' ') score += 2
+
+          // extra points for being in table of contents
+          result.toc.forEach(toc => {
+            const text = toc.text.toLowerCase()
+            const index = text.indexOf(q)
+            if (text === q) {
+              score += toc.depth * 3
+              realPath = result.path + '#' + toc.id
+              blurb = toc.text
+            } else if (index !== -1) {
+              score += toc.depth
+              if (index === 0) blurb = toc.text
+            }
+
+            // an extra point if the match is the start of a word
+            if (index === 0 || text[index - 1] === ' ') score++
+          })
+
+          result.score = score
+          result.blurb = blurb || result.description
+          result.realPath = realPath
+        })
+
+        // sort results to best matches
+        results.sort((a, b) => {
+          return a.score > b.score ? -1 : 1
+        })
+
+        // limit results to 7 or fewer
+        results = results.slice(0, 7)
+
+        console.log(results.map(v => JSON.parse(JSON.stringify(v))))
+        callback(results)
+      }
+    }
+  },
+
+  watch: {
+    mobileSearch (newValue, oldValue) {
+      this.runSearch(newValue, results => {
+        this.mobileSearchResults = results
+      })
     }
   }
 }
@@ -230,10 +386,10 @@ function getCookie(cname) {
   return "";
 }
 
-async function loadPageData (context, $content, key) {
+async function loadPageData (context, version, $content, key) {
   try {
     const nav = context.navigation
-    const filePath = getFilePath(context, key)
+    const filePath = getFilePath(context, version, key)
 
     // avoid running again for current path
     // const was = context.currentPath
@@ -250,7 +406,7 @@ async function loadPageData (context, $content, key) {
       return
     }
 
-    const menu = nav.menu[nav.selected.version]
+    const menu = nav.menu[version]
     const topItemsLength = menu.length
     for (let i = 0; i < topItemsLength; i++) {
       const top = menu[i]
@@ -308,10 +464,11 @@ async function loadPageData (context, $content, key) {
   }
 }
 
-function getFilePath (context, key) {
+function getFilePath (context, version, key) {
   const nav = context.navigation
-  const found = find(nav.menu[nav.selected.version], key)
-  return found ? '/' + nav.selected.version + found : ''
+  // if (key === '/') key = '/index'
+  const found = find(nav.menu[version], key)
+  return found ? '/' + version + found : ''
 
   function find (items) {
     const length = items.length
@@ -328,13 +485,28 @@ function getFilePath (context, key) {
   }
 }
 
+function getVersion (route) {
+  const path = route.fullPath.replace(/^\//, '')
+  const [ version ] = path.split('/')
+  return version
+}
+
 async function fetchDocument ($content, path) {
-  console.log(path)
-  let doc = await $content(path).fetch()
-  if (Array.isArray(doc)) doc = doc.find(v => path === v.path.replace(/\/index$/, ''))
-  if (doc && !doc.toc) doc.toc = []
-  console.log(doc)
-  return doc
+  try {
+    return await inner(path)
+  } catch (e) {
+    if (path[path.length - 1] !== '/') path += '/'
+    return await inner(path + 'index')
+  }
+
+  async function inner (path) {
+    console.log(path)
+    let doc = await $content(path).fetch()
+    if (Array.isArray(doc)) doc = doc.find(v => path === v.path.replace(/\/index$/, ''))
+    if (doc && !doc.toc) doc.toc = []
+    console.log(doc)
+    return doc
+  }
 }
 
 </script>

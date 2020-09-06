@@ -14,7 +14,7 @@
     </i> -->
     <template slot-scope="{ item }">
       <div class="title">{{ item.title }}</div>
-      <div class="description">{{ item.description }}</div>
+      <div class="description">{{ item.blurb }}</div>
     </template>
   </el-autocomplete>
 </template>
@@ -27,26 +27,14 @@ export default {
     }
   },
 
-  props: ['version'],
+  props: ['searchFunction', 'version'],
 
   methods: {
     handleSelect (item) {
-      console.log(item)
+      this.$router.push(item.path)
     },
     async querySearch (query, callback) {
-      console.log(query)
-      if (!query) {
-        return callback([])
-      } else {
-        const startsWith = '/' + this.version + '/'
-        let results = await this.$content(null, { deep: true })
-          .search(query)
-          // .only(['title', 'description', 'path'])
-          .fetch()
-        results = results.filter(v => v.path.indexOf(startsWith) === 0)
-        console.log(results.map(v => JSON.parse(JSON.stringify(v))))
-        callback(results)
-      }
+      this.searchFunction(query, callback)
     }
   }
 }

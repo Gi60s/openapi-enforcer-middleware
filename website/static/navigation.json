@@ -1,5 +1,6 @@
 {
   "1.x": [
+    { "title": "Home", "path": "/" },
     {
       "title": "Guide",
       "path": "/guide",
@@ -12,10 +13,19 @@
         { "title": "Mocking", "path": "/guide/mocking" }
       ]
     },
-    { "title": "API", "path": "/api" },
+    { "title": "API", "path": "/api",
+      "children": [
+        { "title": "Introduction", "path": "/api" },
+        { "title": "Getting Started", "path": "/api/getting-started" },
+        { "title": "Server Setup", "path": "/api/server" },
+        { "title": "OpenAPI Document", "path": "/api/openapi-document" },
+        { "title": "Controllers", "path": "/api/controllers" },
+        { "title": "Mocking", "path": "/api/mocking" }
+      ] },
     { "title": "Examples", "path": "/examples" }
   ],
   "2.x": [
+    { "title": "Home", "path": "/" },
     {
       "title": "Guide 2",
       "path": "/guide",
