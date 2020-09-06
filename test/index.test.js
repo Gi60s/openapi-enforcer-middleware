@@ -27,12 +27,48 @@ const expect = chai.expect
 chai.use(chaiAsPromised)
 
 const Server = utils.server
-const { ok, spec, test } = utils
+const { copy, ok, spec, test } = utils
 
 
 
 /* global describe it */
 describe('openapi-enforcer-middleware', () => {
+
+  describe('configuration', function () {
+    it('middleware will use use sub path', async () => {
+      const doc = spec.openapi([{
+        path: '/foo'
+      }])
+
+      const { app, enforcerPromise, enforcerMiddleware, request, start, stop } = utils.server({ doc, initEnforcer: false })
+      app.use('/api', enforcerMiddleware.init(enforcerPromise))
+
+      app.get('/api/foo', (req, res) => {
+        res.sendStatus(200)
+      })
+
+      // this path is not defined in the OpenAPI doc so it will never be reached with the default middleware options
+      app.get('/api/bar', (req, res) => {
+        res.sendStatus(200)
+      })
+
+      await start()
+
+      // test the route defined by the OpenAPI doc and as an Express route
+      let res = await request({ path: '/api/foo' })
+      expect(res.statusCode).to.equal(200)
+
+      // test the route NOT defined by the OpenAPI doc but only as an Express route
+      res = await request({ path: '/api/bar' })
+      expect(res.statusCode).to.equal(404)
+
+      // test a route that wasn't defined at the Express route root but is defined at the OpenAPI document root
+      res = await request({ path: '/foo' })
+      expect(res.statusCode).to.equal(404)
+
+      await stop()
+    })
+  })
 
   describe('options', () => {
 
@@ -318,7 +354,173 @@ describe('openapi-enforcer-middleware', () => {
       })
     })
 
-    describe('mock result priority', function () {
+    describe.only('mock result priority', function () {
+      let doc
+
+      before(() => {
+        doc = spec.openapi([{
+          responses: [
+            { code: 200, type: 'application/json', example: 1, schema: { type: 'integer' } },
+            { code: 200, type: 'text/plain', examples: { hello: 'hello', bye: 'bye' }, schema: { type: 'string' } },
+            { code: 201, type: 'application/json', example: true, schema: { type: 'boolean' } }
+          ]
+        }])
+      })
+
+      describe('will use 200 response code if none specified', () => {
+        it('openapi v2', async () => {
+          let doc = spec.swagger([{
+            responses: [
+              { code: 200, type: 'application/json', schema: { type: 'integer' } },
+              { code: 201, type: 'application/json', schema: { type: 'boolean' } }
+            ]
+          }])
+          await test({ doc }, async (request) => {
+            let res = await request({ path: '/?x-mock' })
+            expect(res.statusCode).to.equal(200)
+          })
+        })
+
+        it('openapi v3', async () => {
+          let doc = spec.openapi([{
+            responses: [
+              { code: 200, type: 'application/json', schema: { type: 'integer' } },
+              { code: 201, type: 'application/json', schema: { type: 'boolean' } }
+            ]
+          }])
+          await test({ doc }, async (request) => {
+            let res = await request({ path: '/?x-mock' })
+            expect(res.statusCode).to.equal(200)
+          })
+        })
+      })
+
+      describe('will use produce a random response body if no example(s) or implementation exists', () => {
+        it('openapi v2', async () => {
+          const doc = spec.swagger([{
+            responses: [
+              { code: 200, type: 'application/json', schema: { type: 'integer' } }
+            ]
+          }])
+          await test({ doc }, async (request) => {
+            let res = await request({ path: '/?x-mock' })
+            expect(res.body).to.be.a('number')
+            expect(res.body % 1).to.equal(0)
+          })
+        })
+
+        it('openapi v3', async () => {
+          const doc = spec.openapi([{
+            responses: [
+              { code: 200, type: 'application/json', schema: { type: 'integer' } }
+            ]
+          }])
+          await test({ doc }, async (request) => {
+            let res = await request({ path: '/?x-mock' })
+            expect(res.body).to.be.a('number')
+            expect(res.body % 1).to.equal(0)
+          })
+        })
+      })
+
+      describe('will use return a schema example if no implementation exists', function () {
+        it('openapi v2', async () => {
+          const doc = spec.swagger([{
+            responses: [
+              { code: 200, type: 'application/json', schema: { type: 'integer', example: 1 } }
+            ]
+          }])
+          await test({ doc }, async (request) => {
+            let res = await request({ path: '/?x-mock' })
+            expect(res.body).to.equal(1)
+          })
+        })
+
+        it('openapi v3', async () => {
+          const doc = spec.openapi([{
+            responses: [
+              { code: 200, type: 'application/json', schema: { type: 'integer', example: 1 } }
+            ]
+          }])
+          await test({ doc }, async (request) => {
+            let res = await request({ path: '/?x-mock' })
+            expect(res.body).to.equal(1)
+          })
+        })
+      })
+
+      describe('will use return a content example if no implementation exists', () => {
+        it('openapi v3', async () => {
+          const doc = spec.openapi([{
+            responses: [
+              { code: 200, type: 'application/json', example: 2, schema: { type: 'integer', example: 1 } }
+            ]
+          }])
+          await test({ doc }, async (request) => {
+            let res = await request({ path: '/?x-mock' })
+            expect(res.body).to.equal(2)
+          })
+        })
+      })
+
+      it.only('will use implementation if it exists', async () => {
+        const doc = spec.openapi([{
+          responses: [
+            { code: 200, type: 'application/json', example: 2, schema: { type: 'integer', example: 1 } }
+          ]
+        }])
+        doc['x-mock-implemented'] = true
+
+        function routeHook (app) {
+          app.get('/', (req, res) => {
+            if (req.enforcer.mockMode) {
+              res.enforcer.send(5)
+            } else {
+              res.enforcer.send(6)
+            }
+          })
+        }
+
+        await test({ doc, routeHook }, async (request) => {
+          let res = await request({ path: '/?x-mock' })
+          expect(res.body).to.equal(5)
+
+          res = await request({ path: '/' })
+          expect(res.body).to.equal(6)
+        })
+      })
+
+      it('can specify response code', async () => {
+        await test({ doc }, async (request) => {
+          // no mock request and route implemented
+          let res = await request({ path: '/?x-mock=200' })
+          expect(res.statusCode).to.equal(200)
+          expect(res.body).to.be.oneOf([1, 'hello', 'bye'])
+
+          // mock query request disabled
+          res = await request({ path: '/?x-mock=201' })
+          expect(res.statusCode).to.equal(201)
+          expect(res.body).to.equal(true)
+        })
+      })
+
+      it('can specify a response type', async () => {
+        await test({ doc }, async (request) => {
+          // no mock request and route implemented
+          let res = await request({ path: '/?x-mock=200,random' })
+          expect(res.statusCode).to.equal(200)
+          expect(res.body).not.to.be.oneOf([1, 'hello', 'bye'])
+        })
+      })
+
+      it('can specify a response example by name', async () => {
+        await test({ doc }, async (request) => {
+          // include mock request and route implemented
+          let res = await request({ path: '/?x-mock=200,example,hello' })
+          expect(res.statusCode).to.equal(200)
+          expect(res.body).to.equal('hello')
+        })
+      })
 
     })
   })

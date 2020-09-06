@@ -3,7 +3,7 @@ import Enforcer from 'openapi-enforcer'
 import Express from "express";
 import * as I from './interfaces'
 import path from 'path'
-import { errorFromException, initialized } from "./util2";
+import { copy, errorFromException, initialized } from "./util2";
 
 const enforcerVersion = require(path.resolve(path.dirname(require.resolve('openapi-enforcer')), 'package.json')).version
 const ENFORCER_HEADER = 'x-openapi-enforcer'
@@ -26,7 +26,7 @@ export function getMockMode (req: Express.Request): I.MockMode | void {
 
 // fallback mocking middleware - supports specifying response code, example, or schema derived value
 export function mockHandler (req: Express.Request, res: Express.Response, next: Express.NextFunction, mock: I.MockMode) {
-    const { openapi, operation, options } = req.enforcer!
+    const { accepts, openapi, operation, options } = req.enforcer!
 
     const version: number = openapi.swagger ? 2 : +/^(\d+)/.exec(openapi.openapi)![0]
     const exception = new Enforcer.Exception('Unable to generate mock response')
@@ -48,6 +48,15 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
         return
     }
 
+    // determine acceptable response content-types
+    const [ contentTypes, acceptsError ] = accepts(mock.statusCode)
+    if (acceptsError || contentTypes.length === 0) {
+        res.status(406)
+        res.set('content-type', 'text/plain')
+        res.send('Not acceptable')
+        return
+    }
+
     // version 2
     if (version === 2) {
         if (!mock.source || mock.source === 'example') {
@@ -65,6 +74,7 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
                             next
                         )
                         res.set(ENFORCER_HEADER, 'mock: response example')
+                        res.set('content-type', type)
                         return res.enforcer!.send(example)
                     }
                 }
@@ -74,6 +84,7 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
             if (response.schema && response.schema.hasOwnProperty('example')) {
                 res.status(+mock.statusCode)
                 res.set(ENFORCER_HEADER, 'mock: schema example')
+                res.set('content-type', contentTypes[0])
                 return res.enforcer!.send(copy(response.schema.example))
             }
 
@@ -99,6 +110,8 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
 
                 res.status(+mock.statusCode)
                 res.set(ENFORCER_HEADER, 'mock: schema example')
+                res.set('content-type', contentTypes[0])
+
                 return res.enforcer!.send(value)
             } else {
                 exception.message('No schema associated with response')
@@ -208,26 +221,11 @@ export function mockMiddleware (req: Express.Request, res: Express.Response, nex
 
         // call the mock handler
         mockHandler(req, res, next, {
-            origin: 'automatic',
+            origin: 'fallback',
             source: '',
             specified: false,
             statusCode: responseCodes[0] || ''
         })
-    }
-}
-
-
-function copy (value: any): any {
-    if (Array.isArray(value)) {
-        return value.map(copy)
-    } else if (value && typeof value === 'object') {
-        const result: { [key: string]: any } = {}
-        Object.keys(value).forEach(key => {
-            result[key] = copy(value[key])
-        })
-        return result
-    } else {
-        return value
     }
 }
 
@@ -266,7 +264,7 @@ function isWithinVersion (versionLow: string, versionHigh: string): boolean {
     return true
 }
 
-function parseMockValue (origin: string, responseCodes: Array<string>, value: string): I.MockMode {
+function parseMockValue (origin: 'fallback' | 'query' | 'header', responseCodes: Array<string>, value: string): I.MockMode {
     value = value.trim()
     const result: I.MockMode = {
         origin,
@@ -277,7 +275,7 @@ function parseMockValue (origin: string, responseCodes: Array<string>, value: st
     if (value.length) {
         const ar = value.split(',')
         if (ar.length > 0) result.statusCode = ar[0]
-        if (ar.length > 1) result.source = ar[1]
+        if (ar.length > 1) result.source = <'implemented' | 'example' | 'random' | ''>ar[1]
         if (result.source === 'example' && ar.length > 2) result.name = ar[2]
     }
     return result

@@ -8,7 +8,8 @@ import cookieStore from "./cookie-store";
 
 const { validatorBoolean, validatorString, validatorNonEmptyString, validatorQueryParams } = optionValidators
 
-export function init (enforcerPromise: Promise<Enforcer>, options?: I.MiddlewareOptions): I.Middleware {
+// TODO: export function init (enforcerPromise: Promise<Enforcer>, options?: I.MiddlewareOptions): I.Middleware {
+export function init (enforcerPromise: Promise<any>, options?: I.MiddlewareOptions): I.Middleware {
     const opts: I.MiddlewareOptions = normalizeOptions(options, {
         defaults: {
             allowOtherQueryParameters: false,
@@ -20,8 +21,8 @@ export function init (enforcerPromise: Promise<Enforcer>, options?: I.Middleware
             mockQuery: 'x-mock',
             mockStore: cookieStore(),
             xController: 'x-controller',
-            xOperation: 'x-operation',
-            xMockSessions: 'x-mock-sessions'
+            xMockImplemented: 'x-mock-implemented',
+            xOperation: 'x-operation'
         },
         required: [],
         validators: {
@@ -40,8 +41,8 @@ export function init (enforcerPromise: Promise<Enforcer>, options?: I.Middleware
                 return ''
             },
             xController: validatorNonEmptyString,
-            xOperation: validatorNonEmptyString,
-            xMockSessions: validatorNonEmptyString
+            xMockImplemented: validatorNonEmptyString,
+            xOperation: validatorNonEmptyString
         }
     })!
 
@@ -71,6 +72,9 @@ export function init (enforcerPromise: Promise<Enforcer>, options?: I.Middleware
 
                     // make deserialized request values accessible along with openapi, operation, and a response function
                     req.enforcer = {
+                        accepts (responseCode: number | string): { next (): IteratorResult<string[] | void, any>, [Symbol.iterator] (): any } {
+                            return operation.getResponseContentTypeMatches(responseCode, headers.accept || '*/*')
+                        },
                         cookies: cookie,
                         headers,
                         openapi,
@@ -94,7 +98,7 @@ export function init (enforcerPromise: Promise<Enforcer>, options?: I.Middleware
                         req.enforcer.mockStore = opts.mockStore
 
                         // if operation identifies as having operable mock code to execute then don't run auto mock response handler
-                        if (!operation[opts.xMockSessions]) {
+                        if (!hasImplementedMock(opts.xMockImplemented!, operation) && mockMode.source !== 'implemented' && mockMode.source !== '') {
                             mockHandler(req, res, next, mockMode)
                         } else {
                             next()
@@ -104,6 +108,20 @@ export function init (enforcerPromise: Promise<Enforcer>, options?: I.Middleware
                     }
                 }
             })
-            .catch(next)
+            .catch(err => {
+                next(err)
+            })
     }
+}
+
+function hasImplementedMock (mockKey: string, operation: any): boolean {
+    if (operation[mockKey]) return true
+
+    let data = operation.enforcerData
+    while (data) {
+        data = data.parent
+        if (data && data.result[mockKey]) return true
+    }
+
+    return false
 }

@@ -35,6 +35,7 @@ export namespace IEnforcer {
 export type Middleware = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => void
 
 export interface MiddlewareRequestData {
+    accepts (responseCode: number | string): { next (): IteratorResult<string[] | void, any>, [Symbol.iterator] (): any }
     body?: any
     cookies: { [key: string]: any }
     headers: { [key: string]: any }
@@ -53,11 +54,11 @@ export interface MiddlewareResponseData {
 }
 
 export interface MockMode {
-    name?: string
-    origin: string
-    source: string
-    specified: boolean
-    statusCode: string
+    name?: string                                       // example name to use (OpenAPI v3 only)
+    origin: 'fallback' | 'query' | 'header'             // where the mock request originate from
+    source: 'implemented' | 'example' | 'random' | ''   // where to generate the response from
+    specified: boolean                                  // whether a mock request was specified
+    statusCode: string                                  // the response status code to mock for
 }
 
 export interface MockStore {
@@ -75,7 +76,7 @@ export interface MiddlewareOptions {
     mockQuery?: string                              // if true then manual mocking via query is enabled
     mockStore?: MockStore                           // this mock store to use if the request is a mock request
     xController?: string                            // the name of the OpenAPI extension property that will define the API controller file
-    xMockSessions?: string                          // the name of the OpenAPI extension property that identifies if the operation has mock sessions
+    xMockImplemented?: string                       // the name of the OpenAPI extension property that identifies if the operation has a mock response implemented in your code
     xOperation?: string                             // the name of the OpenAPI extension property that will define the operation name within the controller file
 }
 

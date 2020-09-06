@@ -2,6 +2,9 @@ const Enforcer = require('openapi-enforcer')
 const express = require('express')
 const http = require('http')
 const Middleware = require('../dist')
+const util = require('../dist/util2')
+
+exports.copy = util.copy
 
 exports.ok = () => {
   return function (req, res) {
@@ -20,7 +23,7 @@ exports.spec = {
     return buildPaths(result, opts, 3)
   },
 
-  swagger () {
+  swagger (opts) {
     opts = standardizeSpecOptions(opts)
     const result = {
       swagger: '2.0',
@@ -42,10 +45,10 @@ exports.test = async function (options, handler) {
  *
  * @param {object} options
  * @param {object} options.doc
- * @param {boolean|object} options.initEnforcer
- * @param {boolean} options.mock
- * @param {function} options.routeHook
- * @returns {{ app: Express, request: function, stop: function, start: function }}
+ * @param {boolean|object} [options.initEnforcer=true]
+ * @param {boolean} [options.mock=false]
+ * @param {function} [options.routeHook]
+ * @returns {{ app: Express, enforcerPromise: Promise, enforcerMiddleware: *, request: function, stop: function, start: function }}
  */
 exports.server = function (options) {
   const app = express()
@@ -95,7 +98,7 @@ exports.server = function (options) {
           result.body += chunk
         })
         res.on('end', () => {
-          if (res.headers['content-type'] === 'application/json') {
+          if (res.headers['content-type'].indexOf('application/json') === 0) {
             result.body = JSON.parse(result.body)
           }
           resolve(result)
@@ -141,6 +144,8 @@ exports.server = function (options) {
 
   return {
     app,
+    enforcerPromise,
+    enforcerMiddleware: Middleware,
     request,
     start,
     stop
@@ -164,6 +169,10 @@ function buildPaths (doc, opts, version) {
       opt.responses.forEach(res => {
         const response = responses[res.code] = { description: '' }
         if (version === 2) {
+          if (res.type) {
+            if (!operation.produces) operation.produces = []
+            operation.produces.push(res.type)
+          }
           if (res.example) {
             response.examples = {
               [res.type || 'application/json']: res.example
@@ -178,7 +187,13 @@ function buildPaths (doc, opts, version) {
             const content = response.content = {}
             const type = content[res.type || 'application/json'] = {}
             if (res.example) type.example = res.example
-            if (res.examples) type.examples = res.examples
+            if (res.examples) {
+              const results = {}
+              Object.keys(res.examples).forEach(name => {
+                results[name] = { value: res.examples[name] }
+              })
+              type.examples = results
+            }
             if (res.headers) type.headers = res.headers
             if (res.schema) type.schema = res.schema
           }

@@ -15,11 +15,23 @@ interface OptionTemplate {
 
 const extractValue = Enforcer.v3_0.Schema.extractValue // v2 and v3 extractValue is the same
 
+export function copy (value: any): any {
+    return copy2(value, new Map())
+}
+
 export function errorFromException (exception: any): I.StatusError {
     const err = <I.StatusError>Error(exception.toString())
     err.exception = exception
     if (exception.hasOwnProperty('statusCode')) err.statusCode = exception.statusCode
     return err
+}
+
+export function findEnforcerParentComponent(current: any, name: string): any {
+    let data = current.enforcerData
+    while (data) {
+        data = data.parent
+        if (data.result.constructor.name === name) return data.result
+    }
 }
 
 export function handleRequestError (opts: I.MiddlewareOptions, error: I.StatusError, res: Express.Response, next: Express.NextFunction) {
@@ -144,6 +156,29 @@ export const optionValidators = {
     validatorBoolean,
     validatorNonEmptyString,
     validatorString
+}
+
+function copy2 (value: any, map: Map<any, any>): any {
+    const exists = map.get(value)
+    if (exists) return exists
+
+    if (Array.isArray(value)) {
+        const result: any = []
+        map.set(value, result)
+        value.forEach(v => {
+            result.push(copy2(v, map))
+        })
+        return result
+    } else if (value && typeof value === 'object' && value.constructor.name === 'Object') {
+        const result: any = {}
+        map.set(value, result)
+        Object.keys(value).forEach(key => {
+            result[key] = copy2(value, map)
+        })
+        return result
+    } else {
+        return value
+    }
 }
 
 function isArrayOf (value: any, type: string) {
