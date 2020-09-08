@@ -1,3 +1,9 @@
+const fs = require('fs')
+const path = require('path')
+const navigation = require('./static/navigation.json')
+
+const basePath = path.resolve(__dirname, 'content')
+const rxMd = /\.md$/i
 
 export default {
   /*
@@ -10,6 +16,12 @@ export default {
   ** See https://nuxtjs.org/api/configuration-target
   */
   target: 'static',
+
+  // https://nuxtjs.org/guides/configuration-glossary/configuration-generate
+  generate: {
+    routes: generateRoutes(basePath, basePath)
+  },
+
   /*
   ** Headers of the page
   ** See https://nuxtjs.org/api/configuration-head
@@ -81,5 +93,57 @@ export default {
   */
   build: {
     transpile: [/^element-ui/],
+  }
+}
+
+function generateRoutes (basePath, dirPath, routes = []) {
+  const fileNames = fs.readdirSync(dirPath)
+  fileNames.forEach(fileName => {
+    const filePath = path.resolve(dirPath, fileName)
+    const stat = fs.statSync(filePath)
+    if (stat.isDirectory()) {
+      generateRoutes(basePath, filePath, routes)
+    } else if (stat.isFile() && rxMd.test(fileName)) {
+      const relPath = path.relative(basePath, filePath)
+      const parts = relPath.split(path.sep)
+      const lastIndex = parts.length - 1
+      parts[lastIndex] = parts[lastIndex].replace(/\.md$/i, '')
+      if (parts[lastIndex].toLowerCase() === 'index') parts.pop()
+
+      const joined = '/' + parts.join('/')
+      routes.push(joined)
+    }
+  })
+  return routes
+}
+
+function validateNavigation (navigation, routes) {
+  const navArray = []
+
+  Object.keys(navigation).forEach(version => {
+    buildNavArray('/' + version, navigation[version])
+  })
+
+  function buildNavArray (prefix, navs) {
+    navs.forEach(nav => {
+      if (nav.children) {
+        buildNavArray(prefix, nav.children)
+      } else {
+        const path = nav.path === '/' ? '' : nav.path
+        navArray.push(prefix + path)
+      }
+    })
+  }
+
+  // console.log('Nav Array: ', navArray)
+  // console.log('Routes: ', routes)
+
+  const missing = navArray.filter(item => {
+    const index = routes.indexOf(item)
+    return index === -1
+  })
+
+  if (missing.length) {
+    throw Error('One or more navigation paths are defined for pages that do not exist: \n  ' + missing.join('\n  '))
   }
 }

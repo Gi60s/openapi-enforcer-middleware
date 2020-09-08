@@ -1,6 +1,7 @@
 {
   "1.x": [
     { "title": "Home", "path": "/" },
+    { "title": "API", "path": "/api" },
     {
       "title": "Guide",
       "path": "/guide",
@@ -12,32 +13,10 @@
         { "title": "Controllers", "path": "/guide/controllers" },
         { "title": "Mocking", "path": "/guide/mocking" }
       ]
-    },
-    { "title": "API", "path": "/api",
-      "children": [
-        { "title": "Introduction", "path": "/api" },
-        { "title": "Getting Started", "path": "/api/getting-started" },
-        { "title": "Server Setup", "path": "/api/server" },
-        { "title": "OpenAPI Document", "path": "/api/openapi-document" },
-        { "title": "Controllers", "path": "/api/controllers" },
-        { "title": "Mocking", "path": "/api/mocking" }
-      ] },
-    { "title": "Examples", "path": "/examples" }
+    }
   ],
   "2.x": [
     { "title": "Home", "path": "/" },
-    {
-      "title": "Guide 2",
-      "path": "/guide",
-      "children": [
-        { "title": "Getting Started", "path": "/guide/getting-started" },
-        { "title": "Server Setup", "path": "/guide/server" },
-        { "title": "OpenAPI Document", "path": "/guide/openapi-document" },
-        { "title": "Controllers", "path": "/guide/controllers" },
-        { "title": "Mocking", "path": "/guide/mocking" }
-      ]
-    },
-    { "title": "API 2", "path": "/api" },
     {
       "title": "Examples",
       "path": "/examples",

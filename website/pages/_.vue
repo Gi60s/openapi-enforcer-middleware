@@ -16,7 +16,7 @@
         <el-button class="mobile-menu-button" icon="el-icon-menu" @click="overlay = !overlay"></el-button>
 
         <div class="site-navigation">
-          <search :search-function="runSearch" :version="version" />
+          <search v-if="version" :search-function="runSearch" :version="version" />
 
           <!-- top menu -->
           <el-menu mode="horizontal">
@@ -30,7 +30,7 @@
           </el-menu>
 
           <!-- version menu -->
-          <el-menu :default-active="version" mode="horizontal" @select="navSelectVersion">
+          <el-menu v-if="version" :default-active="version" mode="horizontal" @select="navSelectVersion">
             <el-submenu index="version-menu" class="version-menu">
               <template slot="title">{{ version }}</template>
               <el-menu-item v-for="ver in navigation.versions" :key="ver" :index="ver">{{ ver }}</el-menu-item>
@@ -43,7 +43,7 @@
     <div class='body center'>
 
       <!-- left navigation -->
-      <div class='aside-left' :class="{ 'show-navigation': overlay }">
+      <div v-if="version" class='aside-left' :class="{ 'show-navigation': overlay }">
 
         <!-- mobile navigation -->
         <div class="mobile-content">
@@ -70,25 +70,39 @@
             <div class="mobile-menu-group-content">
               <ul>
                 <li v-for="navItem in navigation.menu[version]" :key="navItem.path" :class="navItemClass(navItem, null)">
-                  <nuxt-link :to="'/' + version + navItem.path">{{ navItem.title }}</nuxt-link>
-                  <!--        <ul v-if="navItem.children && navigation.selected.top === navItem.path">-->
-                  <ul v-if="navItem.children">
-                    <li v-for="child in navItem.children" :key="child.path" :class="navItemClass(child, navItem)">
-                      <nuxt-link :to="'/' + version + child.path">{{ child.title }}</nuxt-link>
-                    </li>
-                  </ul>
+                  <nuxt-link v-if="!navItem.children" :to="'/' + version + navItem.path">{{ navItem.title }}</nuxt-link>
+                  <div class="nav-group" v-else>
+                    <div class="nav-group-title">{{ navItem.title }}</div>
+                    <ul v-if="navItem.children">
+                      <li v-for="child in navItem.children" :key="child.path" :class="navItemClass(child, navItem)">
+                        <nuxt-link :to="'/' + version + child.path">{{ child.title }}</nuxt-link>
+                      </li>
+                    </ul>
+                  </div>
                 </li>
               </ul>
             </div>
           </div>
 
           <!-- mobile table of contents -->
-          <div v-if="doc && doc.toc && !doc.noRightColum && doc.toc.length" class="mobile-menu-group" :class="{ 'active-menu': mobileMenu === 'Page Content' }">
+          <div v-if="doc && doc.toc && !doc.noRightColumn && doc.toc.length" class="mobile-menu-group" :class="{ 'active-menu': mobileMenu === 'Page Content' }">
             <div class="mobile-menu-button" @click="setMobileMenu('Page Content')">Page Content</div>
             <div class="mobile-menu-group-content">
               <ul>
                 <li v-for="link of doc.toc" :key="link.id" :class="{ 'toc2': link.depth === 2, 'toc3': link.depth === 3 }">
-                  <NuxtLink :to="link.id">{{ link.text }}</NuxtLink>
+                  <NuxtLink :to="'#' + link.id">{{ link.text }}</NuxtLink>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- mobile version menu -->
+          <div class="mobile-menu-group" :class="{ 'active-menu': mobileMenu === 'Docs Version' }">
+            <div class="mobile-menu-button" @click="setMobileMenu('Docs Version')">Docs Version</div>
+            <div class="mobile-menu-group-content">
+              <ul>
+                <li v-for="version in navigation.versions" :key="version">
+                  <nuxt-link :to="'/' + version">{{version}}</nuxt-link>
                 </li>
               </ul>
             </div>
@@ -105,13 +119,15 @@
 
         <ul class="site-navigation">
           <li v-for="navItem in navigation.menu[version]" :key="navItem.path" :class="navItemClass(navItem, null)">
-            <nuxt-link :to="'/' + version + navItem.path">{{ navItem.title }}</nuxt-link>
-<!--        <ul v-if="navItem.children && navigation.selected.top === navItem.path">-->
-            <ul v-if="navItem.children">
-              <li v-for="child in navItem.children" :key="child.path" :class="navItemClass(child, navItem)">
-                <nuxt-link :to="'/' + version + child.path">{{ child.title }}</nuxt-link>
-              </li>
-            </ul>
+            <nuxt-link v-if="!navItem.children" :to="'/' + version + navItem.path">{{ navItem.title }}</nuxt-link>
+            <div class="nav-group" v-else>
+              <div class="nav-group-title">{{ navItem.title }}</div>
+              <ul v-if="navItem.children">
+                <li v-for="child in navItem.children" :key="child.path" :class="navItemClass(child, navItem)">
+                  <nuxt-link :to="'/' + version + child.path">{{ child.title }}</nuxt-link>
+                </li>
+              </ul>
+            </div>
           </li>
         </ul>
       </div>
@@ -119,7 +135,7 @@
       <div class='content'>
 
         <!-- out of date docs warning -->
-        <el-alert v-if="version !== '2.x'" title="There is a Newer Version!" type="warning" :closable="false">
+        <el-alert v-if="version && version !== '2.x'" title="There is a Newer Version!" type="warning" :closable="false">
           There is a new version of this library available with new documentation. If you are looking
           for documentation for version {{ version }} then you are in the right place,
           otherwise check out the
@@ -137,7 +153,7 @@
           <div class="toc">
             <ul>
               <li v-for="link of doc.toc" :key="link.id" :class="{ 'toc2': link.depth === 2, 'toc3': link.depth === 3 }">
-                <NuxtLink :to="link.id">{{ link.text }}</NuxtLink>
+                <NuxtLink :to="'#' + link.id">{{ link.text }}</NuxtLink>
               </li>
             </ul>
           </div>
@@ -146,7 +162,17 @@
     </div>
 
     <div class="footer">
-      <p>Footer</p>
+      <div>
+        <a href="https://www.npmjs.com/package/openapi-enforcer-middleware" target="_blank">NPM</a>
+        |
+        <a href="https://github.com/byu-oit/openapi-enforcer-middleware" target="_blank">Github</a>
+      </div>
+      <div class="edit-this-page">
+        Caught a mistake or want to contribute to the documentation?
+        <a :href="'https://github.com/byu-oit/openapi-enforcer-middleware/tree/master/website/content' + editPath" target="_blank">
+          Edit this page on Github.
+        </a>
+      </div>
     </div>
   </div>
 </template>
@@ -185,6 +211,8 @@ const store = {
   }
 }
 
+let navigationMenu = null
+
 export default {
   components: {
     Search
@@ -192,12 +220,9 @@ export default {
 
   async beforeRouteEnter  (to, from, next) {
     if (to.fullPath === '/') {
-      const version = store.get('version') || '2.x'
-      next('/' + version)
-    } else {
-      next()
+      const version = store.get('version')
+      if (version) return next('/' + version)
     }
-    // console.log('Before enter', to, from)
     next()
   },
 
@@ -206,52 +231,62 @@ export default {
   //   next()
   // },
 
-  async asyncData({$content, params}) {
-    console.info('INIT')
-    const [ version, ...path ] = params.pathMatch.split('/')
-
-    const navigation = {
-      drawer: true,
-      selected: {
-        path: '',
-        top: '',
-        version
-      },
-      ecosystem: [
-        { title: 'OpenAPI Enforcer (core)', url: 'https://byu-oit.github.io/openapi-enforcer' },
-        { title: 'CLI', url: 'a' },
-        { title: 'Express Middleware', url: 'b' },
-        { title: 'BigInt', url: 'c' },
-        { title: 'Multer', url: 'd' }
-      ],
-      secondary: null,
-      menu: [],
-      versions: ['1.x', '2.x']
+  async asyncData({$content, $router, params}) {
+    const [ version ] = params.pathMatch.split('/')
+    if (version) {
+      store.set('version', version)
     }
 
-    const context = {
-      currentPath: '',
-      doc: null,
-      err: null,
-      navigation,
+    if (!navigationMenu) {
+      const { data } = await axios.get('/navigation.json')
+      navigationMenu = data
+    }
+
+    // await loadPageData(context, version, $content, '/' + path.join('/'))
+    const path = params.pathMatch || '/'
+    let doc = null
+    let isIndex = path === '/'
+    try {
+      doc = await $content(path === '/' ? 'index' : path).fetch()
+    } catch (e) {
+      isIndex = true
+      doc = await $content(path, 'index').fetch()
+    }
+    if (Array.isArray(doc)) doc = doc[0]
+
+    return {
+      editPath: path.replace(/\/$/, '') + (isIndex && doc ? '/index' : '') + '.md',
+      doc,
+      navigation: {
+        drawer: true,
+        selected: {
+          path: '',
+          top: '',
+          version
+        },
+        ecosystem: [
+          { title: 'OpenAPI Enforcer (core)', url: 'https://byu-oit.github.io/openapi-enforcer' },
+          { title: 'CLI', url: 'a' },
+          { title: 'Express Middleware', url: 'b' },
+          { title: 'BigInt', url: 'c' },
+          { title: 'Multer', url: 'd' }
+        ],
+        menu: navigationMenu,
+        versions: ['1.x', '2.x']
+      },
       mobileMenu: 'Site Navigation',
       mobileSearch: '',
       mobileSearchResults: [],
       overlay: false,
       query: ''
     }
-
-    const { data } = await axios.get('/navigation.json')
-    navigation.menu = data
-
-    await loadPageData(context, version, $content, '/' + path.join('/'))
-
-    return context
   },
 
   computed: {
     version () {
-      return getVersion(this.$route)
+      const path = this.$route.fullPath.replace(/^\//, '')
+      const [ version ] = path.split('/')
+      return version
     }
   },
 
@@ -355,7 +390,7 @@ export default {
         // limit results to 7 or fewer
         results = results.slice(0, 7)
 
-        console.log(results.map(v => JSON.parse(JSON.stringify(v))))
+        console.log('search results', results.map(v => JSON.parse(JSON.stringify(v))))
         callback(results)
       }
     }
@@ -366,6 +401,12 @@ export default {
       this.runSearch(newValue, results => {
         this.mobileSearchResults = results
       })
+    },
+
+    overlay (newValue) {
+      if (newValue === true) {
+        this.mobileMenu = 'Site Navigation'
+      }
     }
   }
 }
@@ -384,129 +425,6 @@ function getCookie(cname) {
     }
   }
   return "";
-}
-
-async function loadPageData (context, version, $content, key) {
-  try {
-    const nav = context.navigation
-    const filePath = getFilePath(context, version, key)
-
-    // avoid running again for current path
-    // const was = context.currentPath
-    // if (context.currentPath === key) return
-    // console.log('load ' + key + ' was ' + was)
-    // context.currentPath = key
-
-    // reset navigation selection
-    nav.selected.top = '/' + key.split('/')[1]
-    nav.selected.path = key
-    // context.navigation.secondary = null
-    if (!filePath) {
-      context.doc = undefined
-      return
-    }
-
-    const menu = nav.menu[version]
-    const topItemsLength = menu.length
-    for (let i = 0; i < topItemsLength; i++) {
-      const top = menu[i]
-      console.info('i', i, key, top)
-      if (top.children) {
-        const length = top.children.length
-        for (let j = 0; j < length; j++) {
-          const child = top.children[j]
-          console.log(j, key, child)
-          if (child.path === key) {
-            // nav.selected.top = top.path
-            const secondary = top.children.map(v => {
-              return {
-                depth: 1,
-                path: v.path,
-                title: v.title
-              }
-            })
-
-            const doc = await fetchDocument($content, filePath)
-            const toc = doc.toc.map(v => {
-              return {
-                depth: v.depth,
-                path: key + '#' + v.id,
-                title: v.text
-              }
-            })
-            secondary.splice(j + 1, 0, ...toc)
-            nav.secondary = secondary
-            context.doc = doc
-
-            return
-          }
-        }
-      }
-      if (top.path === key) {
-        // nav.selected.top = key
-        nav.secondary = null
-
-        const doc = await fetchDocument($content, filePath)
-        context.doc = doc
-
-        return
-      }
-
-      // if (!context.doc) {
-      //   context.error = {
-      //     title: '404',
-      //     description: 'Page not found: ' + key
-      //   }
-      // }
-    }
-  } catch (err) {
-    console.error(err.stack)
-  }
-}
-
-function getFilePath (context, version, key) {
-  const nav = context.navigation
-  // if (key === '/') key = '/index'
-  const found = find(nav.menu[version], key)
-  return found ? '/' + version + found : ''
-
-  function find (items) {
-    const length = items.length
-    for (let i = 0; i < length; i++) {
-      const item = items[i]
-      const hasChildren = item.children && item.children.length
-      if (item.path === key) {
-        return hasChildren ? key + '/index' : key
-      } else if (hasChildren) {
-        let found = find (item.children)
-        if (found) return found
-      }
-    }
-  }
-}
-
-function getVersion (route) {
-  const path = route.fullPath.replace(/^\//, '')
-  const [ version ] = path.split('/')
-  return version
-}
-
-async function fetchDocument ($content, path) {
-  try {
-    return await inner(path)
-  } catch (e) {
-    if (path[path.length - 1] !== '/') path += '/'
-    return await inner(path + 'index')
-  }
-
-  async function inner (path) {
-    console.log(path)
-    let doc = await $content(path).fetch()
-    if (Array.isArray(doc)) doc = doc.find(v => path === v.path.replace(/\/index$/, ''))
-    if (doc && !doc.toc) doc.toc = []
-    console.log(doc)
-    return doc
-  }
 }
 
 </script>
