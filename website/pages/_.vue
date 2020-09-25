@@ -252,7 +252,13 @@ export default {
       isIndex = true
       doc = await $content(path, 'index').fetch()
     }
-    if (Array.isArray(doc)) doc = doc[0]
+    if (Array.isArray(doc)) {
+      const matchPath = '/' + path.replace(/^\//, '').replace(/\/$/, '')
+      doc = doc.filter(d => {
+        const p = d.path.replace(/\/index$/, '')
+        return p === matchPath
+      })[0]
+    }
 
     return {
       editPath: path.replace(/\/$/, '') + (isIndex && doc ? '/index' : '') + '.md',
