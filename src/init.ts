@@ -62,6 +62,13 @@ export function init (enforcerPromise: Promise<any>, options?: I.MiddlewareOptio
                 if (opts.allowOtherQueryParameters !== true && opts.mockQuery) opts.allowOtherQueryParameters!.push(opts.mockQuery)
                 const [ request, error ] = openapi.request(requestObj, { allowOtherQueryParameters: opts.allowOtherQueryParameters })
 
+                // merge unvalidated and unserialized values into validated and serialized objects
+                if (request) {
+                    if (req.cookies) mergeNewProperties(req.cookies, request.cookie)
+                    mergeNewProperties(req.headers, request.headers)
+                    mergeNewProperties(req.query, request.query)
+                }
+
                 if (error) {
                     // probably a client error
                     handleRequestError(opts, error, res, next)
@@ -98,10 +105,10 @@ export function init (enforcerPromise: Promise<any>, options?: I.MiddlewareOptio
                         req.enforcer.mockStore = opts.mockStore
 
                         // if operation identifies as having operable mock code to execute then don't run auto mock response handler
-                        if (!hasImplementedMock(opts.xMockImplemented!, operation) && mockMode.source !== 'implemented' && mockMode.source !== '') {
-                            mockHandler(req, res, next, mockMode)
-                        } else {
+                        if (hasImplementedMock(opts.xMockImplemented!, operation) && (mockMode.source === 'implemented' || mockMode.source === '')) {
                             next()
+                        } else {
+                            mockHandler(req, res, next, mockMode)
                         }
                     } else {
                         next()
@@ -112,6 +119,12 @@ export function init (enforcerPromise: Promise<any>, options?: I.MiddlewareOptio
                 next(err)
             })
     }
+}
+
+function mergeNewProperties (src: { [key: string]: any }, dest: { [key: string]: any }) {
+    Object.keys(src).forEach(key => {
+        if (!dest.hasOwnProperty(key)) dest[key] = src[key]
+    })
 }
 
 function hasImplementedMock (mockKey: string, operation: any): boolean {

@@ -628,7 +628,7 @@ describe('openapi-enforcer-middleware', () => {
           })
         })
 
-        it.only('will handle un-mockable random', async () => {
+        it('will handle un-mockable random', async () => {
           const doc = spec.openapi([{
             responses: [{ code: 200, type: 'application/json' }]
           }])
