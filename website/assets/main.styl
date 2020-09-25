@@ -196,7 +196,7 @@ html, body, #__nuxt, #__layout, #__layout > div
       top: (header-height-full + 5)px;
       overflow: auto;
       padding-top: pad;
-      max-height: calc(100vh - 60px);
+      max-height: calc(100% - 60px);
       padding-bottom: 30px;
 
       @media only screen and (max-width: media-mobile)  {
@@ -207,7 +207,7 @@ html, body, #__nuxt, #__layout, #__layout > div
         top: (header-height-mobile + 5)px;
         right: -82%;
         bottom: 0;
-        max-height: calc(100vh - 50px);
+        max-height: calc(100% - 50px);
         background: color-white;
         border-left: 1px solid color-gray;
         width: 80%;
@@ -403,7 +403,10 @@ html, body, #__nuxt, #__layout, #__layout > div
 
       .el-alert {
         margin-bottom: 30px;
-        border: 1px solid #E6A23C;
+
+        &.el-alert--warning {
+          border: 1px solid #E6A23C;
+        }
 
         .el-alert__title,
         .el-alert__description {
@@ -413,6 +416,10 @@ html, body, #__nuxt, #__layout, #__layout > div
             text-decoration: underline;
             cursor: pointer;
           }
+        }
+
+        .el-alert__closebtn {
+          display: none;
         }
       }
 
@@ -477,16 +484,9 @@ html, body, #__nuxt, #__layout, #__layout > div
     border-top: 1px solid color-gray;
     margin: 60px 0 0 0;
     padding: pad;
-    display: flex;
-    justify-content: space-between;
 
     > * {
-      flex: 1;
-    }
-
-    > .edit-this-page {
-      flex: 2;
-      text-align: right;
+      margin-bottom: pad;
     }
 
     a, a:visited {

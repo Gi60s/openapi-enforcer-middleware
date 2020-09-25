@@ -55,16 +55,19 @@ const enforcer = Enforcer('./openapi.yml')
 app.use(EnforcerMiddleware.init(enforcer))
 
 // Create an express route.
-// Because of the Enforcer middleware we know this route will only be executed if the request is valid.
+// Because of the Enforcer middleware we know this route will only 
+// be executed if the request is valid.
 app.get('/', async (req, res) => {
   
-  // We know the query's limit property will be a valid number from 1 to 100.
-  // We also know that limit will always have a value because we set a default value.
+  // We know the query's limit property will be a valid number
+  // from 1 to 100. We also know that limit will always have a
+  // value because we set a default value.
   const limit = req.enforcer.query.limit
   const results = await loadItems(limit)
 
-  // Here we also validate that we're sending a valid response. We don't want to break the
-  // contract that our OpenAPI document has defined.
+  // Here we also validate that we're sending a valid response.
+  // We don't want to break the contract that our OpenAPI document
+  // has defined.
   res.enforcer.send(result)
 })
 
