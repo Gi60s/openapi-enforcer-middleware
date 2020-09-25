@@ -17,10 +17,6 @@
 'use strict'
 const chai = require('chai')
 const chaiAsPromised = require('chai-as-promised')
-// const Enforcer = require('../dist/index')
-// const helper = require('./resources/helper')
-// const path = require('path')
-const Builder = require('../dist/doc-builder').default
 const utils = require('../test-resources/test-utils')
 
 const expect = chai.expect
@@ -28,8 +24,6 @@ chai.use(chaiAsPromised)
 
 const Server = utils.server
 const { copy, ok, spec, test } = utils
-
-
 
 /* global describe it */
 describe('openapi-enforcer-middleware', () => {
@@ -354,7 +348,7 @@ describe('openapi-enforcer-middleware', () => {
       })
     })
 
-    describe.only('mock result priority', function () {
+    describe('mock result priority', function () {
       let doc
 
       before(() => {
@@ -463,7 +457,7 @@ describe('openapi-enforcer-middleware', () => {
         })
       })
 
-      it.only('will use implementation if it exists', async () => {
+      it('will use implementation if it exists', async () => {
         const doc = spec.openapi([{
           responses: [
             { code: 200, type: 'application/json', example: 2, schema: { type: 'integer', example: 1 } }
@@ -495,7 +489,7 @@ describe('openapi-enforcer-middleware', () => {
           // no mock request and route implemented
           let res = await request({ path: '/?x-mock=200' })
           expect(res.statusCode).to.equal(200)
-          expect(res.body).to.be.oneOf([1, 'hello', 'bye'])
+          expect(res.body).to.be.oneOf(['hello', 'bye'])
 
           // mock query request disabled
           res = await request({ path: '/?x-mock=201' })
@@ -504,22 +498,148 @@ describe('openapi-enforcer-middleware', () => {
         })
       })
 
-      it('can specify a response type', async () => {
+      it('can specify a response mode', async () => {
         await test({ doc }, async (request) => {
           // no mock request and route implemented
           let res = await request({ path: '/?x-mock=200,random' })
           expect(res.statusCode).to.equal(200)
-          expect(res.body).not.to.be.oneOf([1, 'hello', 'bye'])
+          expect(res.body).not.to.be.oneOf(['hello', 'bye'])
         })
       })
 
-      it('can specify a response example by name', async () => {
+      describe('examples', () => {
+        it('v2 can specify a example content type', async () => {
+          const doc = spec.swagger([{
+            responses: [
+              { code: 200, type: 'text/foo', example: 'foo', schema: { type: 'string' } }
+            ]
+          }])
+          doc.paths['/'].get.produces.push('text/bar')
+          doc.paths['/'].get.responses[200].examples['text/bar'] = 'bar'
+          await test({ doc }, async (request) => {
+            let res = await request({ path: '/?x-mock', headers: { accept: 'text/foo' } })
+            expect(res.statusCode).to.equal(200)
+            expect(res.body).to.equal('foo')
+
+            res = await request({ path: '/?x-mock', headers: { accept: 'text/bar' } })
+            expect(res.statusCode).to.equal(200)
+            expect(res.body).to.equal('bar')
+          })
+        })
+
+        it('v3 can specify a response example by name', async () => {
+          await test({ doc }, async (request) => {
+            // include mock request and route implemented
+            let res = await request({ path: '/?x-mock=200,example,hello' })
+            expect(res.statusCode).to.equal(200)
+            expect(res.body).to.equal('hello')
+          })
+        })
+      })
+
+      it('will take the first query mock query parameter if multiple supplied', async () => {
         await test({ doc }, async (request) => {
           // include mock request and route implemented
-          let res = await request({ path: '/?x-mock=200,example,hello' })
+          let res = await request({ path: '/?x-mock=200,example,hello&x-mock=201' })
           expect(res.statusCode).to.equal(200)
           expect(res.body).to.equal('hello')
         })
+      })
+    })
+
+    describe('unable to mock', () => {
+      it('will handle un-mockable status codes', async () => {
+        const doc = spec.openapi([{
+          responses: [{ code: 200, type: 'application/json', schema: { type: 'integer' } }]
+        }])
+        await test({ doc }, async (request) => {
+          // include mock request and route implemented
+          let res = await request({ path: '/?x-mock=204' })
+          expect(res.statusCode).to.equal(422)
+          expect(res.body).to.match(/the spec does not define this response code/i)
+        })
+      })
+
+      it('will handle un-mockable content-type', async () => {
+        const doc = spec.openapi([{
+          responses: [{ code: 200, type: 'application/json', schema: { type: 'integer' } }]
+        }])
+        await test({ doc }, async (request) => {
+          // include mock request and route implemented
+          let res = await request({ path: '/?x-mock=200', headers: { accept: 'application/xml' } })
+          expect(res.statusCode).to.equal(406)
+          expect(res.body).to.equal('Not acceptable')
+        })
+      })
+
+      describe('v2', () => {
+        it('will handle un-mockable content-type example', async () => {
+          const doc = spec.swagger([{
+            responses: [{ code: 200, type: 'application/json', schema: { type: 'integer' } }]
+          }])
+          await test({ doc }, async (request) => {
+            // include mock request and route implemented
+            let res = await request({ path: '/?x-mock=200,example' })
+            expect(res.statusCode).to.equal(422)
+            expect(res.body).to.match(/cannot mock from example/i)
+          })
+        })
+
+        it('will handle un-mockable random', async () => {
+          const doc = spec.swagger([{
+            responses: [{ code: 200, type: 'application/json' }]
+          }])
+          await test({ doc }, async (request) => {
+            // include mock request and route implemented
+            let res = await request({ path: '/?x-mock=200,random' })
+            expect(res.statusCode).to.equal(422)
+            expect(res.body).to.match(/unable to generate a random value/i)
+          })
+        })
+
+      })
+
+      describe('v3', () => {
+        it('will handle un-mockable content-type example', async () => {
+          const doc = spec.openapi([{
+            responses: [{ code: 200, type: 'application/json', schema: { type: 'integer' } }]
+          }])
+          await test({ doc }, async (request) => {
+            // include mock request and route implemented
+            let res = await request({ path: '/?x-mock=200,example' })
+            expect(res.statusCode).to.equal(422)
+            expect(res.body).to.match(/mock example is not defined/)
+          })
+        })
+
+        it('will handle un-mockable content-type example due to wrong name', async () => {
+          const doc = spec.openapi([{
+            responses: [{ code: 200, type: 'application/json', examples: { foo: 1 }, schema: { type: 'integer' } }]
+          }])
+          await test({ doc }, async (request) => {
+            // include mock request and route implemented
+            let res = await request({ path: '/?x-mock=200,example,foo' })
+            expect(res.statusCode).to.equal(200)
+            expect(res.body).to.equal(1)
+
+            res = await request({ path: '/?x-mock=200,example,bar' })
+            expect(res.statusCode).to.equal(422)
+            expect(res.body).to.match(/no example value with the name specified/)
+          })
+        })
+
+        it.only('will handle un-mockable random', async () => {
+          const doc = spec.openapi([{
+            responses: [{ code: 200, type: 'application/json' }]
+          }])
+          await test({ doc }, async (request) => {
+            // include mock request and route implemented
+            let res = await request({ path: '/?x-mock=200,random' })
+            expect(res.statusCode).to.equal(422)
+            expect(res.body).to.match(/no content types are specified/i)
+          })
+        })
+
       })
 
     })
@@ -559,7 +679,7 @@ describe('openapi-enforcer-middleware', () => {
         // non-validated response
         let res = await request({ path: '/?validate=false' })
         expect(res.statusCode).to.equal(200)
-        expect(res.body).to.equal('true')
+        expect(res.body).to.equal(true)
 
         // invalid validated response
         res = await request({ path: '/?validate=true' })
