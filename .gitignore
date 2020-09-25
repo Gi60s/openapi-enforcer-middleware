@@ -2,6 +2,9 @@
 node_modules
 .nuxt
 website/dist
+.nyc_output
+coverage
+dist
 
 ### macOS template
 *.DS_Store
