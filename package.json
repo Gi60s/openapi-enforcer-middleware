@@ -4,6 +4,7 @@
   "description": "An express middleware that makes it easy to write web services that follow an Open API specification.",
   "main": "index.js",
   "scripts": {
+    "coverage": "nyc npm run test",
     "docs:build": "markdown-docs build docs-src docs",
     "docs:dev": "markdown-docs dev docs-src",
     "test": "mocha test"
@@ -50,6 +51,7 @@
     "openapi-enforcer": "^1.4.5",
     "request": "^2.88.0",
     "request-promise-native": "^1.0.7",
+    "source-map-support": "^0.5.19",
     "standard": "^12.0.1"
   }
 }
