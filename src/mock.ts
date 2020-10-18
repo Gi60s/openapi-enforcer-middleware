@@ -4,6 +4,8 @@ import Express from "express";
 import * as I from './interfaces'
 import path from 'path'
 import { copy, errorFromException, initialized } from "./util2";
+import {emit} from "./events";
+import ErrorCode from "./error-code";
 
 const enforcerVersion = require(path.resolve(path.dirname(require.resolve('openapi-enforcer')), 'package.json')).version
 const ENFORCER_HEADER = 'x-openapi-enforcer'
@@ -208,18 +210,23 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
     }
 }
 
-export function mockMiddleware (req: Express.Request, res: Express.Response, next: Express.NextFunction) {
-    if (initialized(req, next)) {
-        const {operation} = req.enforcer!
-        const responseCodes = Object.keys(operation.responses)
+export function mockMiddleware () {
+    return function (req: Express.Request, res: Express.Response, next: Express.NextFunction) {
+        if (initialized(req, next)) {
+            const {operation} = req.enforcer!
+            const responseCodes = Object.keys(operation.responses)
 
-        // call the mock handler
-        mockHandler(req, res, next, {
-            origin: 'fallback',
-            source: '',
-            specified: false,
-            statusCode: responseCodes[0] || ''
-        })
+            // call the mock handler
+            mockHandler(req, res, next, {
+                origin: 'fallback',
+                source: '',
+                specified: false,
+                statusCode: responseCodes[0] || ''
+            })
+        } else {
+            emit('error', new ErrorCode('OpenAPI Enforcer Middleware not initialized. Could not mock response.', 'ENFORCER_MIDDLEWARE_NOT_INITIALIZED'))
+            next()
+        }
     }
 }
 

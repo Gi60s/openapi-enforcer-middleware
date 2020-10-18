@@ -1,15 +1,24 @@
-import { routeBuilder as fnRouteBuilder } from './route-builder'
-import { init as fnInit } from "./init"
+import { on } from './events'
+import { routeBuilder } from './route-builder'
+import { init } from "./init"
 import { mockMiddleware } from "./mock"
+import * as I from './interfaces'
 
-export default {
-    routeBuilder: fnRouteBuilder,
-    init: fnInit,
-    mock: mockMiddleware
+export = OpenAPIEnforcerMiddleware
+
+function OpenAPIEnforcerMiddleware (enforcerPromise: Promise<any>) {
+    return {
+        init (options?: I.MiddlewareOptions): I.Middleware {
+            return init(enforcerPromise, options)
+        },
+        mock () {
+            return mockMiddleware()
+        },
+        on,
+        route (controllersDir: string, options?: I.RouteBuilderOptions) {
+            return routeBuilder(enforcerPromise, controllersDir, options)
+        }
+    }
 }
 
-export const routeBuilder = fnRouteBuilder
-
-export const init = fnInit
-
-export const mock = mockMiddleware
+OpenAPIEnforcerMiddleware.default = OpenAPIEnforcerMiddleware

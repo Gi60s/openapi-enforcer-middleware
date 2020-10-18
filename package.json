@@ -2,8 +2,10 @@
   "name": "openapi-enforcer-middleware",
   "version": "1.2.2",
   "description": "An express middleware that makes it easy to write web services that follow an Open API specification.",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
+    "build": "rimraf dist/ && tsc --build tsconfig.json",
     "coverage": "nyc npm run test",
     "docs:build": "markdown-docs build docs-src docs",
     "docs:dev": "markdown-docs dev docs-src",
@@ -13,7 +15,6 @@
     "type": "git",
     "url": "git+https://github.com/byu-oit/openapi-enforcer-middleware.git"
   },
-  "types": "index.d.ts",
   "keywords": [
     "openapi",
     "swagger",
@@ -51,7 +52,9 @@
     "openapi-enforcer": "^1.4.5",
     "request": "^2.88.0",
     "request-promise-native": "^1.0.7",
+    "rimraf": "^3.0.2",
     "source-map-support": "^0.5.19",
-    "standard": "^12.0.1"
+    "standard": "^12.0.1",
+    "typescript": "^4.0.3"
   }
 }

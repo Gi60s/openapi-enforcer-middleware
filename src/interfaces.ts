@@ -5,10 +5,13 @@ interface AnyObject {
     [key: string]: any
 }
 
-export interface ControllerOptions {
-    dependencies: Array<any>
+export interface RouteBuilderOptions {
+    dependencies?: Array<any>
     ignoreMissingControllers?: boolean
     ignoreMissingOperations?: boolean
+    lazyLoad?: boolean                      // set to true to lazy load operations when called the first time
+    xController?: string                    // the name of the OpenAPI extension property that will define the API controller file
+    xOperation?: string                     // the name of the OpenAPI extension property that will define the operation name within the controller file
 }
 
 export type ErrorMiddleware = (err: Error, req: Express.Request, res: Express.Response, next: Express.NextFunction) => void
@@ -75,9 +78,7 @@ export interface MiddlewareOptions {
     mockHeader?: string                             // if true then manual mocking via header is enabled
     mockQuery?: string                              // if true then manual mocking via query is enabled
     mockStore?: MockStore                           // this mock store to use if the request is a mock request
-    xController?: string                            // the name of the OpenAPI extension property that will define the API controller file
     xMockImplemented?: string                       // the name of the OpenAPI extension property that identifies if the operation has a mock response implemented in your code
-    xOperation?: string                             // the name of the OpenAPI extension property that will define the operation name within the controller file
 }
 
 export interface StatusError extends Error {

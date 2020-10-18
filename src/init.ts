@@ -8,7 +8,6 @@ import cookieStore from "./cookie-store";
 
 const { validatorBoolean, validatorString, validatorNonEmptyString, validatorQueryParams } = optionValidators
 
-// TODO: export function init (enforcerPromise: Promise<Enforcer>, options?: I.MiddlewareOptions): I.Middleware {
 export function init (enforcerPromise: Promise<any>, options?: I.MiddlewareOptions): I.Middleware {
     const opts: I.MiddlewareOptions = normalizeOptions(options, {
         defaults: {
@@ -20,9 +19,7 @@ export function init (enforcerPromise: Promise<any>, options?: I.MiddlewareOptio
             mockHeader: 'x-mock',
             mockQuery: 'x-mock',
             mockStore: cookieStore(),
-            xController: 'x-controller',
-            xMockImplemented: 'x-mock-implemented',
-            xOperation: 'x-operation'
+            xMockImplemented: 'x-mock-implemented'
         },
         required: [],
         validators: {
@@ -40,9 +37,7 @@ export function init (enforcerPromise: Promise<any>, options?: I.MiddlewareOptio
                 if (typeof v.setData !== 'function') return message
                 return ''
             },
-            xController: validatorNonEmptyString,
-            xMockImplemented: validatorNonEmptyString,
-            xOperation: validatorNonEmptyString
+            xMockImplemented: validatorNonEmptyString
         }
     })!
 

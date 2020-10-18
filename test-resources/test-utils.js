@@ -2,6 +2,7 @@ const Enforcer = require('openapi-enforcer')
 const express = require('express')
 const http = require('http')
 const Middleware = require('../dist')
+const path = require('path')
 const util = require('../dist/util2')
 
 exports.copy = util.copy
@@ -10,6 +11,23 @@ exports.ok = () => {
   return function (req, res) {
     res.send('ok')
   }
+}
+
+exports.on = function (mw, type, options = { timeout: 1000, count: -1 }) {
+  return new Promise((resolve, reject) => {
+    const results = []
+    setTimeout(() => {
+      if (options.count === -1) {
+        resolve(results)
+      } else if (results.length !== options.count) {
+        reject(Error('Timeout: Took too long to receive all events. Received ' + results.length + ' out of ' + count + '.'))
+      }
+    }, options.timeout)
+    mw.on(type, (value) => {
+      results.push(value)
+      if (results.length === options.count) resolve(results)
+    })
+  })
 }
 
 exports.spec = {
@@ -46,7 +64,8 @@ exports.test = async function (options, handler) {
  * @param {object} options
  * @param {object} options.doc
  * @param {boolean|object} [options.initEnforcer=true]
- * @param {boolean} [options.mock=false]
+ * @param {boolean} [options.fallbackMocking=false]
+ * @param {object} [options.routeBuilder]
  * @param {function} [options.routeHook]
  * @returns {{ app: Express, enforcerPromise: Promise, enforcerMiddleware: *, request: function, stop: function, start: function }}
  */
@@ -59,11 +78,20 @@ exports.server = function (options) {
   if (!options.hasOwnProperty('initEnforcer') || options.initEnforcer === true) options.initEnforcer = {}
 
   const enforcerPromise = Enforcer(options.doc)
+  const mw = Middleware(enforcerPromise)
 
+  app.use(express.text())
   app.use(express.json())
-  if (options.initEnforcer) app.use(Middleware.init(enforcerPromise, options.initEnforcer))
-  if (options.routeHook) options.routeHook(app, Middleware)
-  if (options.mock) app.use(Middleware.mock())
+  app.use((req, res, next) => {
+    next() // a place to set a debug breakpoint
+  })
+  if (options.initEnforcer) app.use(mw.init(options.initEnforcer))
+  if (options.routeBuilder) {
+    const controllerDirectory = path.resolve(__dirname, 'controllers')
+    app.use(mw.route(controllerDirectory, options.routeBuilder))
+  }
+  if (options.routeHook) options.routeHook(app, mw)
+  if (options.fallbackMocking) app.use(mw.mock())
 
   function request (options) {
     if (!options) return Promise.reject(Error('Missing required options parameter'))
@@ -80,8 +108,12 @@ exports.server = function (options) {
         port: listener.address().port
       }
       if (options.body) {
-        if (typeof options.body === 'object' && !options.headers['content-type']) {
-          options.headers['content-type'] = 'application/json'
+        if (!opts.headers['content-type']) {
+          if (typeof options.body === 'object') {
+            opts.headers['content-type'] = 'application/json'
+          } else if (typeof options.body === 'string') {
+            opts.headers['content-type'] = 'text/plain'
+          }
         }
       }
 
@@ -145,7 +177,7 @@ exports.server = function (options) {
   return {
     app,
     enforcerPromise,
-    enforcerMiddleware: Middleware,
+    enforcerMiddleware: mw,
     request,
     start,
     stop

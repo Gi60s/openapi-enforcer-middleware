@@ -82,7 +82,7 @@ export function normalizeOptions<T> (options:T, template: OptionTemplate): T {
     const validators = Object.assign({}, template.validators)
 
     // build value from passed in data
-    const result: { [key: string]: any } = Object.assign({}, defaults, options)
+    const result: { [key: string]: any } = Object.assign({}, defaults, options || {})
 
     // check that all required properties are present
     required.forEach(key => {

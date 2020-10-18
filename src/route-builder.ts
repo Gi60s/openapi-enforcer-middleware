@@ -1,64 +1,103 @@
+import { emit } from './events'
+import ErrorCode from './error-code'
 import Express from 'express'
 import path from 'path'
 import { initialized, normalizeOptions, optionValidators } from "./util2"
 import * as I from "./interfaces";
 
-const { validatorBoolean } = optionValidators
-const map: WeakMap<any, ControllerData> = new WeakMap()
+const { validatorBoolean, validatorNonEmptyString } = optionValidators
+const methods = { get: true, post: true, put: true, delete: true, head: true, trace: true, options: true, connect: true, patch: true }
 
 interface ControllerData {
-    controllerKey: string
-    hasControllerError: boolean
-    missingOperations: { [key: string]: true }
-    operationKey: string
-    path: string
-    promise: Promise<Function>
+    controller: any
+    hasError: boolean
+    promise: Promise<any>
 }
 
-type ControllerOperation = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => void
+interface OperationData {
+    controllerKey: string
+    operationKey: string
+    operationHandler: Function | null
+    path: string
+}
 
 interface GetOperationConfig {
+    controllersMap: Map<string, ControllerData>
     dependencies: Array<any>
     dirPath: string
-    ignoreMissingControllers: boolean
-    ignoreMissingOperations: boolean
     operation: any
+    operationsMap: WeakMap<any, OperationData>
     xController: string
     xOperation: string
 }
 
-export function routeBuilder (dirPath: string, options?: I.ControllerOptions) {
-    const opts: I.ControllerOptions = normalizeOptions(options, {
+export function routeBuilder (enforcerPromise: Promise<any>, dirPath: string, options?: I.RouteBuilderOptions) {
+    const controllersMap: Map<string, ControllerData> = new Map()
+    const operationsMap: WeakMap<any, OperationData> = new WeakMap()
+
+    const opts = normalizeOptions(options, {
         defaults: {
             dependencies: [],
-            ignoreMissingControllers: false,
-            ignoreMissingOperations: false
+            lazyLoad: false,
+            xController: 'x-controller',
+            xOperation: 'x-operation'
         },
         required: [],
         validators: {
             dependencies: (v: any) => Array.isArray(v) ? '' : 'Expected an array of values.',
-            ignoreMissingControllers: validatorBoolean,
-            ignoreMissingOperations: validatorBoolean
+            lazyLoad: validatorBoolean,
+            xController: validatorNonEmptyString,
+            xOperation: validatorNonEmptyString
         }
     })!
 
+    // if we are not lazy loading the load all operations now
+    if (!opts.lazyLoad) {
+        enforcerPromise.then(openapi => {
+            if (openapi.paths) {
+                Object.keys(openapi.paths).forEach(path => {
+                    Object.keys(openapi.paths[path]).forEach(opKey => {
+                        opKey = opKey.toLowerCase()
+                        // @ts-ignore
+                        if (methods[opKey]) {
+                            const config: GetOperationConfig = {
+                                controllersMap,
+                                dependencies: opts.dependencies!,
+                                dirPath,
+                                operation: openapi.paths[path][opKey],
+                                operationsMap,
+                                xController: opts.xController!,
+                                xOperation: opts.xOperation!
+                            }
+                            getOperation(config).catch(err => console.error(err.stack))
+                        }
+                    })
+                })
+            }
+        })
+    }
+
+    // return the express middleware
     return function (req: Express.Request, res: Express.Response, next: Express.NextFunction) {
         if (initialized(req, next)) {
-            const { operation, options } = req.enforcer!
+            const { operation } = req.enforcer!
             const config: GetOperationConfig = {
-                dependencies: opts.dependencies,
+                controllersMap,
+                dependencies: opts.dependencies!,
                 dirPath,
-                ignoreMissingControllers: opts.ignoreMissingControllers!,
-                ignoreMissingOperations: opts.ignoreMissingOperations!,
                 operation,
-                xController: options.xController!,
-                xOperation: options.xOperation!
+                operationsMap,
+                xController: opts.xController!,
+                xOperation: opts.xOperation!
             }
             getOperation(config)
-                .then(async (fnOperation: ControllerOperation) => {
+                .then(async (fnOperation: Function) => {
                     await fnOperation(req, res, next)
                 })
                 .catch(next)
+        } else {
+            emit('error', new ErrorCode('OpenAPI Enforcer Middleware not initialized. Could not map OpenAPI operations to routes.', 'ENFORCER_MIDDLEWARE_NOT_INITIALIZED'))
+            next()
         }
     }
 }
@@ -71,72 +110,87 @@ function getControllerValue (operation: any, xController: string): string | void
     }
 }
 
-async function getOperation (opts: GetOperationConfig): Promise<ControllerOperation> {
-    const { dirPath, operation, xController, xOperation } = opts
+async function getOperation (opts: GetOperationConfig): Promise<Function> {
+    const { controllersMap, dirPath, operation, operationsMap, xController, xOperation } = opts
 
     // load the controller
-    let data = map.get(operation)
+    let data = operationsMap.get(operation)
     if (!data) {
         const controllerKey = getControllerValue(operation, xController) || ''
         const operationKey = operation.operationId || operation[xOperation]
         const controllerPath = controllerKey ? path.resolve(dirPath, controllerKey) : ''
         data = {
             controllerKey,
-            hasControllerError: false,
-            missingOperations: {},
             operationKey,
-            path: controllerPath,
-            promise: controllerKey && operationKey ? import(controllerPath) : Promise.resolve('')
+            operationHandler: null,
+            path: controllerPath
         }
-        map.set(operation, data)
+        operationsMap.set(operation, data)
     }
+
+    // if the operation handler has already been determined then return it
+    if (data.operationHandler) return data.operationHandler
 
     // if the operation does not define a controller or an operation then we assume it shouldn't map to a controller
-    if (!data.controllerKey && !data.operationKey) return noop
-
-    // try to load the controller file
-    let controllerFactory
-    try {
-        controllerFactory = await data.promise
-    } catch (err) {
-        if (!data.hasControllerError) {
-            data.hasControllerError = true
-
-            // TODO: check if this is a missing file error or a runtime error
-            if (!opts.ignoreMissingControllers) {
-                throw Error('Unable to load controller: ' + data.path)
-            } else {
-                return noop
-            }
-
-            throw err
-        }
+    if (!data.controllerKey && !data.operationKey) {
+        return data.operationHandler = noop
     }
 
-    // controller should export a function
-    if (typeof controllerFactory !== 'function') {
-        if (!data.hasControllerError) {
-            data.hasControllerError = true
-            throw Error('Controller file must export a function')
-        } else {
-            return noop
-        }
+    // load the controller
+    const controller = await importController(controllersMap, data.path, opts.dependencies)
+    if (!controller) {
+        return data.operationHandler = noop
     }
-
-    // call the controller factory with dependencies injected to get back the controller
-    const controller = controllerFactory(...opts.dependencies)
 
     // check if the operation is defined in the controller
-    const op: ControllerOperation = controller[data.operationKey]
+    const op: Function = controller[data.operationKey]
     if (!op) {
-        if (!data.missingOperations[data.operationKey]) {
-            data.missingOperations[data.operationKey] = true
-            if (!opts.ignoreMissingOperations) throw Error('Controller : ' + data.path)
-        } else {
-            return noop
-        }
+        emit('error', new ErrorCode('Controller at ' + data.path + ' missing operation: ' + data.operationKey, 'ENFORCER_MIDDLEWARE_ROUTE_NO_OP'))
+        return data.operationHandler = noop
+    } else {
+        return data.operationHandler = op
     }
-    return op
+}
+
+async function importController (controllersMap: Map<string, ControllerData>, filePath: string, dependencies: any[]) {
+    let data = controllersMap.get(filePath)
+    if (!data) {
+        data = {
+            controller: null,
+            hasError: false,
+            promise: Promise.resolve()
+        }
+        controllersMap.set(filePath, data)
+
+        // attempt to load the controller file
+        let factory: any
+        try {
+            data.promise = import(filePath)
+            factory = await data.promise
+        } catch (err) {
+            emit('error', err)
+            return data.controller = null
+        }
+
+        // if the controller file loaded then make sure it exported a function
+        if (typeof factory !== 'function' && typeof factory.default === 'function') factory = factory.default
+        if (typeof factory !== 'function') {
+            emit('error', new ErrorCode('Controller file must export a function: ' + filePath + '. If using ES imports export the function as default.', 'ENFORCER_MIDDLEWARE_ROUTE_FACTORY'))
+            return data.controller = null
+        }
+
+        // call the controller factory with dependencies injected to get back the controller
+        try {
+            data.controller = factory(...dependencies)
+            return data.controller
+        } catch (err) {
+            emit('error', err)
+            return data.controller = null
+        }
+    } else {
+        await data.promise
+        return data.controller
+    }
 }
 
 function noop (_req: Express.Request, _res: Express.Response, next: Express.NextFunction) {
