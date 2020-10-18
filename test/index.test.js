@@ -366,7 +366,7 @@ describe('openapi-enforcer-middleware', () => {
       })
     })
 
-    it.only('can use a mock store', async function () {
+    it('can use a mock store', async function () {
       const doc = spec.openapi([
         {
           method: 'get',
@@ -418,19 +418,15 @@ describe('openapi-enforcer-middleware', () => {
         expect(res.body).to.equal('')
         const cookie = res.headers['set-cookie'].map(c => c.split(';')[0]).join('; ')
 
-        console.log('post 1')
         res = await request({ method: 'post', body: 'foo', path: '/?x-mock', headers: { cookie } })
         expect(res.body).to.equal('foo')
 
-        console.log('get 2')
         res = await request({ method: 'get', path: '/?x-mock', headers: { cookie } })
         expect(res.body).to.equal('foo')
 
-        console.log('post 2')
         res = await request({ method: 'post', body: 'bar', path: '/?x-mock', headers: { cookie } })
         expect(res.body).to.equal('bar')
 
-        console.log('get 3')
         res = await request({ method: 'get', path: '/?x-mock', headers: { cookie } })
         expect(res.body).to.equal('bar')
       })
@@ -755,7 +751,7 @@ describe('openapi-enforcer-middleware', () => {
           }
         })
 
-        app.use((err, req, res, next) => {
+        app.use((err, req, res, _next) => {
           caughtError = true
           res.sendStatus(418)
         })
@@ -788,7 +784,7 @@ describe('openapi-enforcer-middleware', () => {
           res.enforcer.send('hello')
         })
 
-        app.use((err, req, res, next) => {
+        app.use((err, req, res, _next) => {
           caughtError = true
           res.sendStatus(418)
         })
