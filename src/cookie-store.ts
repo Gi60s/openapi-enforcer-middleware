@@ -16,7 +16,7 @@ export default function () {
             if (!id) return {}
 
             const data = store[id]
-            return JSON.parse(data)
+            return data
         },
 
         async setData (req: Express.Request, res: Express.Response, data: AnyObject): Promise<void> {

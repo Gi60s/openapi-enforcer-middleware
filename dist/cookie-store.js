@@ -10,7 +10,7 @@ function default_1() {
             if (!id)
                 return {};
             const data = store[id];
-            return JSON.parse(data);
+            return data;
         },
         async setData(req, res, data) {
             let id = getCookie(req.headers);
