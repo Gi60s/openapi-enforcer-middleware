@@ -220,7 +220,16 @@ export default {
 
   async beforeRouteEnter  (to, from, next) {
     if (to.fullPath === '/') {
-      const version = store.get('version')
+      if (!navigationMenu) {
+        const { data } = await axios.get('/navigation.json')
+        navigationMenu = data
+      }
+
+      let version = store.get('version')
+      if (version && !navigationMenu[version]) {
+        store.set('version', '')
+        version = ''
+      }
       if (version) return next('/' + version)
     }
     next()

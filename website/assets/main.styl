@@ -311,8 +311,12 @@ html, body, #__nuxt, #__layout, #__layout > div
         padding: 0 pad;
         display: block;
 
-        &.nuxt-link-exact-active, &:hover {
+        &.nuxt-link-exact-active {
           background: color-hover;
+        }
+
+        &:hover {
+          background: lighten(color-hover, 40%);
         }
 
         &:hover, &:visited, &:active {
@@ -444,6 +448,24 @@ html, body, #__nuxt, #__layout, #__layout > div
         margin: 35px 0 15px 0;
       }
 
+      h4 {
+        line-height: normal;
+        font-size: 23px;
+        margin: 35px 0 15px 0;
+      }
+
+      h5 {
+        line-height: normal;
+        font-size: 20px;
+        margin: 35px 0 15px 0;
+      }
+
+      h6 {
+        line-height: normal;
+        font-size: 16px;
+        margin: 35px 0 15px 0;
+      }
+
       p {
         margin: 15px 0;
       }
@@ -457,6 +479,29 @@ html, body, #__nuxt, #__layout, #__layout > div
         border-radius: radius;
         border: 1px solid code-border;
         padding: 1px 5px;
+      }
+
+      table {
+        border: 1px solid color-gray;
+        border-collapse: collapse;
+        width: 100%;
+
+        th, td {
+          border: 1px solid color-gray;
+          padding: 3px 10px;
+          vertical-align: top;
+        }
+
+        thead {
+          tr {
+            background-color: color-gray;
+
+            th, td {
+              text-align: left;
+              border: 1px solid darken(color-gray, 20%);
+            }
+          }
+        }
       }
 
       .nuxt-content-highlight {

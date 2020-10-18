@@ -17,6 +17,11 @@
   ],
   "2.x": [
     { "title": "Home", "path": "/" },
+    { "title": "Getting Started", "path": "/getting-started" },
+    { "title": "API", "path": "/api" },
+    { "title": "Req / Res Enforcer", "path": "/req-res-enforcer" },
+    { "title": "Mocking", "path": "/mocking" },
+    { "title": "Route Builder", "path": "/route-builder" },
     {
       "title": "Examples",
       "path": "/examples",
