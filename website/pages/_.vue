@@ -352,7 +352,7 @@ export default {
         const startsWith = '/' + this.version + '/'
         let results = await this.$content(null, { deep: true })
           .search(query)
-          // .only(['title', 'description', 'path'])
+          .only(['title', 'description', 'path', 'tags', 'toc'])
           .fetch()
 
         // filter results to the current version
@@ -391,6 +391,19 @@ export default {
             // an extra point if the match is the start of a word
             if (index === 0 || text[index - 1] === ' ') score++
           })
+
+          // extra points for matching a tag
+          if (result.tags) {
+            result.tags.split(/ +/).forEach(tag => {
+              const text = tag.toLowerCase()
+              const index = text.indexOf(q)
+              if (text === q) {
+                score += 3
+              } else if (index !== -1) {
+                score += 2
+              }
+            })
+          }
 
           result.score = score
           result.blurb = blurb || result.description

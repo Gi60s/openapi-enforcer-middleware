@@ -50,10 +50,10 @@ Initialize the middleware. You need to call this function as an express middlewa
 | handleBadResponse | `boolean` | `true` | How to handle invalid responses. If `true` a 500 response is sent back automatically, if `false` the next middleware is called with the error and the error will be logged to the console. |
 | handleNotFound | `boolean` | `true` | How to handle requests for paths that do not exist. If `true` a 404 response is sent back automatically, if `false` the `enforcer` property is not set on the `req` and `res` objects. |
 | handleMethodNotAllowed | `boolean` | `true` | How to handle method not allowed. If `true` a 405 response is sent back automatically, if `false` the `enforcer` property is not set on the `req` and `res` objects. |
-| mockHeader | `string` | `x-mock` | The name to use for the mocking header. Set to an empty string to disable mock requests via the header. [Learn about mocking.](#) |
-| mockQuery | `string` | 'x-mock` | The name to use for the mocking query parameter. Set to an empty string to disable mock requests via the query parameter. (The value specified will automatically be added to the `allowedOtherQueryParameters`.) [Learn about mocking.](#) |
-| mockStore | [MockStore](#) | [CookieStore](#) | This mock store to use if the request is an implemented mock request. [Learn about mocking.](#) |
-| xMockImplemented | `string` | `x-mock-implemented` | The name of the OpenAPI extension property that identifies if the operation has a mock response implemented in your code. [Learn about mocking.](#) |
+| mockHeader | `string` | `"x-mock"` | The name to use for the mocking header. Set to an empty string to disable mock requests via the header. [Learn about mocking.](./mocking) |
+| mockQuery | `string` | `"x-mock"` | The name to use for the mocking query parameter. Set to an empty string to disable mock requests via the query parameter. (The value specified will automatically be added to the `allowedOtherQueryParameters`.) [Learn about mocking.](./mocking) |
+| mockStore | [MockStore](./mocking#mock-store) | [CookieStore](./mocking) | This mock store to use if the request is an implemented mock request. [Learn about mocking.](./mocking) |
+| xMockImplemented | `string` | `x-mock-implemented` | The name of the OpenAPI extension property that identifies if the operation has a mock response implemented in your code. [Learn about mocking.](./mocking) |
 
 **Returns** an express middleware function.
 
@@ -87,7 +87,7 @@ app.use(enforcerMiddleware.init(initOptions))
 
 `mock ()`
 
-This function enabled fallback (automatic) mocking. This is useful if your API is in development and you've written your OpenAPI spec but have yet to write all of the code to implement the endpoints. Fallback mocking will pick up any requests for endpoints that have not yet been implemented and will automatically generate responses to send back.
+This function enables fallback (automatic) mocking. This is useful if your API is in development and you've written your OpenAPI spec but have yet to write all of the code to implement the endpoints. Fallback mocking will pick up any requests for endpoints that have not yet been implemented and will automatically generate responses to send back.
 
 **Parameters**
 
@@ -159,7 +159,7 @@ To fully understand how this works, check out the [Route Builder](./route-builde
 | Property | Type | Default | Description |
 | -------- | ---- | ------- | ----------- |
 | dependencies | `Array` | `[]` | Dependencies to inject into your controller factories. |
-| lazyLoad | `boolean` | `false` | Whether to lazy load your controllers. Lazy loading will reduce how long it takes to start your app, but probably not by much. |
+| lazyLoad | `boolean` | `false` | Whether to lazy load your controllers. Lazy loading will reduce how long it takes to start your app (although probably not by much) at the cost of having to load each controller the first time it is requested. |
 | xController | `string` | `x-controller` | The name of the property to look for in your OpenAPI document to specify the controller to use for an operation. |
 | xOperation | `string` | `x-operation` | The name of the property to look for in your OpenAPI document to specify the controller's operation to use for an operation. The OpenAPI property `operationId` can be used in place of this value. |
 
