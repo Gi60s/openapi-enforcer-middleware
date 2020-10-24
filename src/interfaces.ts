@@ -1,10 +1,6 @@
 import Express from 'express'
 import { IncomingHttpHeaders } from "http";
 
-interface AnyObject {
-    [key: string]: any
-}
-
 export interface RouteBuilderOptions {
     dependencies?: Array<any>
     ignoreMissingControllers?: boolean
@@ -43,7 +39,10 @@ export interface MiddlewareRequestData {
     cookies: { [key: string]: any }
     headers: { [key: string]: any }
     mockMode?: MockMode                 // this property will only be set if a mock response should be sent
-    mockStore?: MockStore               // this property will only be set if a mock response should be sent
+    mockStore?: {                       // this property will only be set if a mock response should be sent
+        get (key: string): Promise<any>
+        set (key: string, value: any): Promise<any>
+    }
     openapi: any
     operation: any
     options: MiddlewareOptions
@@ -53,7 +52,7 @@ export interface MiddlewareRequestData {
 }
 
 export interface MiddlewareResponseData {
-    send (body: any): void
+    send (body?: any): void
 }
 
 export interface MockMode {
@@ -65,8 +64,8 @@ export interface MockMode {
 }
 
 export interface MockStore {
-    getData (req: Express.Request, res: Express.Response): Promise<AnyObject>
-    setData (req: Express.Request, res: Express.Response, data: AnyObject): Promise<void>
+    get (req: Express.Request, res: Express.Response, key: string): Promise<any>
+    set (req: Express.Request, res: Express.Response, key: string, value: any): Promise<any>
 }
 
 export interface MiddlewareOptions {

@@ -1,5 +1,6 @@
 import Express from 'express'
-import { IncomingHttpHeaders } from "http";
+import { IncomingHttpHeaders } from "http"
+import { MockStore } from "./interfaces";
 
 const store: AnyObject = {}
 let cookieIndex = 0
@@ -9,33 +10,36 @@ interface AnyObject {
     [key: string]: any
 }
 
-export default function () {
+export default function (): MockStore {
     return {
-        async getData (req: Express.Request, _res: Express.Response): Promise<AnyObject> {
+        async get (req: Express.Request, res: Express.Response, key: string): Promise<any> {
             const id = getCookie(req.headers)
-            if (!id) return {}
-
-            const data = store[id]
-            return data
+            if (id) {
+                const data = store[id]
+                return data && data[key]
+            } else {
+                createStore(res)
+            }
         },
 
-        async setData (req: Express.Request, res: Express.Response, data: AnyObject): Promise<void> {
-            let id = getCookie(req.headers)
-
-            // if no cookie created yet then generate the cookie id and set it
-            if (!id) {
-                const now = Date.now()
-                if (now !== lastCookieTimeStamp) {
-                    cookieIndex = 0
-                    lastCookieTimeStamp = now
-                }
-                id = now + '-' + cookieIndex++
-                res.cookie('enforcer-store', id)
-            }
-
-            store[id] = data
+        async set (req: Express.Request, res: Express.Response, key: string, value: any): Promise<void> {
+            let id = getCookie(req.headers) || createStore(res)
+            if (!store[id]) store[id] = {}
+            store[id][key] = value
         }
     }
+}
+
+function createStore (res: Express.Response) {
+    const now = Date.now()
+    if (now !== lastCookieTimeStamp) {
+        cookieIndex = 0
+        lastCookieTimeStamp = now
+    }
+    const id = now + '-' + cookieIndex++
+    res.cookie('enforcer-store', id)
+    store[id] = {}
+    return id
 }
 
 function getCookie(headers: IncomingHttpHeaders): string {

@@ -31,10 +31,10 @@ export function init (enforcerPromise: Promise<any>, options?: I.MiddlewareOptio
             mockHeader: validatorString,
             mockQuery: validatorString,
             mockStore: (v: any) => {
-                const message = 'Expected an object with the properties getData and setData as functions.'
+                const message = 'Expected an object with the properties get and set as functions.'
                 if (!v || typeof v !== 'object') return message
-                if (typeof v.getData !== 'function') return message
-                if (typeof v.setData !== 'function') return message
+                if (typeof v.get !== 'function') return message
+                if (typeof v.set !== 'function') return message
                 return ''
             },
             xMockImplemented: validatorNonEmptyString
@@ -95,9 +95,18 @@ export function init (enforcerPromise: Promise<any>, options?: I.MiddlewareOptio
 
                     const mockMode = getMockMode(req)
                     if (mockMode) {
+                        const mockStore = opts.mockStore!
+
                         // store mock data
                         req.enforcer.mockMode = mockMode
-                        req.enforcer.mockStore = opts.mockStore
+                        req.enforcer.mockStore = {
+                            get (key: string): Promise<any> {
+                                return mockStore.get(req, res, key)
+                            },
+                            set (key: string, value: any): Promise<void> {
+                                return mockStore.set(req, res, key, value)
+                            }
+                        }
 
                         // if operation identifies as having operable mock code to execute then don't run auto mock response handler
                         if (hasImplementedMock(opts.xMockImplemented!, operation) && (mockMode.source === 'implemented' || mockMode.source === '')) {
@@ -123,12 +132,12 @@ function mergeNewProperties (src: { [key: string]: any }, dest: { [key: string]:
 }
 
 function hasImplementedMock (mockKey: string, operation: any): boolean {
-    if (operation[mockKey]) return true
+    if (mockKey in operation) return !!operation[mockKey]
 
     let data = operation.enforcerData
     while (data) {
         data = data.parent
-        if (data && data.result[mockKey]) return true
+        if (data && mockKey in data.result) return !!data.result[mockKey]
     }
 
     return false
