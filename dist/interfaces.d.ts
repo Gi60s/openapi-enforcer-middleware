@@ -1,9 +1,6 @@
 /// <reference types="node" />
 import Express from 'express';
 import { IncomingHttpHeaders } from "http";
-interface AnyObject {
-    [key: string]: any;
-}
 export interface RouteBuilderOptions {
     dependencies?: Array<any>;
     ignoreMissingControllers?: boolean;
@@ -54,7 +51,10 @@ export interface MiddlewareRequestData {
         [key: string]: any;
     };
     mockMode?: MockMode;
-    mockStore?: MockStore;
+    mockStore?: {
+        get(key: string): Promise<any>;
+        set(key: string, value: any): Promise<any>;
+    };
     openapi: any;
     operation: any;
     options: MiddlewareOptions;
@@ -67,7 +67,7 @@ export interface MiddlewareRequestData {
     response: any;
 }
 export interface MiddlewareResponseData {
-    send(body: any): void;
+    send(body?: any): void;
 }
 export interface MockMode {
     name?: string;
@@ -77,8 +77,8 @@ export interface MockMode {
     statusCode: string;
 }
 export interface MockStore {
-    getData(req: Express.Request, res: Express.Response): Promise<AnyObject>;
-    setData(req: Express.Request, res: Express.Response, data: AnyObject): Promise<void>;
+    get(req: Express.Request, res: Express.Response, key: string): Promise<any>;
+    set(req: Express.Request, res: Express.Response, key: string, value: any): Promise<any>;
 }
 export interface MiddlewareOptions {
     allowOtherQueryParameters?: boolean | string[];
@@ -95,4 +95,3 @@ export interface StatusError extends Error {
     exception?: any;
     statusCode?: number;
 }
-export {};

@@ -31,12 +31,12 @@ function init(enforcerPromise, options) {
             mockHeader: validatorString,
             mockQuery: validatorString,
             mockStore: (v) => {
-                const message = 'Expected an object with the properties getData and setData as functions.';
+                const message = 'Expected an object with the properties get and set as functions.';
                 if (!v || typeof v !== 'object')
                     return message;
-                if (typeof v.getData !== 'function')
+                if (typeof v.get !== 'function')
                     return message;
-                if (typeof v.setData !== 'function')
+                if (typeof v.set !== 'function')
                     return message;
                 return '';
             },
@@ -91,8 +91,16 @@ function init(enforcerPromise, options) {
                 };
                 const mockMode = mock_1.getMockMode(req);
                 if (mockMode) {
+                    const mockStore = opts.mockStore;
                     req.enforcer.mockMode = mockMode;
-                    req.enforcer.mockStore = opts.mockStore;
+                    req.enforcer.mockStore = {
+                        get(key) {
+                            return mockStore.get(req, res, key);
+                        },
+                        set(key, value) {
+                            return mockStore.set(req, res, key, value);
+                        }
+                    };
                     if (hasImplementedMock(opts.xMockImplemented, operation) && (mockMode.source === 'implemented' || mockMode.source === '')) {
                         next();
                     }
@@ -118,13 +126,13 @@ function mergeNewProperties(src, dest) {
     });
 }
 function hasImplementedMock(mockKey, operation) {
-    if (operation[mockKey])
-        return true;
+    if (mockKey in operation)
+        return !!operation[mockKey];
     let data = operation.enforcerData;
     while (data) {
         data = data.parent;
-        if (data && data.result[mockKey])
-            return true;
+        if (data && mockKey in data.result)
+            return !!data.result[mockKey];
     }
     return false;
 }

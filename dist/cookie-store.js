@@ -5,29 +5,36 @@ let cookieIndex = 0;
 let lastCookieTimeStamp = 0;
 function default_1() {
     return {
-        async getData(req, _res) {
+        async get(req, res, key) {
             const id = getCookie(req.headers);
-            if (!id)
-                return {};
-            const data = store[id];
-            return data;
-        },
-        async setData(req, res, data) {
-            let id = getCookie(req.headers);
-            if (!id) {
-                const now = Date.now();
-                if (now !== lastCookieTimeStamp) {
-                    cookieIndex = 0;
-                    lastCookieTimeStamp = now;
-                }
-                id = now + '-' + cookieIndex++;
-                res.cookie('enforcer-store', id);
+            if (id) {
+                const data = store[id];
+                return data && data[key];
             }
-            store[id] = data;
+            else {
+                createStore(res);
+            }
+        },
+        async set(req, res, key, value) {
+            let id = getCookie(req.headers) || createStore(res);
+            if (!store[id])
+                store[id] = {};
+            store[id][key] = value;
         }
     };
 }
 exports.default = default_1;
+function createStore(res) {
+    const now = Date.now();
+    if (now !== lastCookieTimeStamp) {
+        cookieIndex = 0;
+        lastCookieTimeStamp = now;
+    }
+    const id = now + '-' + cookieIndex++;
+    res.cookie('enforcer-store', id);
+    store[id] = {};
+    return id;
+}
 function getCookie(headers) {
     const name = "enforcer-store=";
     const decodedCookie = decodeURIComponent(headers.cookie || '');
