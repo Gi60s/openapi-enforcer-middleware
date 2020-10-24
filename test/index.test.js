@@ -393,27 +393,21 @@ describe('openapi-enforcer-middleware', () => {
       function routeHook (app) {
         app.get('/', async (req, res) => {
           const mockStore = req.enforcer.mockStore
-          const data = await mockStore.getData(req, res)
-          if (!data.hasOwnProperty('value')) {
-            data.value = ''
-            await mockStore.setData(req, res, data)
-          }
+          const value = await mockStore.get('value')
           res.set('content-type', 'text/plain')
-          res.send(data.value)
+          res.send(value)
         })
 
         app.post('/', async (req, res) => {
           const mockStore = req.enforcer.mockStore
-          const data = await mockStore.getData(req, res)
-          data.value = req.body
-          await mockStore.setData(req, res, data)
+          const value = String(req.body)
+          await mockStore.set('value', value)
           res.set('content-type', 'text/plain')
-          res.send(String(data.value))
+          res.send(value)
         })
       }
 
       await test({ doc, routeHook }, async (request) => {
-        console.log('get 1')
         let res = await request({ method: 'get', path: '/?x-mock' })
         expect(res.body).to.equal('')
         const cookie = res.headers['set-cookie'].map(c => c.split(';')[0]).join('; ')
