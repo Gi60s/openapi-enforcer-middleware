@@ -1,6 +1,18 @@
 import Express from 'express'
 import { IncomingHttpHeaders } from "http";
 
+declare global {
+    namespace Express {
+        export interface Request {
+            enforcer?: MiddlewareRequestData
+        }
+
+        export interface Response {
+            enforcer?: MiddlewareResponseData
+        }
+    }
+}
+
 export interface RouteBuilderOptions {
     dependencies?: Array<any>
     ignoreMissingControllers?: boolean

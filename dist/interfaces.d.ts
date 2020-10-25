@@ -1,6 +1,16 @@
 /// <reference types="node" />
 import Express from 'express';
 import { IncomingHttpHeaders } from "http";
+declare global {
+    namespace Express {
+        interface Request {
+            enforcer?: MiddlewareRequestData;
+        }
+        interface Response {
+            enforcer?: MiddlewareResponseData;
+        }
+    }
+}
 export interface RouteBuilderOptions {
     dependencies?: Array<any>;
     ignoreMissingControllers?: boolean;
