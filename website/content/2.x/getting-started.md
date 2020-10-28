@@ -52,6 +52,12 @@ const app = express()
 const enforcerMiddleware = EnforcerMiddleware(Enforcer('./openapi.yml'))
 app.use(enforcerMiddleware.init())
 
+// Catch errors
+enforcerMiddleware.on('error', err => {
+  console.error(err)
+  process.exit(1)
+}) 
+
 // If your openapi.yml file defines this path then this path will only
 // execute when the request is valid otherwise it will send back a 400
 // with a message describing why the request was invalid.
