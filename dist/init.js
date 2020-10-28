@@ -7,6 +7,7 @@ exports.init = void 0;
 const util2_1 = require("./util2");
 const mock_1 = require("./mock");
 const cookie_store_1 = __importDefault(require("./cookie-store"));
+const events_1 = require("./events");
 const { validatorBoolean, validatorString, validatorNonEmptyString, validatorQueryParams } = util2_1.optionValidators;
 function init(enforcerPromise, options) {
     const opts = util2_1.normalizeOptions(options, {
@@ -42,6 +43,11 @@ function init(enforcerPromise, options) {
             },
             xMockImplemented: validatorNonEmptyString
         }
+    });
+    enforcerPromise.catch((err) => {
+        if (!err.code)
+            err.code = 'ENFORCER_MIDDLEWARE_LOAD_ERROR';
+        events_1.emit('error', err);
     });
     return function (req, res, next) {
         enforcerPromise

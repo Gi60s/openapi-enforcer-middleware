@@ -5,6 +5,8 @@ import * as I from './interfaces'
 import { handleRequestError, normalizeOptions, optionValidators, reqHasBody, sender } from "./util2"
 import { getMockMode, mockHandler } from "./mock";
 import cookieStore from "./cookie-store";
+import { emit } from './events'
+import ErrorCode from './error-code'
 
 const { validatorBoolean, validatorString, validatorNonEmptyString, validatorQueryParams } = optionValidators
 
@@ -40,6 +42,11 @@ export function init (enforcerPromise: Promise<any>, options?: I.MiddlewareOptio
             xMockImplemented: validatorNonEmptyString
         }
     })!
+
+    enforcerPromise.catch((err: ErrorCode) => {
+        if (!err.code) err.code = 'ENFORCER_MIDDLEWARE_LOAD_ERROR'
+        emit('error', err)
+    })
 
     return function (req: Express.Request, res: Express.Response, next: Express.NextFunction) {
         enforcerPromise
