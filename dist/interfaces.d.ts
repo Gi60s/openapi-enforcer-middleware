@@ -12,7 +12,7 @@ declare global {
     }
 }
 export interface RouteBuilderOptions {
-    dependencies?: Array<any>;
+    commonDependencyKey: string;
     ignoreMissingControllers?: boolean;
     ignoreMissingOperations?: boolean;
     lazyLoad?: boolean;

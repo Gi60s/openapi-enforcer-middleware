@@ -29,19 +29,52 @@ const path_1 = __importDefault(require("path"));
 const util2_1 = require("./util2");
 const { validatorBoolean, validatorNonEmptyString } = util2_1.optionValidators;
 const methods = { get: true, post: true, put: true, delete: true, head: true, trace: true, options: true, connect: true, patch: true };
-function routeBuilder(enforcerPromise, dirPath, options) {
+function routeBuilder(enforcerPromise, dirPath, dependencies, options) {
     const controllersMap = new Map();
     const operationsMap = new WeakMap();
+    if (!dependencies) {
+        dependencies = [];
+    }
+    else {
+        const message = 'Expected an array of values or an object map with property values as arrays of values.';
+        const isArray = Array.isArray(dependencies);
+        const isObject = dependencies && typeof dependencies === 'object';
+        if (!isObject && !isArray)
+            throw Error(message);
+        if (isObject && !isArray) {
+            const map = dependencies;
+            const keys = Object.keys(map);
+            const length = keys.length;
+            for (let i = 0; i < length; i++) {
+                if (!Array.isArray(map[keys[i]]))
+                    throw Error(message);
+            }
+        }
+    }
     const opts = util2_1.normalizeOptions(options, {
         defaults: {
-            dependencies: [],
+            commonDependencyKey: 'common',
             lazyLoad: false,
             xController: 'x-controller',
             xOperation: 'x-operation'
         },
         required: [],
         validators: {
-            dependencies: (v) => Array.isArray(v) ? '' : 'Expected an array of values.',
+            dependencies: (v) => {
+                if (Array.isArray(v))
+                    return '';
+                const message = 'Expected an array of values or an object map with property values as arrays of values.';
+                if (v && typeof v === 'object') {
+                    const keys = Object.keys(v);
+                    const length = keys.length;
+                    for (let i = 0; i < length; i++) {
+                        if (!Array.isArray(v[keys[i]]))
+                            return message;
+                    }
+                    return '';
+                }
+                return message;
+            },
             lazyLoad: validatorBoolean,
             xController: validatorNonEmptyString,
             xOperation: validatorNonEmptyString
@@ -55,8 +88,9 @@ function routeBuilder(enforcerPromise, dirPath, options) {
                         opKey = opKey.toLowerCase();
                         if (methods[opKey]) {
                             const config = {
+                                commonDependencyKey: opts.commonDependencyKey,
                                 controllersMap,
-                                dependencies: opts.dependencies,
+                                dependencies: dependencies,
                                 dirPath,
                                 operation: openapi.paths[path][opKey],
                                 operationsMap,
@@ -74,8 +108,9 @@ function routeBuilder(enforcerPromise, dirPath, options) {
         if (util2_1.initialized(req, next)) {
             const { operation } = req.enforcer;
             const config = {
+                commonDependencyKey: opts.commonDependencyKey,
                 controllersMap,
-                dependencies: opts.dependencies,
+                dependencies: dependencies,
                 dirPath,
                 operation,
                 operationsMap,
@@ -104,7 +139,7 @@ function getControllerValue(operation, xController) {
     }
 }
 async function getOperation(opts) {
-    const { controllersMap, dirPath, operation, operationsMap, xController, xOperation } = opts;
+    const { commonDependencyKey, controllersMap, dirPath, operation, operationsMap, xController, xOperation } = opts;
     let data = operationsMap.get(operation);
     if (!data) {
         const controllerKey = getControllerValue(operation, xController) || '';
@@ -123,7 +158,7 @@ async function getOperation(opts) {
     if (!data.controllerKey && !data.operationKey) {
         return data.operationHandler = noop;
     }
-    const controller = await importController(controllersMap, data.path, opts.dependencies);
+    const controller = await importController(controllersMap, data.path, data.controllerKey, commonDependencyKey, opts.dependencies);
     if (!controller) {
         return data.operationHandler = noop;
     }
@@ -136,7 +171,7 @@ async function getOperation(opts) {
         return data.operationHandler = op;
     }
 }
-async function importController(controllersMap, filePath, dependencies) {
+async function importController(controllersMap, filePath, controllerKey, commonDependencyKey, dependencies) {
     let data = controllersMap.get(filePath);
     if (!data) {
         data = {
@@ -161,7 +196,18 @@ async function importController(controllersMap, filePath, dependencies) {
             return data.controller = null;
         }
         try {
-            data.controller = factory(...dependencies);
+            let specificDeps;
+            if (Array.isArray(dependencies)) {
+                specificDeps = dependencies;
+            }
+            else {
+                specificDeps = [];
+                if (dependencies[controllerKey])
+                    specificDeps.push(...dependencies[controllerKey]);
+                if (dependencies[commonDependencyKey])
+                    specificDeps.push(...dependencies[commonDependencyKey]);
+            }
+            data.controller = factory(...specificDeps);
             return data.controller;
         }
         catch (err) {
