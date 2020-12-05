@@ -1,5 +1,7 @@
 .idea
 node_modules
+website/.nuxt
+website/dist
 
 ### macOS template
 *.DS_Store
