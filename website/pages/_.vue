@@ -135,11 +135,18 @@
       <div class='content'>
 
         <!-- out of date docs warning -->
-        <el-alert v-if="version && version !== '2.x'" title="There is a Newer Version!" type="warning" :closable="false">
+        <!-- <el-alert v-if="version && version !== '2.x'" title="There is a Newer Version!" type="warning" :closable="false">
           There is a new version of this library available with new documentation. If you are looking
           for documentation for version {{ version }} then you are in the right place,
           otherwise check out the
           <span class="page-link" @click="navSelectVersion('2.x')">latest documentation</span>.
+        </el-alert> -->
+
+        <!-- alpha release warning -->
+        <el-alert v-if="version && version === '2.x'" title="Alpha Release" type="warning" :closable="false">
+          Version 2.x of the middleware is functional, but not yet fully stable. There may be some minor breaking changes
+          in the library before the final 2.x release. If you're interested in the current latest release then check out
+          <span class="page-link" @click="navSelectVersion('1.x')">1.x documentation</span>.
         </el-alert>
 
         <h1 v-if="doc">{{ doc.title }}</h1>

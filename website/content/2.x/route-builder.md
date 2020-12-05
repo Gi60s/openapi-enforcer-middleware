@@ -89,7 +89,7 @@ The function needs to export an object, and each property on that object is an a
 **controllers/users.js**
 
 ```js
-module.exports = function (dbConn) {
+module.exports = function () {
   return {
     async listUsers (req, res) {
       const { rows } = dbConn.query('SELECT * FROM users')
@@ -136,7 +136,7 @@ app.use('/api', enforcer.init())
 // Tell the route builder to look for the controller files in the "controllers" directory
 // and inject the database connection dependency
 const controllersPath = path.resolve(__dirname, 'controllers')
-app.use(enforcer.route(controllersPath, { dependencies: [ dbConn ] }))
+app.use(enforcer.route(controllersPath))
 
 const listener = app.listen(8000, err => {
   if (err) return console.error(err.stack)
@@ -144,3 +144,75 @@ const listener = app.listen(8000, err => {
 })
 ```
 
+## Dependency Injection
+
+If you want to pass variables into your controllers then you can use dependency injection.
+
+There are two ways to do this, using an `Array` to inject the same common dependencies into all controllers or using an `Object` map to inject specific dependencies into specific controllers.
+
+If you have not already read up on [How to Use the Route Builder](#how-to-use-the-route-builder) then you should do that first, then return here.
+
+### Common Dependencies
+
+If all of your controllers should receive the same set of dependencies then this is the method you should use to inject those dependencies.
+
+1. In your server file where you use the [route middleware](./api#route) you can add an array of dependencies as a second parameter.
+
+    ```js
+    const controllersPath = path.resolve(__dirname, 'controllers')
+    app.use(enforcer.route(controllersPath, [ dbConn, serviceX ]))
+    ```
+
+2. In your controller files you receive the injected dependencies in the same order as they were provided.
+
+    ```js
+    module.exports = function (dbConn, serviceX) {
+      return {
+        async listUsers (req, res) {
+          // ...
+        }
+      }
+    }
+    ```
+
+### Controller Specific Dependencies
+
+If you want finer control as to which dependencies get injected into which controllers then this is the option for you.
+
+1. In your server file where you use the [route middleware](./api#route) you can inject dependencies as a map of arrays. The property names for the map are linked to the controller with the same name. It is also possible to list "common" dependencies in an array and those are added to the end of the injected dependencies for each controller. It is also possible to change the name of the common dependencies property using the [route middleware options](./api#route). 
+
+    ```js
+    const controllersPath = path.resolve(__dirname, 'controllers')
+    const dependencies = {
+      common: [ dbConn, serviceA ],
+      tasks: [ serviceW ],
+      users: [ serviceX, serviceY ]
+    }
+    app.use(enforcer.route(controllersPath, dependencies))
+    ```
+   
+2. In your controller files you receive the controller specific dependencies followed by the common dependencies.
+   
+   **tasks.js**
+   
+    ```js
+    module.exports = function (serviceW, dbConn, serviceA) {
+     return {
+       async getTask (req, res) {
+         // ...
+       }
+     }
+    }
+    ```
+   
+   **users.js**
+    
+    ```js
+    module.exports = function (serviceX, serviceY, dbConn, serviceA) {
+     return {
+       async listUsers (req, res) {
+         // ...
+       }
+     }
+    }
+    ```

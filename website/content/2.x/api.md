@@ -139,7 +139,7 @@ Add an event listener. Currently, only the [route](#route) middleware emits even
 
 ## Route
 
-`route (controllersDirectory: string, options: RouteOptions`)`
+`route (controllersDirectory: string, depdendencies?: Array | Object, options?: RouteOptions`)`
 
 Automatically generate routes based on your OpenAPI document. This is done by specifying an `x-controller` and `x-operation` properties in your OpenAPI document and then telling this route middleware where to look to link those values to executable code.
 
@@ -152,13 +152,14 @@ To fully understand how this works, check out the [Route Builder](./route-builde
 | Parameter | Type | Description |
 | --------- | ---- | ----------- |
 | controllersDirectory | `string` | The directory path that contains your controller files. | 
+| dependencies | `Array` or `Object` | Dependencies to inject into your controller factories. Learn more about this on the [Route Builder page](./route-builder#dependency-injection). |
 | options | [Route Options](#route-options) | An optional parameter that can define how the route builder works. |
 
 ###### Route Options
 
 | Property | Type | Default | Description |
 | -------- | ---- | ------- | ----------- |
-| dependencies | `Array` | `[]` | Dependencies to inject into your controller factories. |
+| commonDependencyKey | `string` | `common` | If using mapped dependencies then this is the mapping name for common dependencies. Learn more about this on the [Route Builder page](./route-builder#dependency-injection). |
 | lazyLoad | `boolean` | `false` | Whether to lazy load your controllers. Lazy loading will reduce how long it takes to start your app (although probably not by much) at the cost of having to load each controller the first time it is requested. |
 | xController | `string` | `x-controller` | The name of the property to look for in your OpenAPI document to specify the controller to use for an operation. |
 | xOperation | `string` | `x-operation` | The name of the property to look for in your OpenAPI document to specify the controller's operation to use for an operation. The OpenAPI property `operationId` can be used in place of this value. |
