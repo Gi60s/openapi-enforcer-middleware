@@ -3,7 +3,7 @@ export type types = 'error' | 'warning'
 
 const handlers: { [key: string]: Array<Function> } = {}
 
-export function emit (type: types, ...args: any) {
+export function emit (type: types, ...args: Array<any>) {
     if (handlers[type]) {
         process.nextTick(() => {
             handlers[type].forEach(f => {
