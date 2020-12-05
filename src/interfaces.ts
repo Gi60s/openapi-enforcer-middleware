@@ -15,8 +15,8 @@ declare global {
 
 export interface RouteBuilderOptions {
     commonDependencyKey: string
-    ignoreMissingControllers?: boolean
-    ignoreMissingOperations?: boolean
+    // ignoreMissingControllers?: boolean
+    // ignoreMissingOperations?: boolean
     lazyLoad?: boolean                      // set to true to lazy load operations when called the first time
     xController?: string                    // the name of the OpenAPI extension property that will define the API controller file
     xOperation?: string                     // the name of the OpenAPI extension property that will define the operation name within the controller file
