@@ -3,6 +3,8 @@ const path = require('path')
 const navigation = require('./static/navigation.json')
 
 const basePath = path.resolve(__dirname, 'content')
+const baseUrl = '/openapi-enforcer-middleware'
+const publicPath = 'https://byu-oit.github.io' + baseUrl
 const rxMd = /\.md$/i
 
 export default {
@@ -16,6 +18,10 @@ export default {
   ** See https://nuxtjs.org/api/configuration-target
   */
   target: 'static',
+
+  publicRuntimeConfig: {
+    baseUrl: process.env.ENV === 'prod' ? baseUrl : ''
+  },
 
   // https://nuxtjs.org/guides/configuration-glossary/configuration-generate
   generate: {
@@ -34,7 +40,7 @@ export default {
       { hid: 'description', name: 'description', content: process.env.npm_package_description || '' }
     ],
     link: [
-      // { rel: 'icon', type: 'image/x-icon', href: '/favicon.png' }
+      { rel: 'icon', type: 'image/x-icon', href: baseUrl + '/favicon.png' }
     ]
   },
   /*
@@ -93,7 +99,7 @@ export default {
   */
   build: {
     transpile: [/^element-ui/],
-    publicPath: 'https://byu-oit.github.io/openapi-enforcer-middleware/'
+    publicPath
   }
 }
 

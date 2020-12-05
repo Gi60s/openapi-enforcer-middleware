@@ -225,36 +225,37 @@ export default {
     Search
   },
 
-  async beforeRouteEnter  (to, from, next) {
-    if (to.fullPath === '/') {
-      if (!navigationMenu) {
-        const { data } = await axios.get('/navigation.json')
-        navigationMenu = data
-      }
-
-      // let version = store.get('version')
-      // if (version && !navigationMenu[version]) {
-      //   store.set('version', '')
-      //   version = ''
-      // }
-      // if (version) return next('/' + version + '/')
-    }
-    next()
-  },
+  // async beforeRouteEnter  (to, from, next) {
+  //   if (to.fullPath === '/') {
+  //     if (!navigationMenu) {
+  //       const { data } = await axios.get('/navigation.json')
+  //       navigationMenu = data
+  //     }
+  //
+  //     // let version = store.get('version')
+  //     // if (version && !navigationMenu[version]) {
+  //     //   store.set('version', '')
+  //     //   version = ''
+  //     // }
+  //     // if (version) return next('/' + version + '/')
+  //   }
+  //   next()
+  // },
 
   // async beforeRouteUpdate (to, from, next) {
   //   await loadPageData(this, this.$content, to.path)
   //   next()
   // },
 
-  async asyncData({$content, $router, params}) {
+  async asyncData({ $config, $content, $router, params }) {
+    const { baseUrl } = $config
     const [ version ] = params.pathMatch.split('/')
     if (version) {
       store.set('version', version)
     }
 
     if (!navigationMenu) {
-      const { data } = await axios.get('/navigation.json')
+      const { data } = await axios.get(baseUrl + '/navigation.json')
       navigationMenu = data
     }
 
