@@ -917,7 +917,7 @@ describe('openapi-enforcer-middleware', () => {
       })
     })
 
-    it('can inject dependencies', async function () {
+    it('can inject dependencies as an array', async function () {
       const doc = spec.openapi([{
         path: '/',
         method: 'get',
@@ -930,6 +930,54 @@ describe('openapi-enforcer-middleware', () => {
         let res = await request({ path: '/' })
         expect(res.statusCode).to.equal(200)
         expect(res.body).to.equal('get: 2 a,2')
+      })
+    })
+
+    it('can inject dependencies from a map', async function () {
+      const doc = spec.openapi([{
+        path: '/',
+        method: 'get',
+        responses: [{ code: 200, schema: { type: 'string' }}]
+      }])
+      doc['x-controller'] = 'basic'
+      doc.paths['/'].get['x-operation'] = 'myGet'
+
+      await test({ doc, routeBuilder: { dependencies: { basic: ['a', 'b', 'c'], foo: [] } } }, async (request) => {
+        let res = await request({ path: '/' })
+        expect(res.statusCode).to.equal(200)
+        expect(res.body).to.equal('get: 3 a,b,c')
+      })
+    })
+
+    it('can inject common dependencies from a map', async function () {
+      const doc = spec.openapi([{
+        path: '/',
+        method: 'get',
+        responses: [{ code: 200, schema: { type: 'string' }}]
+      }])
+      doc['x-controller'] = 'basic'
+      doc.paths['/'].get['x-operation'] = 'myGet'
+
+      await test({ doc, routeBuilder: { dependencies: { common: ['foo', 'bar'], basic: ['a', 'b', 'c'], foo: [] } } }, async (request) => {
+        let res = await request({ path: '/' })
+        expect(res.statusCode).to.equal(200)
+        expect(res.body).to.equal('get: 5 a,b,c,foo,bar')
+      })
+    })
+
+    it('can inject common dependencies with a different common dependency key from a map', async function () {
+      const doc = spec.openapi([{
+        path: '/',
+        method: 'get',
+        responses: [{ code: 200, schema: { type: 'string' }}]
+      }])
+      doc['x-controller'] = 'basic'
+      doc.paths['/'].get['x-operation'] = 'myGet'
+
+      await test({ doc, routeBuilder: { commonDependencyKey: 'bar', dependencies: { common: ['foo', 'bar'], basic: ['a', 'b', 'c'], bar: ['baz'] } } }, async (request) => {
+        let res = await request({ path: '/' })
+        expect(res.statusCode).to.equal(200)
+        expect(res.body).to.equal('get: 4 a,b,c,baz')
       })
     })
   })
