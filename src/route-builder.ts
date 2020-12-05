@@ -14,6 +14,12 @@ interface ControllerData {
     promise: Promise<any>
 }
 
+export type IDependencies = Array<any> | DependencyMap
+
+export interface DependencyMap {
+    [key: string]: Array<any>
+}
+
 interface OperationData {
     controllerKey: string
     operationKey: string
@@ -22,8 +28,9 @@ interface OperationData {
 }
 
 interface GetOperationConfig {
+    commonDependencyKey: string
     controllersMap: Map<string, ControllerData>
-    dependencies: Array<any>
+    dependencies: IDependencies
     dirPath: string
     operation: any
     operationsMap: WeakMap<any, OperationData>
@@ -31,20 +38,52 @@ interface GetOperationConfig {
     xOperation: string
 }
 
-export function routeBuilder (enforcerPromise: Promise<any>, dirPath: string, options?: I.RouteBuilderOptions) {
+export function routeBuilder (enforcerPromise: Promise<any>, dirPath: string, dependencies?: IDependencies, options?: I.RouteBuilderOptions) {
     const controllersMap: Map<string, ControllerData> = new Map()
     const operationsMap: WeakMap<any, OperationData> = new WeakMap()
 
+    // normalize dependencies
+    if (!dependencies) {
+        dependencies = []
+    } else {
+        const message = 'Expected an array of values or an object map with property values as arrays of values.'
+        const isArray = Array.isArray(dependencies)
+        const isObject = dependencies && typeof dependencies === 'object'
+        if (!isObject && !isArray) throw Error(message)
+        if (isObject && !isArray) {
+            const map: DependencyMap = <DependencyMap>dependencies
+            const keys = Object.keys(map)
+            const length = keys.length
+            for (let i = 0; i < length; i++) {
+                if (!Array.isArray(map[keys[i]])) throw Error(message)
+            }
+        }
+    }
+
     const opts = normalizeOptions(options, {
         defaults: {
-            dependencies: [],
+            commonDependencyKey: 'common',
             lazyLoad: false,
             xController: 'x-controller',
             xOperation: 'x-operation'
         },
         required: [],
         validators: {
-            dependencies: (v: any) => Array.isArray(v) ? '' : 'Expected an array of values.',
+            dependencies: (v: any) => {
+                if (Array.isArray(v)) return ''
+
+                const message = 'Expected an array of values or an object map with property values as arrays of values.'
+                if (v && typeof v === 'object') {
+                    const keys = Object.keys(v)
+                    const length = keys.length
+                    for (let i = 0; i < length; i++) {
+                        if (!Array.isArray(v[keys[i]])) return message
+                    }
+                    return ''
+                }
+
+                return message
+            },
             lazyLoad: validatorBoolean,
             xController: validatorNonEmptyString,
             xOperation: validatorNonEmptyString
@@ -61,8 +100,9 @@ export function routeBuilder (enforcerPromise: Promise<any>, dirPath: string, op
                         // @ts-ignore
                         if (methods[opKey]) {
                             const config: GetOperationConfig = {
+                                commonDependencyKey: opts.commonDependencyKey,
                                 controllersMap,
-                                dependencies: opts.dependencies!,
+                                dependencies: dependencies!,
                                 dirPath,
                                 operation: openapi.paths[path][opKey],
                                 operationsMap,
@@ -82,8 +122,9 @@ export function routeBuilder (enforcerPromise: Promise<any>, dirPath: string, op
         if (initialized(req, next)) {
             const { operation } = req.enforcer!
             const config: GetOperationConfig = {
+                commonDependencyKey: opts.commonDependencyKey,
                 controllersMap,
-                dependencies: opts.dependencies!,
+                dependencies: dependencies!,
                 dirPath,
                 operation,
                 operationsMap,
@@ -111,7 +152,7 @@ function getControllerValue (operation: any, xController: string): string | void
 }
 
 async function getOperation (opts: GetOperationConfig): Promise<Function> {
-    const { controllersMap, dirPath, operation, operationsMap, xController, xOperation } = opts
+    const { commonDependencyKey, controllersMap, dirPath, operation, operationsMap, xController, xOperation } = opts
 
     // load the controller
     let data = operationsMap.get(operation)
@@ -137,7 +178,7 @@ async function getOperation (opts: GetOperationConfig): Promise<Function> {
     }
 
     // load the controller
-    const controller = await importController(controllersMap, data.path, opts.dependencies)
+    const controller = await importController(controllersMap, data.path, data.controllerKey, commonDependencyKey, opts.dependencies)
     if (!controller) {
         return data.operationHandler = noop
     }
@@ -152,7 +193,7 @@ async function getOperation (opts: GetOperationConfig): Promise<Function> {
     }
 }
 
-async function importController (controllersMap: Map<string, ControllerData>, filePath: string, dependencies: any[]) {
+async function importController (controllersMap: Map<string, ControllerData>, filePath: string, controllerKey: string, commonDependencyKey: string, dependencies: IDependencies) {
     let data = controllersMap.get(filePath)
     if (!data) {
         data = {
@@ -181,7 +222,15 @@ async function importController (controllersMap: Map<string, ControllerData>, fi
 
         // call the controller factory with dependencies injected to get back the controller
         try {
-            data.controller = factory(...dependencies)
+            let specificDeps: any[]
+            if (Array.isArray(dependencies)) {
+                specificDeps = dependencies
+            } else {
+                specificDeps = []
+                if (dependencies[controllerKey]) specificDeps.push(...dependencies[controllerKey])
+                if (dependencies[commonDependencyKey]) specificDeps.push(...dependencies[commonDependencyKey])
+            }
+            data.controller = factory(...specificDeps)
             return data.controller
         } catch (err) {
             emit('error', err)
