@@ -88,7 +88,8 @@ exports.server = function (options) {
   if (options.initEnforcer) app.use(mw.init(options.initEnforcer))
   if (options.routeBuilder) {
     const controllerDirectory = path.resolve(__dirname, 'controllers')
-    app.use(mw.route(controllerDirectory, options.routeBuilder))
+    const dependecies = options.routeBuilder.dependencies
+    app.use(mw.route(controllerDirectory, dependecies, options.routeBuilder))
   }
   if (options.routeHook) options.routeHook(app, mw)
   if (options.fallbackMocking) app.use(mw.mock())
