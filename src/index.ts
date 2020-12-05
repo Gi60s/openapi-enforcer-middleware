@@ -1,5 +1,5 @@
 import { on } from './events'
-import { routeBuilder } from './route-builder'
+import { routeBuilder, IDependencies } from './route-builder'
 import { init } from "./init"
 import { mockMiddleware } from "./mock"
 import * as I from './interfaces'
@@ -15,8 +15,8 @@ function OpenAPIEnforcerMiddleware (enforcerPromise: Promise<any>) {
             return mockMiddleware()
         },
         on,
-        route (controllersDir: string, options?: I.RouteBuilderOptions) {
-            return routeBuilder(enforcerPromise, controllersDir, options)
+        route (controllersDir: string, dependencies?: IDependencies, options?: I.RouteBuilderOptions) {
+            return routeBuilder(enforcerPromise, controllersDir, dependencies, options)
         }
     }
 }
