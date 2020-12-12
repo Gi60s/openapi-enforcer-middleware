@@ -176,7 +176,7 @@
       </div>
       <div class="edit-this-page">
         Caught a mistake or want to contribute to the documentation?
-        <a :href="'https://github.com/byu-oit/openapi-enforcer-middleware/tree/master/website/content' + editPath" target="_blank">
+        <a :href="'https://github.com/byu-oit/openapi-enforcer-middleware/tree/master/website/content/' + editPath" target="_blank">
           Edit this page on Github.
         </a>
       </div>
@@ -278,6 +278,7 @@ export default {
     }
 
     return {
+      baseUrl,
       editPath: path.replace(/\/$/, '') + (isIndex && doc ? '/index' : '') + '.md',
       doc,
       navigation: {

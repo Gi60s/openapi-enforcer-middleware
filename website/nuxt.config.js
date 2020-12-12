@@ -20,7 +20,11 @@ export default {
   target: 'static',
 
   publicRuntimeConfig: {
-    baseUrl: process.env.ENV === 'prod' ? baseUrl : ''
+    baseUrl: baseUrl
+  },
+
+  router: {
+    base: baseUrl
   },
 
   // https://nuxtjs.org/guides/configuration-glossary/configuration-generate

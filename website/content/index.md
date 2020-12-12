@@ -10,8 +10,8 @@ An express middleware that makes it easy to write web services that follow an Op
 
 Which version of the documentation do you want to see?
 
-<el-button onclick="window.location.href = '/1.x'">Docs for 1.x</el-button>
-<el-button onclick="window.location.href = '/2.x'" type="success">Docs for 2.x</el-button>
+<el-button onclick="window.location.href = '/openapi-enforcer-middleware/1.x'">Docs for 1.x</el-button>
+<el-button onclick="window.location.href = '/openapi-enforcer-middleware/2.x'" type="success">Docs for 2.x</el-button>
 
 ## Features
 
