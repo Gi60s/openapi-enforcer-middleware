@@ -306,7 +306,7 @@ describe('openapi-enforcer-middleware', () => {
       })
     })
 
-    it.only('enforces write only properties for response bodies', async () => {
+    it('enforces write only properties for response bodies', async () => {
       const doc = spec.openapi([{
         method: 'get',
         path: '/',
