@@ -88,3 +88,7 @@ app.listen(3000)
 ## Auto Build Routes
 
 If you are interested in having this package build your express routes for you so that you don't have to keep your express routes in sync with your OpenAPI paths then check out the [route builder documentation](./route-builder).
+
+## Documentation
+
+If you'd like to have user-friendly documentation for your API based off of your API definition, checkout the [API docs generation documentation](./api-docs-generation.md)

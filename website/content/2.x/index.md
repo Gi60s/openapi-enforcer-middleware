@@ -16,6 +16,7 @@ An express middleware that makes it easy to write web services that follow an Op
 - Option for manual response mocking in production
 - Highly configurable
 - Accepts middleware plugins
+- Creates [ReDoc](https://github.com/Redocly/redoc) API documentation
 
 ## Installation
 
