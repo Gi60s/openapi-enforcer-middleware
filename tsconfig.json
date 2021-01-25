@@ -13,11 +13,6 @@
 
     "outDir": "./dist",
 
-    "typeRoots": [
-      "src/types/index.ts",
-      "node_modules/@types"
-    ],
-
     "noImplicitAny": true,
     "preserveConstEnums": true,
     "removeComments": true,
