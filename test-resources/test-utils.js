@@ -131,7 +131,7 @@ exports.server = function (options) {
           result.body += chunk
         })
         res.on('end', () => {
-          if (res.headers['content-type'].indexOf('application/json') === 0) {
+          if (res.headers['content-type'] && res.headers['content-type'].indexOf('application/json') === 0) {
             result.body = JSON.parse(result.body)
           }
           resolve(result)
