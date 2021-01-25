@@ -9,8 +9,9 @@ export = OpenAPIEnforcerMiddleware
 
 function OpenAPIEnforcerMiddleware (enforcerPromise: Promise<any>) {
     return {
-        docs(specUrlPath: string, serverPort: number) {
-            return docsMiddleware(specUrlPath, serverPort)
+        // TODO: Uses the RedocRawOptions object (from redoc pacakge) instead of Record.
+        docs(specUrlPath: string, serverPort: number, redocOptions: Record<string, unknown>) {
+            return docsMiddleware(enforcerPromise, specUrlPath, serverPort, redocOptions)
         },
         init (options?: I.MiddlewareOptions): I.Middleware {
             return init(enforcerPromise, options)

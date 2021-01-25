@@ -2,7 +2,7 @@ import { on } from './events';
 import * as I from './interfaces';
 export = OpenAPIEnforcerMiddleware;
 declare function OpenAPIEnforcerMiddleware(enforcerPromise: Promise<any>): {
-    docs(specUrlPath: string, serverPort: number): (req: import("express").Request<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs>, res: import("express").Response<any>, next: import("express").NextFunction) => void;
+    docs(specUrlPath: string, serverPort: number, redocOptions: Record<string, unknown>): (req: import("express").Request<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs>, res: import("express").Response<any>, next: import("express").NextFunction) => void;
     init(options?: I.MiddlewareOptions | undefined): I.Middleware;
     mock(): (req: import("express").Request<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs>, res: import("express").Response<any>, next: import("express").NextFunction) => void;
     on: typeof on;

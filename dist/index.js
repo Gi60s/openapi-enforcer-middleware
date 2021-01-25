@@ -6,8 +6,8 @@ const mock_1 = require("./mock");
 const docs_1 = require("./docs");
 function OpenAPIEnforcerMiddleware(enforcerPromise) {
     return {
-        docs(specUrlPath, serverPort) {
-            return docs_1.docsMiddleware(specUrlPath, serverPort);
+        docs(specUrlPath, serverPort, redocOptions) {
+            return docs_1.docsMiddleware(enforcerPromise, specUrlPath, serverPort, redocOptions);
         },
         init(options) {
             return init_1.init(enforcerPromise, options);
