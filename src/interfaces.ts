@@ -22,8 +22,6 @@ export interface RouteBuilderOptions {
     xOperation?: string                     // the name of the OpenAPI extension property that will define the operation name within the controller file
 }
 
-export type ErrorMiddleware = (err: Error, req: Express.Request, res: Express.Response, next: Express.NextFunction) => void
-
 export namespace IEnforcer {
     export interface RequestInput {
         body?: string | { [key: string]: any }
@@ -46,7 +44,7 @@ export namespace IEnforcer {
 export type Middleware = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => void
 
 export interface MiddlewareRequestData {
-    accepts (responseCode: number | string): { next (): IteratorResult<string[] | void, any>, [Symbol.iterator] (): any }
+    accepts (responseCode: number | string): { next (): IteratorResult<string[] | void>, [Symbol.iterator] (): any }
     body?: any
     cookies: { [key: string]: any }
     headers: { [key: string]: any }
