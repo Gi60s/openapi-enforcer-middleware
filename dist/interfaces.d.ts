@@ -13,13 +13,10 @@ declare global {
 }
 export interface RouteBuilderOptions {
     commonDependencyKey: string;
-    ignoreMissingControllers?: boolean;
-    ignoreMissingOperations?: boolean;
     lazyLoad?: boolean;
     xController?: string;
     xOperation?: string;
 }
-export declare type ErrorMiddleware = (err: Error, req: Express.Request, res: Express.Response, next: Express.NextFunction) => void;
 export declare namespace IEnforcer {
     interface RequestInput {
         body?: string | {
@@ -50,7 +47,7 @@ export declare namespace IEnforcer {
 export declare type Middleware = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => void;
 export interface MiddlewareRequestData {
     accepts(responseCode: number | string): {
-        next(): IteratorResult<string[] | void, any>;
+        next(): IteratorResult<string[] | void>;
         [Symbol.iterator](): any;
     };
     body?: any;
