@@ -148,7 +148,6 @@ describe('openapi-enforcer-middleware', () => {
         })
       })
 
-
       it('can be configured to ignore bad requests', async () => {
         const doc = spec.openapi([{
           path: '/{num}',
@@ -246,6 +245,84 @@ describe('openapi-enforcer-middleware', () => {
           let res = await request({ method: 'put', path: '/' })
           expect(res.statusCode).to.equal(418)
         })
+      })
+    })
+  })
+
+  describe('readOnly and writeOnly', function () {
+    function merge (target, source) {
+      Object.keys(source).forEach(key => {
+        const value = source[key]
+        if (key in target) {
+          if (typeof value === 'object' && value !== null && typeof target[key] === 'object' && target[key] !== null) {
+            merge(target[key], value)
+          } else {
+            target[key] = value
+          }
+        } else {
+          target[key] = value
+        }
+      })
+    }
+
+    function rwContent (schema = {}) {
+      const result = {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: {
+              read: {
+                type: 'string',
+                readOnly: true
+              },
+              write: {
+                type: 'string',
+                writeOnly: true
+              }
+            }
+          }
+        }
+      }
+      merge(result['application/json'].schema, schema)
+      return result
+    }
+
+    it('enforces read only properties for request bodies', async () => {
+      const doc = spec.openapi([{
+        method: 'post',
+        path: '/',
+      }])
+      const op = doc.paths['/'].post
+      op.requestBody = { content: rwContent({ required: ['read', 'write']}) }
+
+      function routeHook (app) {
+        app.post('/', ok())
+      }
+
+      await test({ doc, routeHook }, async (request) => {
+        let res = await request({ path: '/', method: 'post', body: { read: 'abc', write: 'abc' } })
+        expect(res.statusCode).to.equal(400)
+        expect(res.body).to.match(/Cannot write to read only properties/)
+      })
+    })
+
+    it.only('enforces write only properties for response bodies', async () => {
+      const doc = spec.openapi([{
+        method: 'get',
+        path: '/',
+      }])
+      const op = doc.paths['/'].get
+      merge(op.responses[200], { content: rwContent({ required: ['read', 'write']}) })
+
+      function routeHook (app) {
+        app.get('/', (req, res) => {
+          res.enforcer.send({ read: 'abc', write: 'abc' })
+        })
+      }
+
+      await test({ doc, routeHook }, async (request) => {
+        let res = await request({ path: '/', method: 'get' })
+        expect(res.statusCode).to.equal(500)
       })
     })
   })
