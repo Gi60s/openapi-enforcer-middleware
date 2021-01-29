@@ -1,6 +1,6 @@
 {
   "name": "openapi-enforcer-middleware",
-  "version": "2.0.0-alpha-5",
+  "version": "2.0.0-alpha-6",
   "description": "An express middleware that makes it easy to write web services that follow an Open API specification.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -50,7 +50,8 @@
     "express": "^4.17.1",
     "mocha": "^5.2.0",
     "nyc": "^14.1.1",
-    "openapi-enforcer": "^1.12.8",
+    "openapi-enforcer": "^1.13.1",
+    "redoc": "^2.0.0-rc.48",
     "request": "^2.88.2",
     "request-promise-native": "^1.0.9",
     "rimraf": "^3.0.2",
