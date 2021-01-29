@@ -8,6 +8,7 @@ paths:
   /users:
     get:
       x-operation: listUsers
+      summary: List users
       responses:
         200:
           description: Success
@@ -19,6 +20,7 @@ paths:
                   $ref: '#/components/schemas/User'
     post:
       x-operation: addUser
+      summary: Add user
       requestBody:
         content:
           application/json:
@@ -44,6 +46,7 @@ paths:
           type: integer
     get:
       x-operation: getUser
+      summary: Get user
       responses:
         200:
           description: Success
@@ -53,6 +56,7 @@ paths:
                 $ref: '#/components/schemas/User'
     put:
       x-operation: updateUser
+      summary: Update user
       requestBody:
         content:
           application/json:
@@ -67,6 +71,7 @@ paths:
                 $ref: '#/components/schemas/User'
     delete:
       x-operation: deleteUser
+      summary: Delete user
       responses:
         204:
           description: Success
