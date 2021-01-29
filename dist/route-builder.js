@@ -26,6 +26,7 @@ exports.routeBuilder = void 0;
 const events_1 = require("./events");
 const error_code_1 = __importDefault(require("./error-code"));
 const path_1 = __importDefault(require("path"));
+const init_1 = require("./init");
 const util2_1 = require("./util2");
 const { validatorBoolean, validatorNonEmptyString } = util2_1.optionValidators;
 const methods = { get: true, post: true, put: true, delete: true, head: true, trace: true, options: true, connect: true, patch: true };
@@ -105,7 +106,11 @@ function routeBuilder(enforcerPromise, dirPath, dependencies, options) {
         });
     }
     return function (req, res, next) {
-        if (util2_1.initialized(req, next)) {
+        const { initialized, basePathMatch } = init_1.getInitStatus(req);
+        if (!basePathMatch) {
+            next();
+        }
+        else if (initialized) {
             const { operation } = req.enforcer;
             const config = {
                 commonDependencyKey: opts.commonDependencyKey,

@@ -3,7 +3,8 @@ import Enforcer from 'openapi-enforcer'
 import Express from "express";
 import * as I from './interfaces'
 import path from 'path'
-import { copy, errorFromException, initialized } from "./util2";
+import { getInitStatus } from './init'
+import { copy, errorFromException } from "./util2";
 import {emit} from "./events";
 import ErrorCode from "./error-code";
 
@@ -212,7 +213,10 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
 
 export function mockMiddleware () {
     return function (req: Express.Request, res: Express.Response, next: Express.NextFunction) {
-        if (initialized(req, next)) {
+        const { initialized, basePathMatch } = getInitStatus(req)
+        if (!basePathMatch) {
+            next()
+        } else if (initialized) {
             const {operation} = req.enforcer!
             const responseCodes = Object.keys(operation.responses)
 

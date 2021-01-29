@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.mockMiddleware = exports.mockHandler = exports.getMockMode = void 0;
 const openapi_enforcer_1 = __importDefault(require("openapi-enforcer"));
 const path_1 = __importDefault(require("path"));
+const init_1 = require("./init");
 const util2_1 = require("./util2");
 const events_1 = require("./events");
 const error_code_1 = __importDefault(require("./error-code"));
@@ -169,7 +170,11 @@ function mockHandler(req, res, next, mock) {
 exports.mockHandler = mockHandler;
 function mockMiddleware() {
     return function (req, res, next) {
-        if (util2_1.initialized(req, next)) {
+        const { initialized, basePathMatch } = init_1.getInitStatus(req);
+        if (!basePathMatch) {
+            next();
+        }
+        else if (initialized) {
             const { operation } = req.enforcer;
             const responseCodes = Object.keys(operation.responses);
             mockHandler(req, res, next, {

@@ -2,7 +2,8 @@ import { emit } from './events'
 import ErrorCode from './error-code'
 import Express from 'express'
 import path from 'path'
-import { initialized, normalizeOptions, optionValidators } from "./util2"
+import { getInitStatus } from './init'
+import { normalizeOptions, optionValidators } from "./util2"
 import * as I from "./interfaces";
 
 const { validatorBoolean, validatorNonEmptyString } = optionValidators
@@ -119,7 +120,10 @@ export function routeBuilder (enforcerPromise: Promise<any>, dirPath: string, de
 
     // return the express middleware
     return function (req: Express.Request, res: Express.Response, next: Express.NextFunction) {
-        if (initialized(req, next)) {
+        const { initialized, basePathMatch } = getInitStatus(req)
+        if (!basePathMatch) {
+            next()
+        } else if (initialized) {
             const { operation } = req.enforcer!
             const config: GetOperationConfig = {
                 commonDependencyKey: opts.commonDependencyKey,

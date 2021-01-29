@@ -3,12 +3,21 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.init = void 0;
+exports.init = exports.getInitStatus = void 0;
 const util2_1 = require("./util2");
 const mock_1 = require("./mock");
 const cookie_store_1 = __importDefault(require("./cookie-store"));
 const events_1 = require("./events");
 const { validatorBoolean, validatorString, validatorNonEmptyString, validatorQueryParams } = util2_1.optionValidators;
+const activeRequestMap = new WeakMap();
+function getInitStatus(req) {
+    const path = activeRequestMap.get(req);
+    return {
+        initialized: path !== undefined,
+        basePathMatch: path === req.baseUrl
+    };
+}
+exports.getInitStatus = getInitStatus;
 function init(enforcerPromise, options) {
     const opts = util2_1.normalizeOptions(options, {
         defaults: {
@@ -52,6 +61,7 @@ function init(enforcerPromise, options) {
     return function (req, res, next) {
         enforcerPromise
             .then(openapi => {
+            activeRequestMap.set(req, req.baseUrl);
             const relativePath = ('/' + req.originalUrl.substring(req.baseUrl.length)).replace(/^\/{2}/, '/');
             const hasBody = util2_1.reqHasBody(req);
             const requestObj = {

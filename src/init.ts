@@ -9,6 +9,15 @@ import { emit } from './events'
 import ErrorCode from './error-code'
 
 const { validatorBoolean, validatorString, validatorNonEmptyString, validatorQueryParams } = optionValidators
+const activeRequestMap: WeakMap<Express.Request, string> = new WeakMap()
+
+export function getInitStatus (req: Express.Request): { initialized: boolean, basePathMatch: boolean } {
+    const path = activeRequestMap.get(req)
+    return {
+        initialized: path !== undefined,
+        basePathMatch: path === req.baseUrl
+    }
+}
 
 export function init (enforcerPromise: Promise<any>, options?: I.MiddlewareOptions): I.Middleware {
     const opts: I.MiddlewareOptions = normalizeOptions(options, {
@@ -51,6 +60,8 @@ export function init (enforcerPromise: Promise<any>, options?: I.MiddlewareOptio
     return function (req: Express.Request, res: Express.Response, next: Express.NextFunction) {
         enforcerPromise
             .then(openapi => {
+                activeRequestMap.set(req, req.baseUrl)
+
                 // convert express request into OpenAPI Enforcer request
                 const relativePath = ('/' + req.originalUrl.substring(req.baseUrl.length)).replace(/^\/{2}/, '/')
                 const hasBody = reqHasBody(req)
