@@ -18,6 +18,10 @@ app.use('/api', enforcer.init())
 const controllersPath = path.resolve(__dirname, 'controllers')
 app.use(enforcer.route(controllersPath))
 
+app.use('/docs', enforcer.docs({
+  postRedocInitScripts: ['/foo.js', './bar.js']
+}))
+
 const listener = app.listen(8000, err => {
   if (err) return console.error(err.stack)
   console.log('Listening on port ' + listener.address().port)
