@@ -17,6 +17,7 @@ This method is not technically a constructor function because it does not use th
 
 **Returns** an object with the following methods:
 
+- [docs](#docs) - Generate an endpoint for serving your OpenAPI documentation using Redoc.
 - [init](#init) - Initialize the openapi-enforcer-middleware.
 - [mock](#mock) - Enable fallback (automatic) mocking.
 - [on](#on) - Add event listeners.
@@ -27,6 +28,56 @@ This method is not technically a constructor function because it does not use th
 ```js
 const enforcerPromise = Enforcer('./openapi.yml')
 const enforcerMiddleware = EnforcerMiddleware(enforcerPromise)
+```
+
+## Docs
+
+`docs (options?: DocsOptions)`
+
+Generate an endpoint for serving your OpenAPI documentation using Redoc. This endpoint does not require that the [init](#init) middleware be called first.
+
+**Parameters**
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| options | [Docs Options](#docs-options) | An optional parameter that describes how the docs middleware should work. |
+
+###### Init Options
+
+| Property | Type | Default | Description |
+| -------- | ---- | ------- | ----------- |
+| padding | `string` | `0` | Specify the padding to wrap the docs page. Specifying an empty string will set the body margin and padding to defaults. Specifying any other value will set the body margin to zero and set the padding to the value specified. |
+| preRedocInitScripts | `string[]` | `[]` | An array of strings for each JavaScript source to load prior to calling the Redoc init function. |
+| postRedocInitScripts | `string[]` | `[]` | An array of strings for each JavaScript source to load after to calling the Redoc init function. |
+| redoc | `object` | | Redoc specific options. See redoc.cdnVersion and redoc.options for details. |
+| redoc.cdnVersion | `string` | | If specified then the public CDN will be used to get the redoc library with the version you've specified. If not specified then the middleware will look to see if you've installed the NPM Redoc package and will use your installed Redoc library. If not specified and you have not installed the Redoc package then it will use the `next` version off the CDN. |
+| redoc.options | `object` | | Options to pass directly to the redoc library during initialization. |
+| styleSheets | `string[]` | | An array of strings for each CSS href to load in the head of the HTML. |
+| title | `string` | | The HTML title for the page. Defaults to the title specified in the OpenAPI document info.title property with the exception that if that title is a blank string then it will use `"API Documentation"` as the title. |
+
+**Example**
+
+```js
+const Enforcer = require('openapi-enforcer')
+const EnforcerMiddleware = require('openapi-enforcer-middleware')
+const express = require('express')
+
+const app = express()
+
+const enforcerMiddleware = EnforcerMiddleware(Enforcer('./openapi.yml'))
+
+// visiting http://<your-server.com>/docs will show the docs
+app.use('/docs', enforcerMiddleware.docs({
+  padding: 0,
+  preRedocInitScripts: ['/before-init.js'],
+  postRedocInitScripts: ['/after-init.js'],
+  redoc: {
+    cdnVersion: 'next',
+    options: {}
+  },
+  styleSheets: ['/my-css.css'],
+  title: 'My API'
+}))
 ```
 
 ## Init
