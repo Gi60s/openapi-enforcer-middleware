@@ -6,7 +6,7 @@
     "dev": "nuxt",
     "build": "nuxt build",
     "start": "nuxt start",
-    "generate": "nuxt generate && rm -rf ../docs && cp -r ./dist ../docs && git add ../docs && git commit -a -m 'update docs'",
+    "generate": "nuxt generate && rm -rf ../docs && cp -r ./dist ../docs && git add ../docs",
     "export": "nuxt export",
     "serve": "nuxt serve"
   },
