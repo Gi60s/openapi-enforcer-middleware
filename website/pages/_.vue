@@ -260,7 +260,10 @@ export default {
     }
 
     // await loadPageData(context, version, $content, '/' + path.join('/'))
-    const path = params.pathMatch || '/'
+    let path = params.pathMatch || '/'
+    path = path.replace(/\/+$/, '')
+    if (!path.length) path = '/'
+
     let doc = null
     let isIndex = path === '/'
     try {
