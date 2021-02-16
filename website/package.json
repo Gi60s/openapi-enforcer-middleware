@@ -6,7 +6,8 @@
     "dev": "nuxt",
     "build": "nuxt build",
     "start": "nuxt start",
-    "generate": "nuxt generate && rm -rf ../docs && cp -r ./dist ../docs && git add ../docs",
+    "generate": "nuxt generate",
+    "deploy": "nuxt generate && push-dir --dir=dist --branch=gh-pages --cleanup",
     "export": "nuxt export",
     "serve": "nuxt serve"
   },
@@ -16,6 +17,7 @@
     "element-ui": "^2.13.2",
     "nuxt": "^2.14.4",
     "prism-themes": "^1.4.0",
+    "push-dir": "^0.4.1",
     "stylus": "^0.54.8",
     "stylus-loader": "^3.0.2"
   },
