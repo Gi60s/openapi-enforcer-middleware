@@ -103,7 +103,7 @@ Initialize the middleware. You need to call this function as an express middlewa
 | handleMethodNotAllowed | `boolean` | `true` | How to handle method not allowed. If `true` a 405 response is sent back automatically, if `false` the `enforcer` property is not set on the `req` and `res` objects. |
 | mockHeader | `string` | `"x-mock"` | The name to use for the mocking header. Set to an empty string to disable mock requests via the header. [Learn about mocking.](./mocking) |
 | mockQuery | `string` | `"x-mock"` | The name to use for the mocking query parameter. Set to an empty string to disable mock requests via the query parameter. (The value specified will automatically be added to the `allowedOtherQueryParameters`.) [Learn about mocking.](./mocking) |
-| mockStore | [MockStore](./mocking#mock-store) | [CookieStore](./mocking) | This mock store to use if the request is an implemented mock request. [Learn about mocking.](./mocking) |
+| mockStore | [MockStore](mocking#mock-store) | [CookieStore](mocking) | This mock store to use if the request is an implemented mock request. [Learn about mocking.](./mocking) |
 | xMockImplemented | `string` | `x-mock-implemented` | The name of the OpenAPI extension property that identifies if the operation has a mock response implemented in your code. [Learn about mocking.](./mocking) |
 
 **Returns** an express middleware function.
@@ -144,7 +144,7 @@ This function enables fallback (automatic) mocking. This is useful if your API i
 
 None
 
-**Returns** an express middlware.
+**Returns** an express middleware.
 
 **Example**
 
@@ -196,7 +196,7 @@ Automatically generate routes based on your OpenAPI document. This is done by sp
 
 The big advantage of using this middleware is that you don't have to update your express routes manually when your OpenAPI document changes.
 
-To fully understand how this works, check out the [Route Builder](./route-builder) documentation.
+To fully understand how this works, check out the [Route Builder](route-builder) documentation.
 
 **Parameters**
 
@@ -219,7 +219,7 @@ To fully understand how this works, check out the [Route Builder](./route-builde
 
 **Example**
 
-This example won't make much sense on its own. Check of the [Route Builder](./route-builder) documentation for more details.
+This example won't make much sense on its own. Check of the [Route Builder](route-builder) documentation for more details.
 
 ```js
 const Enforcer = require('openapi-enforcer')

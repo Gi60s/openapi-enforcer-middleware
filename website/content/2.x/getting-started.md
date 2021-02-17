@@ -32,13 +32,13 @@ You can see that `a` is a number and `b` is a string.
 
 If you send either `1` or `'1'` over the internet it has to be *serialized* before sending. Once serialized the value will look like this: `1`. How can you know whether `1` then represents a number or a string? The value will need to be *deserialized* back into it's type based value before you can know.
 
-This library will automatically handle serialization and deserialization for you when you use the [request and response enforcer objects](./req-res-enforcer).
+This library will automatically handle serialization and deserialization for you when you use the [request and response enforcer objects](req-res-enforcer.md).
 
 ## Server Setup
 
 The below example is for a basic server set up using default options.
 
-Be sure to read up on the [req and res enforcer properties](./req-res-enforcer) to get the biggest benefit from this middleware.
+Be sure to read up on the [req and res enforcer properties](req-res-enforcer.md) to get the biggest benefit from this middleware.
 
 ```js
 const Enforcer = require('openapi-enforcer')
@@ -87,4 +87,4 @@ app.listen(3000)
 
 ## Auto Build Routes
 
-If you are interested in having this package build your express routes for you so that you don't have to keep your express routes in sync with your OpenAPI paths then check out the [route builder documentation](route-builder.md)..
+If you are interested in having this package build your express routes for you so that you don't have to keep your express routes in sync with your OpenAPI paths then check out the [route builder documentation](route-builder.md).

@@ -104,6 +104,46 @@ export default {
   build: {
     transpile: [/^element-ui/],
     publicPath
+  },
+
+  hooks: {
+    'content:file:beforeParse': (file) => {
+      // if (!file.path.includes('getting-started.md')) return
+
+      const contentDir = path.resolve(__dirname, 'content')
+      if (file.extension === '.md') {
+        const relPath = path.relative(contentDir, path.dirname(file.path))
+
+        const rx = /\[([^\]]+)\]\(([^\)]+)\)/g
+        const content = file.data
+        let match
+        let result = ''
+        let index = 0
+        while (match = rx.exec(content)) {
+          let link = match[2]
+          const found = /^(.*)\.md(#[^\)]+)?$/.exec(link)
+          if (found && !/^https?:\/\//.test(found[1]) && !found[1].startsWith('#')) {
+            if (found[1].startsWith('./')) {
+              link = path.resolve('/', relPath, found[1].substring(2)) + (found[2] || '')
+              // console.log(relPath)
+              // console.log('-' + match[1] + ' | ' + match[2] + ' | ' + link)
+            } else if (!found[1].startsWith('/')) {
+              link = path.resolve('/', relPath, found[1]) + (found[2] || '')
+              // console.log(found[1], relPath, link)
+              // console.log(relPath)
+              // console.log('-' + match[1] + ' | ' + match[2] + ' | ' + link)
+            }
+          } else {
+            if (found && found[1].startsWith('#')) console.log(found[1])
+          }
+          result += content.substring(index, match.index) + '[' + match[1] + '](' + link + ')'
+          index = match.index + match[0].length
+        }
+        result += content.substring(index)
+
+        file.data = result
+      }
+    }
   }
 }
 
