@@ -98,7 +98,11 @@ function routeBuilder(enforcerPromise, dirPath, dependencies, options) {
                                 xController: opts.xController,
                                 xOperation: opts.xOperation
                             };
-                            getOperation(config).catch(err => console.error(err.stack));
+                            getOperation(config).catch(err => {
+                                if (err.code !== 'MODULE_NOT_FOUND') {
+                                    events_1.emit('error', err);
+                                }
+                            });
                         }
                     });
                 });
@@ -191,7 +195,12 @@ async function importController(controllersMap, filePath, controllerKey, commonD
             factory = await data.promise;
         }
         catch (err) {
-            events_1.emit('error', err);
+            if (err.code === 'MODULE_NOT_FOUND') {
+                events_1.emit('error', new error_code_1.default('Controller file not found: ' + filePath, 'ENFORCER_MIDDLEWARE_ROUTE_CONTROLLER'));
+            }
+            else {
+                events_1.emit('error', err);
+            }
             return data.controller = null;
         }
         if (typeof factory !== 'function' && typeof factory.default === 'function')
