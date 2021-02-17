@@ -110,7 +110,11 @@ export function routeBuilder (enforcerPromise: Promise<any>, dirPath: string, de
                                 xController: opts.xController!,
                                 xOperation: opts.xOperation!
                             }
-                            getOperation(config).catch(err => console.error(err.stack))
+                            getOperation(config).catch(err => {
+                                if (err.code !== 'MODULE_NOT_FOUND') {
+                                    emit('error', err)
+                                }
+                            })
                         }
                     })
                 })
@@ -213,7 +217,11 @@ async function importController (controllersMap: Map<string, ControllerData>, fi
             data.promise = import(filePath)
             factory = await data.promise
         } catch (err) {
-            emit('error', err)
+            if (err.code === 'MODULE_NOT_FOUND') {
+                emit('error', new ErrorCode('Controller file not found: ' + filePath, 'ENFORCER_MIDDLEWARE_ROUTE_CONTROLLER'))
+            } else {
+                emit('error', err)
+            }
             return data.controller = null
         }
 
