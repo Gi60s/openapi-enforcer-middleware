@@ -7,7 +7,7 @@ const openapiPath = path.resolve(__dirname, 'openapi.yml')
 const enforcer = EnforcerMiddleware(Enforcer(openapiPath))
 
 enforcer.on('error', err => {
-  console.error(err.stack)
+  console.error(err)
 })
 
 const app = express()
