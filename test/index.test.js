@@ -868,6 +868,25 @@ describe('openapi-enforcer-middleware', () => {
         expect(caughtError).to.equal(true)
       })
     })
+
+    it('can send undefined', async () => {
+      const doc = spec.openapi([{
+        responses: [{ code: 200}]
+      }])
+
+      function routeHook (app) {
+        app.get('/', (req, res) => {
+          res.enforcer.send()
+        })
+      }
+
+      await test({ doc, routeHook, initEnforcer: { handleBadResponse: false } }, async (request) => {
+        // invalid response validated and caught
+        let res = await request({ path: '/' })
+        expect(res.body).to.equal('')
+        expect(res.statusCode).to.equal(200)
+      })
+    })
   })
 
   describe('route builder', function () {
@@ -885,7 +904,7 @@ describe('openapi-enforcer-middleware', () => {
       mw.route(path.resolve(resources, ))
       const results = await on(mw, 'error')
       expect(results.length).to.equal(1)
-      expect(results[0].code).to.equal('MODULE_NOT_FOUND')
+      expect(results[0].code).to.equal('ENFORCER_MIDDLEWARE_ROUTE_CONTROLLER')
     })
 
     it('will identify a missing operation', async function () {
