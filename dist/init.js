@@ -103,7 +103,11 @@ function init(enforcerPromise, options) {
                 if (hasBody)
                     req.enforcer.body = body;
                 res.enforcer = {
-                    send: util2_1.sender(opts, req, res, next)
+                    send: util2_1.sender(opts, req, res, next),
+                    status(code) {
+                        res.status(code);
+                        return this;
+                    }
                 };
                 const mockMode = mock_1.getMockMode(req);
                 if (mockMode) {
