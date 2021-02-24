@@ -108,7 +108,11 @@ export function init (enforcerPromise: Promise<any>, options?: I.MiddlewareOptio
 
                     // make response data object
                     res.enforcer = {
-                        send: sender(opts, req, res, next)
+                        send: sender(opts, req, res, next),
+                        status (code: number) {
+                            res.status(code)
+                            return this
+                        }
                     }
 
                     const mockMode = getMockMode(req)
