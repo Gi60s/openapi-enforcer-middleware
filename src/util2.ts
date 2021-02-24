@@ -144,7 +144,8 @@ export function sender (opts: I.MiddlewareOptions, req: Express.Request, res: Ex
             const sendObject = response.schema && response.schema.type
                 ? ['array', 'object'].indexOf(response.schema.type) !== -1
                 : typeof response.body === 'object'
-            res.send(sendObject ? response.body : String(response.body))
+            const body = response.body === undefined ? '' : response.body
+            res.send(sendObject ? body : String(body))
         } else {
             res.send()
         }
