@@ -63,6 +63,7 @@ export interface MiddlewareRequestData {
 
 export interface MiddlewareResponseData {
     send (body?: any): void
+    status (code: number): MiddlewareResponseData
 }
 
 export interface MockMode {
