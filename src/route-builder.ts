@@ -155,7 +155,7 @@ function getControllerValue (operation: any, xController: string): string | void
     let node = operation
     while (node) {
         if (xController in node) return node[xController]
-        node = node.enforcerData.parent.result
+        node = node.enforcerData && node.enforcerData.parent ? node.enforcerData.parent.result : null
     }
 }
 
@@ -166,7 +166,7 @@ async function getOperation (opts: GetOperationConfig): Promise<Function> {
     let data = operationsMap.get(operation)
     if (!data) {
         const controllerKey = getControllerValue(operation, xController) || ''
-        const operationKey = operation.operationId || operation[xOperation]
+        const operationKey = operation.operationId || operation[xOperation] || ''
         const controllerPath = controllerKey ? path.resolve(dirPath, controllerKey) : ''
         data = {
             controllerKey,
@@ -181,15 +181,23 @@ async function getOperation (opts: GetOperationConfig): Promise<Function> {
     if (data.operationHandler) return data.operationHandler
 
     // if the operation does not define a controller or an operation then we assume it shouldn't map to a controller
-    if (!data.controllerKey && !data.operationKey) {
+    const opPath = operation.enforcerData.parent && operation.enforcerData.parent.key
+    const opMethod = operation.enforcerData.key
+    if (!data.controllerKey) {
+        if (!data.operationKey) {
+            emit('warning', new ErrorCode('Operation at "' + opMethod.toUpperCase() + ' ' + opPath + '" not mapped because no ' + xController + ' and no ' + xOperation + ' (nor operationId) has been defined.', 'ENFORCER_MIDDLEWARE_ROUTE_NO_MAPPING'))
+        } else {
+            emit('warning', new ErrorCode('Operation at "' + opMethod.toUpperCase() + ' ' + opPath + '" not mapped because no ' + xController + ' has been defined.', 'ENFORCER_MIDDLEWARE_ROUTE_NO_MAPPING'))
+        }
+        return data.operationHandler = noop
+    } else if (!data.operationKey) {
+        emit('warning', new ErrorCode('Operation at "' + opMethod.toUpperCase() + ' ' + opPath + '" not mapped because no ' + xOperation + ' (nor operationId) has been defined.', 'ENFORCER_MIDDLEWARE_ROUTE_NO_MAPPING'))
         return data.operationHandler = noop
     }
 
     // load the controller
     const controller = await importController(controllersMap, data.path, data.controllerKey, commonDependencyKey, opts.dependencies)
-    if (!controller) {
-        return data.operationHandler = noop
-    }
+    if (!controller) return data.operationHandler = noop
 
     // check if the operation is defined in the controller
     const op: Function = controller[data.operationKey]

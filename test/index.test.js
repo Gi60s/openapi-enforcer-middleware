@@ -1076,6 +1076,36 @@ describe('openapi-enforcer-middleware', () => {
         expect(res.body).to.equal('get: 4 a,b,c,baz')
       })
     })
+
+    it('will warn about paths that do not have an x-controller', async () => {
+      const doc = spec.openapi([{
+        responses: [{ code: 200, schema: { type: 'number' }}]
+      }])
+      // doc['x-controller'] = 'foo'
+      // doc.paths['/'].get['x-operation'] = 'bar'
+
+      const promise = Enforcer(doc)
+      const mw = Middleware(promise)
+      mw.route(path.resolve(resources, 'controllers'))
+      const results = await on(mw, 'warning')
+      expect(results.length).to.equal(1)
+      expect(results[0].code).to.equal('ENFORCER_MIDDLEWARE_ROUTE_NO_MAPPING')
+    })
+
+    it('will warn about paths that do not have an x-operation nor an operationId', async () => {
+      const doc = spec.openapi([{
+        responses: [{ code: 200, schema: { type: 'number' }}]
+      }])
+      doc['x-controller'] = 'foo'
+      // doc.paths['/'].get['x-operation'] = 'bar'
+
+      const promise = Enforcer(doc)
+      const mw = Middleware(promise)
+      mw.route(path.resolve(resources, 'controllers'))
+      const results = await on(mw, 'warning')
+      expect(results.length).to.equal(1)
+      expect(results[0].code).to.equal('ENFORCER_MIDDLEWARE_ROUTE_NO_MAPPING')
+    })
   })
 
 })

@@ -144,7 +144,7 @@ function getControllerValue(operation, xController) {
     while (node) {
         if (xController in node)
             return node[xController];
-        node = node.enforcerData.parent.result;
+        node = node.enforcerData && node.enforcerData.parent ? node.enforcerData.parent.result : null;
     }
 }
 async function getOperation(opts) {
@@ -152,7 +152,7 @@ async function getOperation(opts) {
     let data = operationsMap.get(operation);
     if (!data) {
         const controllerKey = getControllerValue(operation, xController) || '';
-        const operationKey = operation.operationId || operation[xOperation];
+        const operationKey = operation.operationId || operation[xOperation] || '';
         const controllerPath = controllerKey ? path_1.default.resolve(dirPath, controllerKey) : '';
         data = {
             controllerKey,
@@ -164,13 +164,24 @@ async function getOperation(opts) {
     }
     if (data.operationHandler)
         return data.operationHandler;
-    if (!data.controllerKey && !data.operationKey) {
+    const opPath = operation.enforcerData.parent && operation.enforcerData.parent.key;
+    const opMethod = operation.enforcerData.key;
+    if (!data.controllerKey) {
+        if (!data.operationKey) {
+            events_1.emit('warning', new error_code_1.default('Operation at "' + opMethod.toUpperCase() + ' ' + opPath + '" not mapped because no ' + xController + ' and no ' + xOperation + ' (nor operationId) has been defined.', 'ENFORCER_MIDDLEWARE_ROUTE_NO_MAPPING'));
+        }
+        else {
+            events_1.emit('warning', new error_code_1.default('Operation at "' + opMethod.toUpperCase() + ' ' + opPath + '" not mapped because no ' + xController + ' has been defined.', 'ENFORCER_MIDDLEWARE_ROUTE_NO_MAPPING'));
+        }
+        return data.operationHandler = noop;
+    }
+    else if (!data.operationKey) {
+        events_1.emit('warning', new error_code_1.default('Operation at "' + opMethod.toUpperCase() + ' ' + opPath + '" not mapped because no ' + xOperation + ' (nor operationId) has been defined.', 'ENFORCER_MIDDLEWARE_ROUTE_NO_MAPPING'));
         return data.operationHandler = noop;
     }
     const controller = await importController(controllersMap, data.path, data.controllerKey, commonDependencyKey, opts.dependencies);
-    if (!controller) {
+    if (!controller)
         return data.operationHandler = noop;
-    }
     const op = controller[data.operationKey];
     if (!op) {
         events_1.emit('error', new error_code_1.default('Controller at ' + data.path + ' missing operation: ' + data.operationKey, 'ENFORCER_MIDDLEWARE_ROUTE_NO_OP'));
