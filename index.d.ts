@@ -5,9 +5,9 @@ export = OpenApiEnforcerMiddleware
 declare class OpenApiEnforcerMiddleware {
     constructor (definition: string|object, options?:OpenApiEnforcerMiddleware.Options );
 
-    controllers<T extends unknown[]> (controllersDirectoryPath: string | OpenApiEnforcerMiddleware.Controllers, ...dependencyInjection: T): Promise<object>;
+    controllers<T extends unknown[]> (controllersDirectoryPath: string | OpenApiEnforcerMiddleware.ControllersMap, ...dependencyInjection: T): Promise<object>;
     middleware (): OpenApiEnforcerMiddleware.MiddlewareFunction;
-    mocks<T extends unknown[]> (controllersDirectoryPath?: string | OpenApiEnforcerMiddleware.Controllers, automatic?: boolean, ...dependencyInjection: T): Promise<object>;
+    mocks<T extends unknown[]> (controllersDirectoryPath?: string | OpenApiEnforcerMiddleware.ControllersMap, automatic?: boolean, ...dependencyInjection: T): Promise<object>;
     use (middleware: OpenApiEnforcerMiddleware.MiddlewareFunction): void;
 
     promise: Promise<object>
@@ -20,6 +20,8 @@ declare namespace OpenApiEnforcerMiddleware {
     export type NextFunction = OriginalNextFunction
 
     export type Controllers = Record<string, MiddlewareFunction>
+
+    export type ControllersMap = Record<string, Controllers>
 
     export interface Options {
         allowOtherQueryParameters?: boolean;
