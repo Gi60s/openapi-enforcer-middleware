@@ -1,3 +1,4 @@
+import {RequestHandler, ErrorRequestHandler, NextFunction as OriginalNextFunction} from 'express-serve-static-core'
 
 export = OpenApiEnforcerMiddleware
 
@@ -5,7 +6,7 @@ declare class OpenApiEnforcerMiddleware {
     constructor (definition: string|object, options?:OpenApiEnforcerMiddleware.Options );
 
     controllers (controllersDirectoryPath: string|object, ...dependencyInjection: any): Promise<object>;
-    middleware (): OpenApiEnforcerMiddleware.MiddlewareFunction;
+    middleware (): RequestHandler;
     mocks (controllersDirectoryPath: string|object|undefined, automatic?: boolean, ...dependencyInjection: any): Promise<object>;
     use (middleware: OpenApiEnforcerMiddleware.MiddlewareFunction): void;
 
@@ -14,14 +15,9 @@ declare class OpenApiEnforcerMiddleware {
 
 declare namespace OpenApiEnforcerMiddleware {
 
-    export interface MiddlewareFunction {
-        (req: object, res: object, next: NextFunction): void;
-        (err: Error, req: object, res: object, next: NextFunction): void;
-    }
+    export type MiddlewareFunction = RequestHandler | ErrorRequestHandler
 
-    export interface NextFunction {
-        (err?: Error): void;
-    }
+    export type NextFunction = OriginalNextFunction
 
     export interface Options {
         allowOtherQueryParameters?: boolean;
