@@ -1,12 +1,13 @@
+import {RequestHandler, ErrorRequestHandler, NextFunction as OriginalNextFunction} from 'express-serve-static-core'
 
 export = OpenApiEnforcerMiddleware
 
 declare class OpenApiEnforcerMiddleware {
     constructor (definition: string|object, options?:OpenApiEnforcerMiddleware.Options );
 
-    controllers (controllersDirectoryPath: string|object, ...dependencyInjection: any): Promise<object>;
+    controllers<T extends unknown[]> (controllersDirectoryPath: string | OpenApiEnforcerMiddleware.ControllersMap, ...dependencyInjection: T): Promise<object>;
     middleware (): OpenApiEnforcerMiddleware.MiddlewareFunction;
-    mocks (controllersDirectoryPath: string|object|undefined, automatic?: boolean, ...dependencyInjection: any): Promise<object>;
+    mocks<T extends unknown[]> (controllersDirectoryPath?: string | OpenApiEnforcerMiddleware.ControllersMap, automatic?: boolean, ...dependencyInjection: T): Promise<object>;
     use (middleware: OpenApiEnforcerMiddleware.MiddlewareFunction): void;
 
     promise: Promise<object>
@@ -14,14 +15,13 @@ declare class OpenApiEnforcerMiddleware {
 
 declare namespace OpenApiEnforcerMiddleware {
 
-    export interface MiddlewareFunction {
-        (req: object, res: object, next: NextFunction): void;
-        (err: Error, req: object, res: object, next: NextFunction): void;
-    }
+    export type MiddlewareFunction = RequestHandler | ErrorRequestHandler
 
-    export interface NextFunction {
-        (err?: Error): void;
-    }
+    export type NextFunction = OriginalNextFunction
+
+    export type Controllers = Record<string, MiddlewareFunction>
+
+    export type ControllersMap = Record<string, Controllers>
 
     export interface Options {
         allowOtherQueryParameters?: boolean;
