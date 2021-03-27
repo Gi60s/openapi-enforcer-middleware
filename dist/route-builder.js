@@ -30,9 +30,11 @@ const init_1 = require("./init");
 const util2_1 = require("./util2");
 const { validatorBoolean, validatorNonEmptyString } = util2_1.optionValidators;
 const methods = { get: true, post: true, put: true, delete: true, head: true, trace: true, options: true, connect: true, patch: true };
-function routeBuilder(enforcerPromise, dirPath, dependencies, options) {
+function routeBuilder(enforcerPromise, controllers, dependencies, options) {
     const controllersMap = new Map();
     const operationsMap = new WeakMap();
+    const controllersInput = typeof controllers !== 'string' ? controllers : null;
+    const dirPath = typeof controllers === 'string' ? controllers : '';
     if (!dependencies) {
         dependencies = [];
     }
@@ -90,6 +92,7 @@ function routeBuilder(enforcerPromise, dirPath, dependencies, options) {
                         if (methods[opKey]) {
                             const config = {
                                 commonDependencyKey: opts.commonDependencyKey,
+                                controllersInput,
                                 controllersMap,
                                 dependencies: dependencies,
                                 dirPath,
@@ -118,6 +121,7 @@ function routeBuilder(enforcerPromise, dirPath, dependencies, options) {
             const { operation } = req.enforcer;
             const config = {
                 commonDependencyKey: opts.commonDependencyKey,
+                controllersInput,
                 controllersMap,
                 dependencies: dependencies,
                 dirPath,
@@ -148,7 +152,7 @@ function getControllerValue(operation, xController) {
     }
 }
 async function getOperation(opts) {
-    const { commonDependencyKey, controllersMap, dirPath, operation, operationsMap, xController, xOperation } = opts;
+    const { commonDependencyKey, controllersInput, controllersMap, dirPath, operation, operationsMap, xController, xOperation } = opts;
     let data = operationsMap.get(operation);
     if (!data) {
         const controllerKey = getControllerValue(operation, xController) || '';
@@ -179,7 +183,33 @@ async function getOperation(opts) {
         events_1.emit('warning', new error_code_1.default('Operation at "' + opMethod.toUpperCase() + ' ' + opPath + '" not mapped because no ' + xOperation + ' (nor operationId) has been defined.', 'ENFORCER_MIDDLEWARE_ROUTE_NO_MAPPING'));
         return data.operationHandler = noop;
     }
-    const controller = await importController(controllersMap, data.path, data.controllerKey, commonDependencyKey, opts.dependencies);
+    const controllerKey = data.controllerKey;
+    const dependencies = opts.dependencies;
+    let specificDeps;
+    if (Array.isArray(dependencies)) {
+        specificDeps = dependencies;
+    }
+    else {
+        specificDeps = [];
+        if (dependencies[controllerKey])
+            specificDeps.push(...dependencies[controllerKey]);
+        if (dependencies[commonDependencyKey])
+            specificDeps.push(...dependencies[commonDependencyKey]);
+    }
+    let controller;
+    if (controllersInput && controllerKey in controllersInput) {
+        const directive = controllersInput[controllerKey];
+        if (typeof directive === 'function') {
+            controller = directive;
+        }
+        else if (directive instanceof Promise) {
+            const loaded = await directive;
+            controller = loaded.default(...specificDeps);
+        }
+    }
+    else {
+        controller = await importController(controllersMap, data.path, specificDeps);
+    }
     if (!controller)
         return data.operationHandler = noop;
     const op = controller[data.operationKey];
@@ -191,7 +221,7 @@ async function getOperation(opts) {
         return data.operationHandler = op;
     }
 }
-async function importController(controllersMap, filePath, controllerKey, commonDependencyKey, dependencies) {
+async function importController(controllersMap, filePath, dependencies) {
     let data = controllersMap.get(filePath);
     if (!data) {
         data = {
@@ -221,18 +251,7 @@ async function importController(controllersMap, filePath, controllerKey, commonD
             return data.controller = null;
         }
         try {
-            let specificDeps;
-            if (Array.isArray(dependencies)) {
-                specificDeps = dependencies;
-            }
-            else {
-                specificDeps = [];
-                if (dependencies[controllerKey])
-                    specificDeps.push(...dependencies[controllerKey]);
-                if (dependencies[commonDependencyKey])
-                    specificDeps.push(...dependencies[commonDependencyKey]);
-            }
-            data.controller = factory(...specificDeps);
+            data.controller = factory(...dependencies);
             return data.controller;
         }
         catch (err) {

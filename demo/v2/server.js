@@ -15,8 +15,12 @@ app.use(express.json())
 
 app.use('/api', enforcer.init())
 
-const controllersPath = path.resolve(__dirname, 'controllers')
-app.use(enforcer.route(controllersPath))
+// const controllersPath = path.resolve(__dirname, 'controllers')
+// app.use(enforcer.route(controllersPath))
+
+app.use(enforcer.route({
+  users: require('./controllers/users')
+}))
 
 app.use('/docs', enforcer.docs({
   postRedocInitScripts: ['/foo.js', './bar.js']

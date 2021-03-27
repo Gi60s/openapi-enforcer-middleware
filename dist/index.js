@@ -16,8 +16,8 @@ function OpenAPIEnforcerMiddleware(enforcerPromise) {
             return mock_1.mockMiddleware();
         },
         on: events_1.on,
-        route(controllersDir, dependencies, options) {
-            return route_builder_1.routeBuilder(enforcerPromise, controllersDir, dependencies, options);
+        route(controllers, dependencies, options) {
+            return route_builder_1.routeBuilder(enforcerPromise, controllers, dependencies, options);
         }
     };
 }

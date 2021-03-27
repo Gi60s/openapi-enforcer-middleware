@@ -15,6 +15,10 @@ interface ControllerData {
     promise: Promise<any>
 }
 
+// type ControllerFunction = (...args: unknown[]) => object
+
+export type ControllerReference = any
+
 export type IDependencies = Array<any> | DependencyMap
 
 export interface DependencyMap {
@@ -30,6 +34,7 @@ interface OperationData {
 
 interface GetOperationConfig {
     commonDependencyKey: string
+    controllersInput: Record<string, Promise<any>> | null
     controllersMap: Map<string, ControllerData>
     dependencies: IDependencies
     dirPath: string
@@ -39,9 +44,11 @@ interface GetOperationConfig {
     xOperation: string
 }
 
-export function routeBuilder (enforcerPromise: Promise<any>, dirPath: string, dependencies?: IDependencies, options?: I.RouteBuilderOptions) {
+export function routeBuilder (enforcerPromise: Promise<any>, controllers: string | Record<string, ControllerReference>, dependencies?: IDependencies, options?: I.RouteBuilderOptions) {
     const controllersMap: Map<string, ControllerData> = new Map()
     const operationsMap: WeakMap<any, OperationData> = new WeakMap()
+    const controllersInput: Record<string, ControllerReference> | null = typeof controllers !== 'string' ? controllers : null
+    const dirPath: string = typeof controllers === 'string' ? controllers : ''
 
     // normalize dependencies
     if (!dependencies) {
@@ -102,6 +109,7 @@ export function routeBuilder (enforcerPromise: Promise<any>, dirPath: string, de
                         if (methods[opKey]) {
                             const config: GetOperationConfig = {
                                 commonDependencyKey: opts.commonDependencyKey,
+                                controllersInput,
                                 controllersMap,
                                 dependencies: dependencies!,
                                 dirPath,
@@ -131,6 +139,7 @@ export function routeBuilder (enforcerPromise: Promise<any>, dirPath: string, de
             const { operation } = req.enforcer!
             const config: GetOperationConfig = {
                 commonDependencyKey: opts.commonDependencyKey,
+                controllersInput,
                 controllersMap,
                 dependencies: dependencies!,
                 dirPath,
@@ -160,7 +169,7 @@ function getControllerValue (operation: any, xController: string): string | void
 }
 
 async function getOperation (opts: GetOperationConfig): Promise<Function> {
-    const { commonDependencyKey, controllersMap, dirPath, operation, operationsMap, xController, xOperation } = opts
+    const { commonDependencyKey, controllersInput, controllersMap, dirPath, operation, operationsMap, xController, xOperation } = opts
 
     // load the controller
     let data = operationsMap.get(operation)
@@ -195,8 +204,30 @@ async function getOperation (opts: GetOperationConfig): Promise<Function> {
         return data.operationHandler = noop
     }
 
-    // load the controller
-    const controller = await importController(controllersMap, data.path, data.controllerKey, commonDependencyKey, opts.dependencies)
+    // get controller specific dependencies
+    const controllerKey = data.controllerKey
+    const dependencies = opts.dependencies
+    let specificDeps: any[]
+    if (Array.isArray(dependencies)) {
+        specificDeps = dependencies
+    } else {
+        specificDeps = []
+        if (dependencies[controllerKey]) specificDeps.push(...dependencies[controllerKey])
+        if (dependencies[commonDependencyKey]) specificDeps.push(...dependencies[commonDependencyKey])
+    }
+
+    let controller: any
+    if (controllersInput && controllerKey in controllersInput) {
+        const directive = controllersInput[controllerKey]
+        if (typeof directive === 'function') {
+            controller = directive
+        } else if (directive instanceof Promise) {
+            const loaded = await directive
+            controller = loaded.default(...specificDeps)
+        }
+    } else {
+        controller = await importController(controllersMap, data.path, specificDeps)
+    }
     if (!controller) return data.operationHandler = noop
 
     // check if the operation is defined in the controller
@@ -209,7 +240,7 @@ async function getOperation (opts: GetOperationConfig): Promise<Function> {
     }
 }
 
-async function importController (controllersMap: Map<string, ControllerData>, filePath: string, controllerKey: string, commonDependencyKey: string, dependencies: IDependencies) {
+async function importController (controllersMap: Map<string, ControllerData>, filePath: string, dependencies: any[]) {
     let data = controllersMap.get(filePath)
     if (!data) {
         data = {
@@ -242,15 +273,7 @@ async function importController (controllersMap: Map<string, ControllerData>, fi
 
         // call the controller factory with dependencies injected to get back the controller
         try {
-            let specificDeps: any[]
-            if (Array.isArray(dependencies)) {
-                specificDeps = dependencies
-            } else {
-                specificDeps = []
-                if (dependencies[controllerKey]) specificDeps.push(...dependencies[controllerKey])
-                if (dependencies[commonDependencyKey]) specificDeps.push(...dependencies[commonDependencyKey])
-            }
-            data.controller = factory(...specificDeps)
+            data.controller = factory(...dependencies)
             return data.controller
         } catch (err) {
             emit('error', err)
