@@ -23,11 +23,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.routeBuilder = void 0;
+const debug_1 = __importDefault(require("debug"));
 const events_1 = require("./events");
 const error_code_1 = __importDefault(require("./error-code"));
 const path_1 = __importDefault(require("path"));
 const init_1 = require("./init");
 const util2_1 = require("./util2");
+const debug = debug_1.default('openapi-enforcer-middleware:router');
 const { validatorBoolean, validatorNonEmptyString } = util2_1.optionValidators;
 const methods = { get: true, post: true, put: true, delete: true, head: true, trace: true, options: true, connect: true, patch: true };
 function routeBuilder(enforcerPromise, controllers, dependencies, options) {
@@ -83,7 +85,9 @@ function routeBuilder(enforcerPromise, controllers, dependencies, options) {
             xOperation: validatorNonEmptyString
         }
     });
+    debug('Initialized with options: ' + JSON.stringify(opts, null, 2));
     if (!opts.lazyLoad) {
+        debug('Preloading all operations now');
         enforcerPromise.then(openapi => {
             if (openapi.paths) {
                 Object.keys(openapi.paths).forEach(path => {
@@ -115,9 +119,11 @@ function routeBuilder(enforcerPromise, controllers, dependencies, options) {
     return function (req, res, next) {
         const { initialized, basePathMatch } = init_1.getInitStatus(req);
         if (!basePathMatch) {
+            debug('Base path does not match registered base path');
             next();
         }
         else if (initialized) {
+            debug('Base path matches registered base path and is initialized');
             const { operation } = req.enforcer;
             const config = {
                 commonDependencyKey: opts.commonDependencyKey,
@@ -132,11 +138,13 @@ function routeBuilder(enforcerPromise, controllers, dependencies, options) {
             };
             getOperation(config)
                 .then(async (fnOperation) => {
+                debug('Operation found. Executing now.');
                 await fnOperation(req, res, next);
             })
                 .catch(next);
         }
         else {
+            debug('Not initialized');
             events_1.emit('error', new error_code_1.default('OpenAPI Enforcer Middleware not initialized. Could not map OpenAPI operations to routes.', 'ENFORCER_MIDDLEWARE_NOT_INITIALIZED'));
             next();
         }
@@ -146,15 +154,19 @@ exports.routeBuilder = routeBuilder;
 function getControllerValue(operation, xController) {
     let node = operation;
     while (node) {
-        if (xController in node)
+        if (xController in node) {
+            debug('Controller key ' + xController + ' found: ' + node[xController]);
             return node[xController];
+        }
         node = node.enforcerData && node.enforcerData.parent ? node.enforcerData.parent.result : null;
     }
+    debug('Controller key ' + xController + ' not found');
 }
 async function getOperation(opts) {
     const { commonDependencyKey, controllersInput, controllersMap, dirPath, operation, operationsMap, xController, xOperation } = opts;
     let data = operationsMap.get(operation);
     if (!data) {
+        debug('Loading controller');
         const controllerKey = getControllerValue(operation, xController) || '';
         const operationKey = operation.operationId || operation[xOperation] || '';
         const controllerPath = controllerKey ? path_1.default.resolve(dirPath, controllerKey) : '';
@@ -200,14 +212,17 @@ async function getOperation(opts) {
     if (controllersInput && controllerKey in controllersInput) {
         const directive = controllersInput[controllerKey];
         if (typeof directive === 'function') {
+            debug('Controller loaded by provided function');
             controller = directive;
         }
         else if (directive instanceof Promise) {
+            debug('Controller loading from ES import');
             const loaded = await directive;
             controller = loaded.default(...specificDeps);
         }
     }
     else {
+        debug('Loading controller with dynamic import: ' + data.path);
         controller = await importController(controllersMap, data.path, specificDeps);
     }
     if (!controller)

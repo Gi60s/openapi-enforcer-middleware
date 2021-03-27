@@ -4,12 +4,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.mockMiddleware = exports.mockHandler = exports.getMockMode = void 0;
+const debug_1 = __importDefault(require("debug"));
 const openapi_enforcer_1 = __importDefault(require("openapi-enforcer"));
 const path_1 = __importDefault(require("path"));
 const init_1 = require("./init");
 const util2_1 = require("./util2");
 const events_1 = require("./events");
 const error_code_1 = __importDefault(require("./error-code"));
+const debug = debug_1.default('openapi-enforcer-middleware:mock');
 const enforcerVersion = require(path_1.default.resolve(path_1.default.dirname(require.resolve('openapi-enforcer')), 'package.json')).version;
 const ENFORCER_HEADER = 'x-openapi-enforcer';
 function getMockMode(req) {
@@ -32,6 +34,7 @@ function getMockMode(req) {
 }
 exports.getMockMode = getMockMode;
 function mockHandler(req, res, next, mock) {
+    debug('Running fallback mocking middleware');
     const { accepts, openapi, operation, options } = req.enforcer;
     const version = openapi.swagger ? 2 : +/^(\d+)/.exec(openapi.openapi)[0];
     const exception = new openapi_enforcer_1.default.Exception('Unable to generate mock response');
@@ -40,6 +43,7 @@ function mockHandler(req, res, next, mock) {
     if (operation.responses.hasOwnProperty(mock.statusCode))
         response = operation.responses[mock.statusCode];
     function unableToMock(message, status) {
+        debug('Unable to mock: ' + status + ' ' + message);
         if (options.handleBadRequest) {
             res.status(status);
             res.set('content-type', 'text/plain');
@@ -68,6 +72,7 @@ function mockHandler(req, res, next, mock) {
             if (response.hasOwnProperty('examples')) {
                 const type = contentTypes[0];
                 if (response.examples.hasOwnProperty(type)) {
+                    debug('Mocking from response example');
                     res.status(+mock.statusCode);
                     return deserializeExample(exception.nest('Unable to deserialize example'), response.examples[type], response.schema, unableToMock, example => {
                         res.set(ENFORCER_HEADER, 'mock: response example');
@@ -77,6 +82,7 @@ function mockHandler(req, res, next, mock) {
                 }
             }
             if (response.schema && response.schema.hasOwnProperty('example')) {
+                debug('Mocking from schema example');
                 res.status(+mock.statusCode);
                 res.set(ENFORCER_HEADER, 'mock: schema example');
                 res.set('content-type', contentTypes[0]);
@@ -89,6 +95,7 @@ function mockHandler(req, res, next, mock) {
         if (!mock.source || mock.source === 'random') {
             const schema = response.schema;
             if (schema) {
+                debug('Mocking randomly generated value from schema');
                 const [value, err, warning] = schema.random();
                 if (err) {
                     return unableToMock(err.toString(), 422);
@@ -113,6 +120,7 @@ function mockHandler(req, res, next, mock) {
             if (mock.name) {
                 if (content.examples && content.examples.hasOwnProperty(mock.name) && content.examples[mock.name].hasOwnProperty('value')) {
                     res.status(+mock.statusCode);
+                    debug('Mocking from specific response named example');
                     return deserializeExample(exception.nest('Unable to deserialize example: ' + mock.name), content.examples[mock.name].value, content.schema, unableToMock, example => {
                         res.set(ENFORCER_HEADER, 'mock: response example');
                         res.enforcer.send(example);
@@ -126,6 +134,7 @@ function mockHandler(req, res, next, mock) {
                 ? Object.keys(content.examples).filter(name => content.examples[name].hasOwnProperty('value'))
                 : [];
             if (content.examples && exampleNames.length > 0) {
+                debug('Mocking from random response named example');
                 const index = Math.floor(Math.random() * exampleNames.length);
                 res.status(+mock.statusCode);
                 return deserializeExample(exception.nest('Unable to deserialize example: ' + exampleNames[index]), content.examples[exampleNames[index]].value, content.schema, unableToMock, example => {
@@ -134,6 +143,7 @@ function mockHandler(req, res, next, mock) {
                 });
             }
             if (content.hasOwnProperty('example')) {
+                debug('Mocking from response example');
                 res.status(+mock.statusCode);
                 res.set(ENFORCER_HEADER, 'mock: response example');
                 return res.enforcer.send(util2_1.copy(content.example));
@@ -150,6 +160,7 @@ function mockHandler(req, res, next, mock) {
         if (!mock.source || mock.source === 'random') {
             const schema = response.content[type].schema;
             if (schema) {
+                debug('Mocking randomly generated value from schema');
                 const [value, err, warning] = schema.random();
                 if (err)
                     return unableToMock(err.toString(), 422);
@@ -172,9 +183,11 @@ function mockMiddleware() {
     return function (req, res, next) {
         const { initialized, basePathMatch } = init_1.getInitStatus(req);
         if (!basePathMatch) {
+            debug('Base path does not match registered base path');
             next();
         }
         else if (initialized) {
+            debug('Base path matches registered base path and is initialized');
             const { operation } = req.enforcer;
             const responseCodes = Object.keys(operation.responses);
             mockHandler(req, res, next, {
@@ -185,6 +198,7 @@ function mockMiddleware() {
             });
         }
         else {
+            debug('Not initialized');
             events_1.emit('error', new error_code_1.default('OpenAPI Enforcer Middleware not initialized. Could not mock response.', 'ENFORCER_MIDDLEWARE_NOT_INITIALIZED'));
             next();
         }
@@ -254,6 +268,7 @@ function parseMockValue(origin, responseCodes, value) {
         if (result.source === 'example' && ar.length > 2)
             result.name = ar[2];
     }
+    debug('Mock mode determined', result);
     return result;
 }
 //# sourceMappingURL=mock.js.map

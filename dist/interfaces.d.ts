@@ -90,6 +90,7 @@ export interface MockStore {
 }
 export interface MiddlewareOptions {
     allowOtherQueryParameters?: boolean | string[];
+    baseUrl?: string;
     handleBadRequest?: boolean;
     handleBadResponse?: boolean;
     handleNotFound?: boolean;

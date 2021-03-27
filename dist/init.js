@@ -4,17 +4,20 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.init = exports.getInitStatus = void 0;
+const debug_1 = __importDefault(require("debug"));
 const util2_1 = require("./util2");
 const mock_1 = require("./mock");
 const cookie_store_1 = __importDefault(require("./cookie-store"));
 const events_1 = require("./events");
 const { validatorBoolean, validatorString, validatorNonEmptyString, validatorQueryParams } = util2_1.optionValidators;
 const activeRequestMap = new WeakMap();
+const debug = debug_1.default('openapi-enforcer-middleware:init');
 function getInitStatus(req) {
     const path = activeRequestMap.get(req);
+    debug('Comparing initialized base URL ' + path + ' to original URL ' + req.originalUrl);
     return {
         initialized: path !== undefined,
-        basePathMatch: path === req.baseUrl
+        basePathMatch: req.originalUrl.startsWith(path || '')
     };
 }
 exports.getInitStatus = getInitStatus;
@@ -22,6 +25,7 @@ function init(enforcerPromise, options) {
     const opts = util2_1.normalizeOptions(options, {
         defaults: {
             allowOtherQueryParameters: false,
+            baseUrl: null,
             handleBadRequest: true,
             handleBadResponse: true,
             handleNotFound: true,
@@ -34,6 +38,7 @@ function init(enforcerPromise, options) {
         required: [],
         validators: {
             allowOtherQueryParameters: validatorQueryParams,
+            baseUrl: v => typeof v !== 'string' && v !== null ? 'Expected a string or null' : '',
             handleBadRequest: validatorBoolean,
             handleBadResponse: validatorBoolean,
             handleNotFound: validatorBoolean,
@@ -53,6 +58,7 @@ function init(enforcerPromise, options) {
             xMockImplemented: validatorNonEmptyString
         }
     });
+    debug('Initialized with options: ' + JSON.stringify(opts, null, 2));
     enforcerPromise.catch((err) => {
         if (!err.code)
             err.code = 'ENFORCER_MIDDLEWARE_LOAD_ERROR';
@@ -61,8 +67,10 @@ function init(enforcerPromise, options) {
     return function (req, res, next) {
         enforcerPromise
             .then(openapi => {
-            activeRequestMap.set(req, req.baseUrl);
-            const relativePath = ('/' + req.originalUrl.substring(req.baseUrl.length)).replace(/^\/{2}/, '/');
+            const baseUrl = typeof opts.baseUrl === 'string' ? opts.baseUrl : req.baseUrl;
+            debug('Register request base URL: ' + baseUrl);
+            activeRequestMap.set(req, baseUrl);
+            const relativePath = ('/' + req.originalUrl.substring(baseUrl.length)).replace(/^\/{2}/, '/');
             const hasBody = util2_1.reqHasBody(req);
             const requestObj = {
                 headers: req.headers,
@@ -84,8 +92,10 @@ function init(enforcerPromise, options) {
             }
             if (error) {
                 util2_1.handleRequestError(opts, error, res, next);
+                debug('Request failed validation', error);
             }
             else {
+                debug('Request valid');
                 const { body, cookie, headers, operation, path, query, response } = request;
                 req.enforcer = {
                     accepts(responseCode) {
@@ -112,6 +122,7 @@ function init(enforcerPromise, options) {
                 const mockMode = mock_1.getMockMode(req);
                 if (mockMode) {
                     const mockStore = opts.mockStore;
+                    debug('Request is for mocked data');
                     req.enforcer.mockMode = mockMode;
                     req.enforcer.mockStore = {
                         get(key) {
@@ -122,9 +133,11 @@ function init(enforcerPromise, options) {
                         }
                     };
                     if (hasImplementedMock(opts.xMockImplemented, operation) && (mockMode.source === 'implemented' || mockMode.source === '')) {
+                        debug('Request has implemented mock');
                         next();
                     }
                     else {
+                        debug('Request being auto mocked');
                         mock_1.mockHandler(req, res, next, mockMode);
                     }
                 }

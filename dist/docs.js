@@ -4,7 +4,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.docsMiddleware = void 0;
+const debug_1 = __importDefault(require("debug"));
 const path_1 = __importDefault(require("path"));
+const debug = debug_1.default('openapi-enforcer-middleware:docs');
 function docsMiddleware(enforcerPromise, options) {
     const redocPath = getRedocModulePath();
     if (options === undefined)
@@ -30,6 +32,7 @@ function docsMiddleware(enforcerPromise, options) {
     if (!('postRedocInitScripts' in options))
         options.postRedocInitScripts = [];
     let indexHTML = '';
+    debug('Docs middleware initialized');
     return function (req, res, next) {
         enforcerPromise
             .then(async (openapi) => {
