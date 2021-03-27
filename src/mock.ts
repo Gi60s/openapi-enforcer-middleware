@@ -1,3 +1,4 @@
+import Debug from 'debug'
 // @ts-ignore
 import Enforcer from 'openapi-enforcer'
 import Express from "express";
@@ -8,6 +9,7 @@ import { copy, errorFromException } from "./util2";
 import {emit} from "./events";
 import ErrorCode from "./error-code";
 
+const debug = Debug('openapi-enforcer-middleware:mock')
 const enforcerVersion = require(path.resolve(path.dirname(require.resolve('openapi-enforcer')), 'package.json')).version
 const ENFORCER_HEADER = 'x-openapi-enforcer'
 
@@ -29,6 +31,7 @@ export function getMockMode (req: Express.Request): I.MockMode | void {
 
 // fallback mocking middleware - supports specifying response code, example, or schema derived value
 export function mockHandler (req: Express.Request, res: Express.Response, next: Express.NextFunction, mock: I.MockMode) {
+    debug('Running fallback mocking middleware')
     const { accepts, openapi, operation, options } = req.enforcer!
 
     const version: number = openapi.swagger ? 2 : +/^(\d+)/.exec(openapi.openapi)![0]
@@ -39,6 +42,7 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
     if (operation.responses.hasOwnProperty(mock.statusCode)) response = operation.responses[mock.statusCode]
 
     function unableToMock (message: string, status: number) {
+        debug('Unable to mock: ' + status + ' ' + message)
         if (options.handleBadRequest) {
             res.status(status)
             res.set('content-type', 'text/plain')
@@ -77,6 +81,7 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
             if (response.hasOwnProperty('examples')) {
                 const type = contentTypes[0]
                 if (response.examples.hasOwnProperty(type)) {
+                    debug('Mocking from response example')
                     res.status(+mock.statusCode)
                     return deserializeExample(
                         exception.nest('Unable to deserialize example'),
@@ -94,6 +99,7 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
 
             // use schema example if set
             if (response.schema && response.schema.hasOwnProperty('example')) {
+                debug('Mocking from schema example')
                 res.status(+mock.statusCode)
                 res.set(ENFORCER_HEADER, 'mock: schema example')
                 res.set('content-type', contentTypes[0])
@@ -108,6 +114,7 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
         if (!mock.source || mock.source === 'random') {
             const schema = response.schema
             if (schema) {
+                debug('Mocking randomly generated value from schema')
                 const [value, err, warning] = schema.random()
                 if (err) {
                     return unableToMock(err.toString(), 422)
@@ -137,6 +144,7 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
             if (mock.name) {
                 if (content.examples && content.examples.hasOwnProperty(mock.name) && content.examples[mock.name].hasOwnProperty('value')) {
                     res.status(+mock.statusCode)
+                    debug('Mocking from specific response named example')
                     return deserializeExample(
                         exception.nest('Unable to deserialize example: ' + mock.name),
                         content.examples[mock.name].value,
@@ -158,6 +166,7 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
                 ? Object.keys(content.examples).filter(name => content.examples[name].hasOwnProperty('value'))
                 : []
             if (content.examples && exampleNames.length > 0) {
+                debug('Mocking from random response named example')
                 const index = Math.floor(Math.random() * exampleNames.length)
                 res.status(+mock.statusCode)
                 return deserializeExample(
@@ -174,6 +183,7 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
 
             // select the example
             if (content.hasOwnProperty('example')) {
+                debug('Mocking from response example')
                 res.status(+mock.statusCode)
                 res.set(ENFORCER_HEADER, 'mock: response example')
                 return res.enforcer!.send(copy(content.example))
@@ -195,6 +205,7 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
         if (!mock.source || mock.source === 'random') {
             const schema = response.content[type].schema
             if (schema) {
+                debug('Mocking randomly generated value from schema')
                 const [ value, err, warning ] = schema.random()
                 if (err) return unableToMock(err.toString(), 422)
 
@@ -215,8 +226,10 @@ export function mockMiddleware () {
     return function (req: Express.Request, res: Express.Response, next: Express.NextFunction) {
         const { initialized, basePathMatch } = getInitStatus(req)
         if (!basePathMatch) {
+            debug('Base path does not match registered base path')
             next()
         } else if (initialized) {
+            debug('Base path matches registered base path and is initialized')
             const {operation} = req.enforcer!
             const responseCodes = Object.keys(operation.responses)
 
@@ -228,6 +241,7 @@ export function mockMiddleware () {
                 statusCode: responseCodes[0] || ''
             })
         } else {
+            debug('Not initialized')
             emit('error', new ErrorCode('OpenAPI Enforcer Middleware not initialized. Could not mock response.', 'ENFORCER_MIDDLEWARE_NOT_INITIALIZED'))
             next()
         }
@@ -286,5 +300,6 @@ function parseMockValue (origin: 'fallback' | 'query' | 'header', responseCodes:
         if (ar.length > 1) result.source = <'implemented' | 'example' | 'random' | ''>ar[1]
         if (result.source === 'example' && ar.length > 2) result.name = ar[2]
     }
+    debug('Mock mode determined', result)
     return result
 }

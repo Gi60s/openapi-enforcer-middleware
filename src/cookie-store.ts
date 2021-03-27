@@ -1,7 +1,9 @@
+import Debug from 'debug'
 import Express from 'express'
 import { IncomingHttpHeaders } from "http"
 import { MockStore } from "./interfaces";
 
+const debug = Debug('openapi-enforcer-middleware:cookie-store')
 const store: AnyObject = {}
 let cookieIndex = 0
 let lastCookieTimeStamp = 0
@@ -15,8 +17,15 @@ export default function (): MockStore {
         async get (req: Express.Request, res: Express.Response, key: string): Promise<any> {
             const id = getCookie(req.headers)
             if (id) {
+                debug('ID retrieved from cookie: ' + id)
                 const data = store[id]
-                return data && data[key]
+                if (!data) {
+                    debug('Nothing in store for ID: ' + id)
+                } else if (key in data) {
+                    return data[key]
+                } else {
+                    debug('No data for ID ' + id + ' at key: ' + key)
+                }
             } else {
                 createStore(res)
             }
@@ -24,8 +33,12 @@ export default function (): MockStore {
 
         async set (req: Express.Request, res: Express.Response, key: string, value: any): Promise<void> {
             let id = getCookie(req.headers) || createStore(res)
-            if (!store[id]) store[id] = {}
+            if (!store[id]) {
+                store[id] = {}
+                debug('Store initialized for ID: ' + id)
+            }
             store[id][key] = value
+            debug('Stored data for ID ' + id + ' at key: ' + key)
         }
     }
 }
@@ -39,6 +52,7 @@ function createStore (res: Express.Response) {
     const id = now + '-' + cookieIndex++
     res.cookie('enforcer-store', id)
     store[id] = {}
+    debug('Store created for id: ' + id)
     return id
 }
 

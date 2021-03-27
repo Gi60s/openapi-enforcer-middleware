@@ -1,5 +1,8 @@
+import Debug from 'debug'
 import Express from 'express'
 import path from 'path'
+
+const debug = Debug('openapi-enforcer-middleware:docs')
 
 export interface DocsOptions {
     padding?: string // Set to empty string to use default HTML padding, otherwise set padding value. Defaults to '0'
@@ -32,6 +35,8 @@ export function docsMiddleware (enforcerPromise: Promise<any>, options?: Partial
     if (!('postRedocInitScripts' in options)) options.postRedocInitScripts = []
 
     let indexHTML = ''
+    
+    debug('Docs middleware initialized')
 
     // @ts-ignore
     return function (req: Express.Request, res: Express.Response, next: Express.NextFunction) {

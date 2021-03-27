@@ -1,3 +1,4 @@
+import Debug from 'debug'
 import { emit } from './events'
 import ErrorCode from './error-code'
 import Express from 'express'
@@ -6,6 +7,7 @@ import { getInitStatus } from './init'
 import { normalizeOptions, optionValidators } from "./util2"
 import * as I from "./interfaces";
 
+const debug = Debug('openapi-enforcer-middleware:router')
 const { validatorBoolean, validatorNonEmptyString } = optionValidators
 const methods = { get: true, post: true, put: true, delete: true, head: true, trace: true, options: true, connect: true, patch: true }
 
@@ -97,9 +99,11 @@ export function routeBuilder (enforcerPromise: Promise<any>, controllers: string
             xOperation: validatorNonEmptyString
         }
     })!
+    debug('Initialized with options: ' + JSON.stringify(opts, null, 2))
 
     // if we are not lazy loading the load all operations now
     if (!opts.lazyLoad) {
+        debug('Preloading all operations now')
         enforcerPromise.then(openapi => {
             if (openapi.paths) {
                 Object.keys(openapi.paths).forEach(path => {
@@ -134,8 +138,10 @@ export function routeBuilder (enforcerPromise: Promise<any>, controllers: string
     return function (req: Express.Request, res: Express.Response, next: Express.NextFunction) {
         const { initialized, basePathMatch } = getInitStatus(req)
         if (!basePathMatch) {
+            debug('Base path does not match registered base path')
             next()
         } else if (initialized) {
+            debug('Base path matches registered base path and is initialized')
             const { operation } = req.enforcer!
             const config: GetOperationConfig = {
                 commonDependencyKey: opts.commonDependencyKey,
@@ -150,10 +156,12 @@ export function routeBuilder (enforcerPromise: Promise<any>, controllers: string
             }
             getOperation(config)
                 .then(async (fnOperation: Function) => {
+                    debug('Operation found. Executing now.')
                     await fnOperation(req, res, next)
                 })
                 .catch(next)
         } else {
+            debug('Not initialized')
             emit('error', new ErrorCode('OpenAPI Enforcer Middleware not initialized. Could not map OpenAPI operations to routes.', 'ENFORCER_MIDDLEWARE_NOT_INITIALIZED'))
             next()
         }
@@ -163,9 +171,13 @@ export function routeBuilder (enforcerPromise: Promise<any>, controllers: string
 function getControllerValue (operation: any, xController: string): string | void {
     let node = operation
     while (node) {
-        if (xController in node) return node[xController]
+        if (xController in node) {
+            debug('Controller key ' + xController + ' found: ' + node[xController])
+            return node[xController]
+        }
         node = node.enforcerData && node.enforcerData.parent ? node.enforcerData.parent.result : null
     }
+    debug('Controller key ' + xController + ' not found')
 }
 
 async function getOperation (opts: GetOperationConfig): Promise<Function> {
@@ -174,6 +186,7 @@ async function getOperation (opts: GetOperationConfig): Promise<Function> {
     // load the controller
     let data = operationsMap.get(operation)
     if (!data) {
+        debug('Loading controller')
         const controllerKey = getControllerValue(operation, xController) || ''
         const operationKey = operation.operationId || operation[xOperation] || ''
         const controllerPath = controllerKey ? path.resolve(dirPath, controllerKey) : ''
@@ -220,12 +233,15 @@ async function getOperation (opts: GetOperationConfig): Promise<Function> {
     if (controllersInput && controllerKey in controllersInput) {
         const directive = controllersInput[controllerKey]
         if (typeof directive === 'function') {
+            debug('Controller loaded by provided function')
             controller = directive
         } else if (directive instanceof Promise) {
+            debug('Controller loading from ES import')
             const loaded = await directive
             controller = loaded.default(...specificDeps)
         }
     } else {
+        debug('Loading controller with dynamic import: ' + data.path)
         controller = await importController(controllersMap, data.path, specificDeps)
     }
     if (!controller) return data.operationHandler = noop
