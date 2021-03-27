@@ -1,3 +1,4 @@
+import Debug from 'debug'
 // @ts-ignore
 import Enforcer from 'openapi-enforcer'
 import Express from 'express'
@@ -10,12 +11,14 @@ import ErrorCode from './error-code'
 
 const { validatorBoolean, validatorString, validatorNonEmptyString, validatorQueryParams } = optionValidators
 const activeRequestMap: WeakMap<Express.Request, string> = new WeakMap()
+const debug = Debug('openapi-enforcer-middleware:init')
 
 export function getInitStatus (req: Express.Request): { initialized: boolean, basePathMatch: boolean } {
     const path = activeRequestMap.get(req)
+    debug('Comparing initialized base URL ' + path + ' to original URL ' + req.originalUrl)
     return {
         initialized: path !== undefined,
-        basePathMatch: path === req.baseUrl
+        basePathMatch: req.originalUrl.startsWith(path || '')
     }
 }
 
@@ -23,6 +26,7 @@ export function init (enforcerPromise: Promise<any>, options?: I.MiddlewareOptio
     const opts: I.MiddlewareOptions = normalizeOptions(options, {
         defaults: {
             allowOtherQueryParameters: false,
+            baseUrl: null,
             handleBadRequest: true,
             handleBadResponse: true,
             handleNotFound: true,
@@ -35,6 +39,7 @@ export function init (enforcerPromise: Promise<any>, options?: I.MiddlewareOptio
         required: [],
         validators: {
             allowOtherQueryParameters: validatorQueryParams,
+            baseUrl: v => typeof v !== 'string' && v !== null ? 'Expected a string or null' : '',
             handleBadRequest: validatorBoolean,
             handleBadResponse: validatorBoolean,
             handleNotFound: validatorBoolean,
@@ -51,6 +56,7 @@ export function init (enforcerPromise: Promise<any>, options?: I.MiddlewareOptio
             xMockImplemented: validatorNonEmptyString
         }
     })!
+    debug('Initialized with options: ' + JSON.stringify(opts, null, 2))
 
     enforcerPromise.catch((err: ErrorCode) => {
         if (!err.code) err.code = 'ENFORCER_MIDDLEWARE_LOAD_ERROR'
@@ -60,10 +66,12 @@ export function init (enforcerPromise: Promise<any>, options?: I.MiddlewareOptio
     return function (req: Express.Request, res: Express.Response, next: Express.NextFunction) {
         enforcerPromise
             .then(openapi => {
-                activeRequestMap.set(req, req.baseUrl)
+                const baseUrl = typeof opts.baseUrl === 'string' ? opts.baseUrl : req.baseUrl
+                debug('Register request base URL: ' + baseUrl)
+                activeRequestMap.set(req, baseUrl)
 
                 // convert express request into OpenAPI Enforcer request
-                const relativePath = ('/' + req.originalUrl.substring(req.baseUrl.length)).replace(/^\/{2}/, '/')
+                const relativePath = ('/' + req.originalUrl.substring(baseUrl.length)).replace(/^\/{2}/, '/')
                 const hasBody = reqHasBody(req)
                 const requestObj: I.IEnforcer.RequestInput = {
                     headers: req.headers,
@@ -85,9 +93,11 @@ export function init (enforcerPromise: Promise<any>, options?: I.MiddlewareOptio
                 if (error) {
                     // probably a client error
                     handleRequestError(opts, error, res, next)
+                    debug('Request failed validation', error)
 
                 } else {
                     // request match found
+                    debug('Request valid')
                     const { body, cookie, headers, operation, path, query, response } = request
 
                     // make deserialized request values accessible along with openapi, operation, and a response function
@@ -118,6 +128,7 @@ export function init (enforcerPromise: Promise<any>, options?: I.MiddlewareOptio
                     const mockMode = getMockMode(req)
                     if (mockMode) {
                         const mockStore = opts.mockStore!
+                        debug('Request is for mocked data')
 
                         // store mock data
                         req.enforcer.mockMode = mockMode
@@ -132,8 +143,10 @@ export function init (enforcerPromise: Promise<any>, options?: I.MiddlewareOptio
 
                         // if operation identifies as having operable mock code to execute then don't run auto mock response handler
                         if (hasImplementedMock(opts.xMockImplemented!, operation) && (mockMode.source === 'implemented' || mockMode.source === '')) {
+                            debug('Request has implemented mock')
                             next()
                         } else {
+                            debug('Request being auto mocked')
                             mockHandler(req, res, next, mockMode)
                         }
                     } else {
