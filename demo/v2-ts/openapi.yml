@@ -1,0 +1,95 @@
+openapi: '3.0.0'
+info:
+  title: Users API
+  version: '1.0'
+x-controller: users
+x-mock-implemented: true
+paths:
+  /users:
+    get:
+      x-operation: listUsers
+      summary: List users
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+    post:
+      x-operation: addUser
+      summary: Add user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        201:
+          description: Success
+          headers:
+            location:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+  /users/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      x-operation: getUser
+      summary: Get user
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+    put:
+      x-operation: updateUser
+      summary: Update user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+    delete:
+      x-operation: deleteUser
+      summary: Delete user
+      responses:
+        204:
+          description: Success
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+        email:
+          type: string
+      example:
+        id: 1
+        name: Bob
+        email: bob@email.com
+
+
