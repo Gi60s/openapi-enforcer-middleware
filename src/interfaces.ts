@@ -81,6 +81,7 @@ export interface MockStore {
 
 export interface MiddlewareOptions {
     allowOtherQueryParameters?: boolean | string[]
+    baseUrl?: string                                // the base URL to use for the enforcer router
     handleBadRequest?: boolean                      // if true, a 400 response is sent back automatically, if false the `enforcer` property is not set on the req and res objects.
     handleBadResponse?: boolean                     // if true, a 500 response is sent back automatically, if false the next middleware is called with the error
     handleNotFound?: boolean                        // if true, a 404 response is sent back automatically, if false the `enforcer` property is not set on the req and res objects.
