@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Controllers | OpenAPI Enforcer Middleware</title>
+    <meta name="generator" content="VuePress 1.8.2">
+    
+    <meta name="description" content="A guide to setting up a controller files for the OpenAPI Enforcer Middleware.">
+    <meta name="theme-color" content="#3eaf7c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    
+    <link rel="preload" href="/openapi-enforcer-middleware/assets/css/0.styles.cb64e744.css" as="style"><link rel="preload" href="/openapi-enforcer-middleware/assets/js/app.98b0fab6.js" as="script"><link rel="preload" href="/openapi-enforcer-middleware/assets/js/2.dcde1ce6.js" as="script"><link rel="preload" href="/openapi-enforcer-middleware/assets/js/6.a875d6bd.js" as="script"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/10.ffdc4f19.js"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/11.03083ece.js"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/12.aba0c263.js"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/13.cb55f3b4.js"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/14.9ec011dc.js"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/15.a041b35e.js"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/16.45056757.js"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/17.80dcc11e.js"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/18.d8f1eb83.js"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/19.371dae60.js"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/20.bf47b38c.js"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/21.0f4a8a32.js"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/22.c1061d7e.js"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/23.01129fdf.js"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/24.b2281de7.js"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/3.61b802ad.js"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/4.f5d0af7c.js"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/5.86c39536.js"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/7.eff6e27d.js"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/8.eea0e05f.js"><link rel="prefetch" href="/openapi-enforcer-middleware/assets/js/9.60becb93.js">
+    <link rel="stylesheet" href="/openapi-enforcer-middleware/assets/css/0.styles.cb64e744.css">
+  </head>
+  <body>
+    <div id="app" data-server-rendered="true"><div class="theme-container"><header class="navbar"><div class="sidebar-button"><svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" viewBox="0 0 448 512" class="icon"><path fill="currentColor" d="M436 124H12c-6.627 0-12-5.373-12-12V80c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12zm0 160H12c-6.627 0-12-5.373-12-12v-32c0-6.627 5.373-12 12-12h424c6.627 0 12 5.373 12 12v32c0 6.627-5.373 12-12 12z"></path></svg></div> <a href="/openapi-enforcer-middleware/" class="home-link router-link-active"><!----> <span class="site-name">OpenAPI Enforcer Middleware</span></a> <div class="links"><div class="search-box"><input aria-label="Search" autocomplete="off" spellcheck="false" value=""> <!----></div> <nav class="nav-links can-hide"><div class="nav-item"><a href="/openapi-enforcer-middleware/guide/getting-started.html" class="nav-link">
+  Guide
+</a></div><div class="nav-item"><a href="/openapi-enforcer-middleware/api/index.html" class="nav-link">
+  API
+</a></div><div class="nav-item"><a href="/openapi-enforcer-middleware/v1/" class="nav-link router-link-active">
+  1.x
+</a></div> <!----></nav></div></header> <div class="sidebar-mask"></div> <aside class="sidebar"><nav class="nav-links"><div class="nav-item"><a href="/openapi-enforcer-middleware/guide/getting-started.html" class="nav-link">
+  Guide
+</a></div><div class="nav-item"><a href="/openapi-enforcer-middleware/api/index.html" class="nav-link">
+  API
+</a></div><div class="nav-item"><a href="/openapi-enforcer-middleware/v1/" class="nav-link router-link-active">
+  1.x
+</a></div> <!----></nav>  <ul class="sidebar-links"><li><section class="sidebar-group depth-0"><p class="sidebar-heading"><span></span> <!----></p> <ul class="sidebar-links sidebar-group-items"><li><a href="/openapi-enforcer-middleware/v1/" aria-current="page" class="sidebar-link">OpenAPI Enforcer Middleware</a></li><li><a href="/openapi-enforcer-middleware/v1/api.html" class="sidebar-link">API</a></li></ul></section></li><li><section class="sidebar-group depth-0"><p class="sidebar-heading open"><span>Guide</span> <!----></p> <ul class="sidebar-links sidebar-group-items"><li><a href="/openapi-enforcer-middleware/v1/guide/getting-started.html" class="sidebar-link">Getting Started</a></li><li><a href="/openapi-enforcer-middleware/v1/guide/server.html" class="sidebar-link">Server Setup</a></li><li><a href="/openapi-enforcer-middleware/v1/guide/openapi-document.html" class="sidebar-link">OpenAPI Document</a></li><li><a href="/openapi-enforcer-middleware/v1/guide/controllers.html" aria-current="page" class="active sidebar-link">Controllers</a><ul class="sidebar-sub-headers"><li class="sidebar-sub-header"><a href="/openapi-enforcer-middleware/v1/guide/controllers.html#defining-controllers" class="sidebar-link">Defining Controllers</a></li><li class="sidebar-sub-header"><a href="/openapi-enforcer-middleware/v1/guide/controllers.html#referencing-controllers" class="sidebar-link">Referencing Controllers</a></li></ul></li><li><a href="/openapi-enforcer-middleware/v1/guide/mocking.html" class="sidebar-link">Mocking</a></li></ul></section></li></ul> </aside> <main class="page"> <div class="theme-default-content content__default"><div class="custom-block warning"><p class="custom-block-title">WARNING</p> <p>You are looking at the documentation for version 1.x. For the documentation on the latest version see the <a href="/openapi-enforcer-middleware/guide/getting-started.html">Guide</a> or the <a href="/openapi-enforcer-middleware/api/">API</a>.</p></div> <h2 id="defining-controllers"><a href="#defining-controllers" class="header-anchor">#</a> Defining Controllers</h2> <p>A controller is an object whose properties are functions. These functions will be called by the OpenAPI Enforcer Middleware according to the <code>x-controller</code> and <code>x-operation</code> attributes you <a href="openapi-document">specify in your OpenAPI document</a>. When these functions are called, they will receive the request, response, and next function as parameters.</p> <p>You can define your controller objects one of two ways:</p> <ol><li><p>As an <code>object</code>.</p></li> <li><p>As a <code>function</code> that returns an object.</p></li></ol> <h3 id="controller-via-an-object"><a href="#controller-via-an-object" class="header-anchor">#</a> Controller via an Object</h3> <p>Define the object, naming the properties the same as those listed as the <code>x-operation</code> properties in your <a href="openapi-document">OpenAPI document</a>.</p> <div class="language-js extra-class"><pre class="language-js"><code>module<span class="token punctuation">.</span>exports <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token function-variable function">addPerson</span><span class="token operator">:</span> <span class="token keyword">async</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res<span class="token punctuation">,</span> next</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">await</span> <span class="token function">savePersonToDatabase</span><span class="token punctuation">(</span>req<span class="token punctuation">.</span>body<span class="token punctuation">)</span>
+    res<span class="token punctuation">.</span><span class="token function">sendStatus</span><span class="token punctuation">(</span><span class="token number">201</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  
+  <span class="token function-variable function">getPerson</span><span class="token operator">:</span> <span class="token keyword">async</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res<span class="token punctuation">,</span> next</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> person <span class="token operator">=</span> <span class="token keyword">await</span> <span class="token function">getPersonById</span><span class="token punctuation">(</span>req<span class="token punctuation">.</span>params<span class="token punctuation">.</span>personId<span class="token punctuation">)</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>person<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      res<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>person<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+      res<span class="token punctuation">.</span><span class="token function">sendStatus</span><span class="token punctuation">(</span><span class="token number">404</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre></div><h3 id="controller-via-a-function"><a href="#controller-via-a-function" class="header-anchor">#</a> Controller via a Function</h3> <p>When creating a controller via a function, the function must return an object that looks like a controller object. The advantage of this method is that it allows for <a href="#dependency-injection">dependency injection</a>.</p> <div class="language-js extra-class"><pre class="language-js"><code>module<span class="token punctuation">.</span><span class="token function-variable function">exports</span> <span class="token operator">=</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">return</span> <span class="token punctuation">{</span>
+    <span class="token function-variable function">addPerson</span><span class="token operator">:</span> <span class="token keyword">async</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res<span class="token punctuation">,</span> next</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">await</span> <span class="token function">savePersonToDatabase</span><span class="token punctuation">(</span>req<span class="token punctuation">.</span>body<span class="token punctuation">)</span>
+      res<span class="token punctuation">.</span><span class="token function">sendStatus</span><span class="token punctuation">(</span><span class="token number">201</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      
+    <span class="token function-variable function">getPerson</span><span class="token operator">:</span> <span class="token keyword">async</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res<span class="token punctuation">,</span> next</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">const</span> person <span class="token operator">=</span> <span class="token keyword">await</span> <span class="token function">getPersonById</span><span class="token punctuation">(</span>req<span class="token punctuation">.</span>params<span class="token punctuation">.</span>personId<span class="token punctuation">)</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>person<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        res<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>person<span class="token punctuation">)</span>
+      <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+        res<span class="token punctuation">.</span><span class="token function">sendStatus</span><span class="token punctuation">(</span><span class="token number">404</span><span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre></div><h3 id="dependency-injection"><a href="#dependency-injection" class="header-anchor">#</a> Dependency Injection</h3> <p>Dependency injection is when you pass dependencies (database connections, data, functionality, etc.) into a function so that it can use the dependencies to accomplish its task.</p> <p>For example, if you have a controller that requires a connection to the database to operate, you may want to pass that dependency in. This improves the testability of your code.</p> <p>Accomplishing dependency injection with the OpenAPI Enforcer middleware is a two step process:</p> <ol><li><p>Define a controller via a function and add parameters to the function signature:</p> <div class="language-js extra-class"><pre class="language-js"><code>module<span class="token punctuation">.</span><span class="token function-variable function">exports</span> <span class="token operator">=</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">databaseConnection<span class="token punctuation">,</span> someData</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> controller <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+
+  controller<span class="token punctuation">.</span><span class="token function-variable function">addPerson</span> <span class="token operator">=</span> <span class="token keyword">async</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res<span class="token punctuation">,</span> next</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> <span class="token punctuation">{</span> id<span class="token punctuation">,</span> name <span class="token punctuation">}</span> <span class="token operator">=</span> req<span class="token punctuation">.</span>body
+    <span class="token keyword">const</span> rows <span class="token operator">=</span> <span class="token keyword">await</span> databaseConnection<span class="token punctuation">.</span><span class="token function">query</span><span class="token punctuation">(</span><span class="token string">'INSERT INTO people (id, name) VALUES ($1, $2)'</span><span class="token punctuation">,</span> <span class="token punctuation">[</span> id<span class="token punctuation">,</span> name <span class="token punctuation">]</span><span class="token punctuation">)</span>
+    res<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>rows<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token keyword">return</span> controller
+<span class="token punctuation">}</span>
+</code></pre></div></li> <li><p>When telling the OpenAPI Enforcer Middleware where to find the controller, also specify the parameters to pass in:</p> <div class="language-js extra-class"><pre class="language-js"><code><span class="token keyword">const</span> EnforcerMiddleware <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'openapi-enforcer-middleware'</span><span class="token punctuation">)</span>
+<span class="token keyword">const</span> express <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express'</span><span class="token punctuation">)</span>
+
+<span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">const</span> enforcer <span class="token operator">=</span> <span class="token function">EnforcerMiddleware</span><span class="token punctuation">(</span><span class="token string">'/path/to/openapi-definition.yml'</span><span class="token punctuation">)</span>
+<span class="token keyword">const</span> databaseConnection <span class="token operator">=</span> <span class="token function">getDatabaseConnection</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">const</span> someData <span class="token operator">=</span> <span class="token punctuation">{</span> <span class="token operator">...</span> <span class="token punctuation">}</span>
+
+<span class="token comment">// pass in dependencies</span>
+enforcer<span class="token punctuation">.</span><span class="token function">controllers</span><span class="token punctuation">(</span><span class="token string">'/path/to/controllers-dir'</span><span class="token punctuation">,</span> databaseConnection<span class="token punctuation">,</span> someData<span class="token punctuation">)</span>
+
+app<span class="token punctuation">.</span><span class="token function">use</span><span class="token punctuation">(</span>enforcer<span class="token punctuation">.</span><span class="token function">middleware</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+app<span class="token punctuation">.</span><span class="token function">listen</span><span class="token punctuation">(</span><span class="token number">3000</span><span class="token punctuation">)</span>
+</code></pre></div></li></ol> <h2 id="referencing-controllers"><a href="#referencing-controllers" class="header-anchor">#</a> Referencing Controllers</h2> <p>You know <a href="#defining-controllers">how to define a controller</a>. Here we cover how you can set up the OpenAPI Enforcer middleware can call it.</p> <h3 id="controllers-in-files"><a href="#controllers-in-files" class="header-anchor">#</a> Controllers in Files</h3> <p>Placing each unique controller in its own file is the recommended method. It simplifies code and makes it easily testable.</p> <p><img src="/openapi-enforcer-middleware/assets/img/overview-v1.bd88582e.png" alt="Overview"></p> <ol><li><p>Choose a directory where you'll put your controller files.</p></li> <li><p>Create files with the same names as the <code>x-controller</code> property in your <a href="/openapi-enforcer-middleware/v1/guide/openapi-document.html">OpenAPI document</a>.</p> <p>For example, you will need a file named <code>people.js</code> if you have an OpenAPI document with an <code>x-controller</code> set to <code>people</code></p> <div class="language-yml extra-class"><pre class="language-yml"><code><span class="token key atrule">paths</span><span class="token punctuation">:</span>
+  <span class="token key atrule">/people</span><span class="token punctuation">:</span>
+    <span class="token key atrule">get</span><span class="token punctuation">:</span>
+      <span class="token key atrule">x-controller</span><span class="token punctuation">:</span> people
+      <span class="token key atrule">x-operation</span><span class="token punctuation">:</span> getList
+      <span class="token punctuation">...</span>
+</code></pre></div></li> <li><p>Export your controller object or function from each file, defining the properties that match the operations.</p> <p><strong>people.js</strong></p> <div class="language-js extra-class"><pre class="language-js"><code>exports<span class="token punctuation">.</span><span class="token function-variable function">getList</span> <span class="token operator">=</span> <span class="token keyword">async</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res<span class="token punctuation">,</span> next</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> list <span class="token operator">=</span> <span class="token keyword">await</span> <span class="token function">getAllPeople</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  res<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>list<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre></div></li></ol> <h3 id="inline-controllers"><a href="#inline-controllers" class="header-anchor">#</a> Inline Controllers</h3> <p>Inline controllers are defined as an object whose properties are the <code>x-controller</code> names and its values are a controller object. Below is a section of an OpenAPI document and a section of how you would set up your server to use inline controllers.</p> <p><strong>OpenAPI Document</strong></p> <div class="language-yml extra-class"><pre class="language-yml"><code><span class="token key atrule">paths</span><span class="token punctuation">:</span>
+  /people/<span class="token punctuation">{</span>id<span class="token punctuation">}</span><span class="token punctuation">:</span>
+    <span class="token key atrule">get</span><span class="token punctuation">:</span>
+      <span class="token key atrule">x-controller</span><span class="token punctuation">:</span> people
+      <span class="token key atrule">x-operation</span><span class="token punctuation">:</span> getPerson
+      <span class="token punctuation">...</span>
+</code></pre></div><p><strong>Server File</strong></p> <div class="language-js extra-class"><pre class="language-js"><code><span class="token comment">// Create a controllers map</span>
+<span class="token keyword">const</span> controllersMap <span class="token operator">=</span> <span class="token punctuation">{</span>
+  people<span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token comment">// associates to x-controller: people</span>
+    
+    <span class="token comment">// associates to x-operation: getPerson</span>
+    <span class="token function-variable function">getPerson</span><span class="token operator">:</span> <span class="token keyword">async</span> <span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res<span class="token punctuation">,</span> next</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">const</span> person <span class="token operator">=</span> <span class="token keyword">await</span> <span class="token function">getPersonById</span><span class="token punctuation">(</span>req<span class="token punctuation">.</span>params<span class="token punctuation">.</span>id<span class="token punctuation">)</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>person<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        res<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>person<span class="token punctuation">)</span>
+      <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+        res<span class="token punctuation">.</span><span class="token function">sendStatus</span><span class="token punctuation">(</span><span class="token number">404</span><span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// Add controllers</span>
+enforcer<span class="token punctuation">.</span><span class="token function">controllers</span><span class="token punctuation">(</span>controllersMap<span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token function">catch</span><span class="token punctuation">(</span>console<span class="token punctuation">.</span>error<span class="token punctuation">)</span>
+
+<span class="token comment">// Add the enforcer middleware runner to the express app.</span>
+app<span class="token punctuation">.</span><span class="token function">use</span><span class="token punctuation">(</span>enforcer<span class="token punctuation">.</span><span class="token function">middleware</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+</code></pre></div></div> <footer class="page-edit"><!----> <!----></footer> <div class="page-nav"><p class="inner"><span class="prev">
+      ←
+      <a href="/openapi-enforcer-middleware/v1/guide/openapi-document.html" class="prev">
+        OpenAPI Document
+      </a></span> <span class="next"><a href="/openapi-enforcer-middleware/v1/guide/mocking.html">
+        Mocking
+      </a>
+      →
+    </span></p></div> </main></div><div class="global-ui"></div></div>
+    <script src="/openapi-enforcer-middleware/assets/js/app.98b0fab6.js" defer></script><script src="/openapi-enforcer-middleware/assets/js/2.dcde1ce6.js" defer></script><script src="/openapi-enforcer-middleware/assets/js/6.a875d6bd.js" defer></script>
+  </body>
+</html>
