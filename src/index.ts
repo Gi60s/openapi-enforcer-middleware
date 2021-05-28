@@ -11,7 +11,6 @@ export { PartialDocsOptions as DocsOptions } from './docs'
 
 export default function OpenAPIEnforcerMiddleware (openapi: any) {
     return {
-        // TODO: Uses the RedocRawOptions object (from redoc package) instead of Record.
         docs(options?: Partial<PartialDocsOptions>) {
             return docsMiddleware(openapi, options)
         },

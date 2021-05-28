@@ -1,6 +1,7 @@
 import Debug from 'debug'
 import Express from 'express'
 import path from 'path'
+import { RedocRawOptions } from 'redoc'
 
 const debug = Debug('openapi-enforcer-middleware:docs')
 
@@ -10,7 +11,7 @@ export interface DocsOptions {
     postRedocInitScripts: string[] // The path to JavaScript files that should be run after redoc init
     redoc: {
         cdnVersion?: string // If omitted or empty string then will check node_modules for installed redoc, otherwise will default to 'next'.
-        options?: Record<string, unknown> // Options to pass to redoc during init
+        options?: RedocRawOptions // Options to pass to redoc during init
     }
     styleSheets: string[] // The path to CSS files that should be added to the head.
     title: string // The title to use for the page. Defaults to OpenAPI spec title.
