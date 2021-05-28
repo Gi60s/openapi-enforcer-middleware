@@ -9,13 +9,13 @@ const debug = debug_1.default('openapi-enforcer-middleware:events');
 const handlers = {};
 function emit(type, ...args) {
     debug('Event emitted: ' + type, ...args);
-    if (handlers[type]) {
-        process.nextTick(() => {
+    process.nextTick(() => {
+        if (handlers[type]) {
             handlers[type].forEach(f => {
                 f(...args);
             });
-        });
-    }
+        }
+    });
 }
 exports.emit = emit;
 function on(type, handler) {

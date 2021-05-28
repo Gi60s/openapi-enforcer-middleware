@@ -2,137 +2,67 @@ import Debug from 'debug'
 import { emit } from './events'
 import ErrorCode from './error-code'
 import Express from 'express'
-import path from 'path'
 import { getInitStatus } from './init'
 import { normalizeOptions, optionValidators } from "./util2"
-import * as I from "./interfaces";
+import * as I from "./interfaces"
 
 const debug = Debug('openapi-enforcer-middleware:router')
-const { validatorBoolean, validatorNonEmptyString } = optionValidators
-const methods = { get: true, post: true, put: true, delete: true, head: true, trace: true, options: true, connect: true, patch: true }
+const methods = ['get', 'post', 'put', 'delete', 'head', 'trace', 'options', 'connect', 'patch']
+const { validatorNonEmptyString } = optionValidators
 
-interface ControllerData {
-    controller: any
-    hasError: boolean
-    promise: Promise<any>
-}
+export type Controllers = Record<string, ControllersMap>
+export type ControllersMap = Record<string, Route>
+export type Route = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => any
 
-// type ControllerFunction = (...args: unknown[]) => object
+export function routeBuilder (openapi: any, controllers: Controllers, options?: I.RouteBuilderOptions) {
+    const operationsMap = new WeakMap<any, Route>()
 
-export type ControllerReference = any
-
-export type IDependencies = Array<any> | DependencyMap
-
-export interface DependencyMap {
-    [key: string]: Array<any>
-}
-
-interface OperationData {
-    controllerKey: string
-    operationKey: string
-    operationHandler: Function | null
-    path: string
-}
-
-interface GetOperationConfig {
-    commonDependencyKey: string
-    controllersInput: Record<string, Promise<any>> | null
-    controllersMap: Map<string, ControllerData>
-    dependencies: IDependencies
-    dirPath: string
-    operation: any
-    operationsMap: WeakMap<any, OperationData>
-    xController: string
-    xOperation: string
-}
-
-export function routeBuilder (enforcerPromise: Promise<any>, controllers: string | Record<string, ControllerReference>, dependencies?: IDependencies, options?: I.RouteBuilderOptions) {
-    const controllersMap: Map<string, ControllerData> = new Map()
-    const operationsMap: WeakMap<any, OperationData> = new WeakMap()
-    const controllersInput: Record<string, ControllerReference> | null = typeof controllers !== 'string' ? controllers : null
-    const dirPath: string = typeof controllers === 'string' ? controllers : ''
-
-    // normalize dependencies
-    if (!dependencies) {
-        dependencies = []
-    } else {
-        const message = 'Expected an array of values or an object map with property values as arrays of values.'
-        const isArray = Array.isArray(dependencies)
-        const isObject = dependencies && typeof dependencies === 'object'
-        if (!isObject && !isArray) throw Error(message)
-        if (isObject && !isArray) {
-            const map: DependencyMap = <DependencyMap>dependencies
-            const keys = Object.keys(map)
-            const length = keys.length
-            for (let i = 0; i < length; i++) {
-                if (!Array.isArray(map[keys[i]])) throw Error(message)
-            }
-        }
+    if (typeof controllers !== 'object' || controllers === null) {
+        throw Error('Expected controllers to be a non-null object. Received: ' + controllers)
     }
 
     const opts = normalizeOptions(options, {
         defaults: {
-            commonDependencyKey: 'common',
-            lazyLoad: false,
             xController: 'x-controller',
             xOperation: 'x-operation'
         },
         required: [],
         validators: {
-            dependencies: (v: any) => {
-                if (Array.isArray(v)) return ''
-
-                const message = 'Expected an array of values or an object map with property values as arrays of values.'
-                if (v && typeof v === 'object') {
-                    const keys = Object.keys(v)
-                    const length = keys.length
-                    for (let i = 0; i < length; i++) {
-                        if (!Array.isArray(v[keys[i]])) return message
-                    }
-                    return ''
-                }
-
-                return message
-            },
-            lazyLoad: validatorBoolean,
             xController: validatorNonEmptyString,
             xOperation: validatorNonEmptyString
         }
     })!
     debug('Initialized with options: ' + JSON.stringify(opts, null, 2))
 
-    // if we are not lazy loading the load all operations now
-    if (!opts.lazyLoad) {
-        debug('Preloading all operations now')
-        enforcerPromise.then(openapi => {
-            if (openapi.paths) {
-                Object.keys(openapi.paths).forEach(path => {
-                    Object.keys(openapi.paths[path]).forEach(opKey => {
-                        opKey = opKey.toLowerCase()
+    // build all operations
+    Object.keys(openapi.paths)
+        .forEach(path => {
+            Object.keys(openapi.paths[path])
+                .filter(key => methods.includes(key.toLowerCase()))
+                .forEach(method => {
+                    const operation = openapi.paths[path][method]
+                    operationsMap.set(operation, noop)
+
+                    // get the controller id and operation id
+                    const controllerKey = getControllerValue(operation, opts.xController!) || ''
+                    const operationKey = operation.operationId || operation[opts.xOperation!] || ''
+
+                    // verify that the controller id and operation id have been defined for this operation
+                    if (!controllerKey) {
+                        emit('warning', new ErrorCode('Operation at "' + method + ' ' + path + '" not mapped because no ' + opts.xController + ' has been defined.', 'ENFORCER_MIDDLEWARE_ROUTE_NO_MAPPING'))
+                    } else if (!operationKey) {
+                        emit('warning', new ErrorCode('Operation at "' + method + ' ' + path + '" not mapped because no ' + opts.xOperation + ' (not operationId) has been defined.', 'ENFORCER_MIDDLEWARE_ROUTE_NO_MAPPING'))
+                    } else if (controllers[controllerKey] === undefined) {
+                        emit('error', new ErrorCode('Controller not defined: ' + controllerKey, 'ENFORCER_MIDDLEWARE_ROUTE_CONTROLLER'))
                         // @ts-ignore
-                        if (methods[opKey]) {
-                            const config: GetOperationConfig = {
-                                commonDependencyKey: opts.commonDependencyKey,
-                                controllersInput,
-                                controllersMap,
-                                dependencies: dependencies!,
-                                dirPath,
-                                operation: openapi.paths[path][opKey],
-                                operationsMap,
-                                xController: opts.xController!,
-                                xOperation: opts.xOperation!
-                            }
-                            getOperation(config).catch(err => {
-                                if (err.code !== 'MODULE_NOT_FOUND') {
-                                    emit('error', err)
-                                }
-                            })
-                        }
-                    })
+                    } else if (controllers[controllerKey][operationKey] === undefined) {
+                        emit('error', new ErrorCode('Controller at ' + path + ' missing operation: ' + operationKey, 'ENFORCER_MIDDLEWARE_ROUTE_NO_OP'))
+                    } else {
+                        // @ts-ignore
+                        operationsMap.set(operation, controllers[controllerKey][operationKey])
+                    }
                 })
-            }
         })
-    }
 
     // return the express middleware
     return function (req: Express.Request, res: Express.Response, next: Express.NextFunction) {
@@ -143,23 +73,14 @@ export function routeBuilder (enforcerPromise: Promise<any>, controllers: string
         } else if (initialized) {
             debug('Base path matches registered base path and is initialized')
             const { operation } = req.enforcer!
-            const config: GetOperationConfig = {
-                commonDependencyKey: opts.commonDependencyKey,
-                controllersInput,
-                controllersMap,
-                dependencies: dependencies!,
-                dirPath,
-                operation,
-                operationsMap,
-                xController: opts.xController!,
-                xOperation: opts.xOperation!
+
+            // load the operation handler
+            const handler = operationsMap.get(operation)!
+            try {
+                handler(req, res, next)
+            } catch(err) {
+                next(err)
             }
-            getOperation(config)
-                .then(async (fnOperation: Function) => {
-                    debug('Operation found. Executing now.')
-                    await fnOperation(req, res, next)
-                })
-                .catch(next)
         } else {
             debug('Not initialized')
             emit('error', new ErrorCode('OpenAPI Enforcer Middleware not initialized. Could not map OpenAPI operations to routes.', 'ENFORCER_MIDDLEWARE_NOT_INITIALIZED'))
@@ -178,127 +99,6 @@ function getControllerValue (operation: any, xController: string): string | void
         node = node.enforcerData && node.enforcerData.parent ? node.enforcerData.parent.result : null
     }
     debug('Controller key ' + xController + ' not found')
-}
-
-async function getOperation (opts: GetOperationConfig): Promise<Function> {
-    const { commonDependencyKey, controllersInput, controllersMap, dirPath, operation, operationsMap, xController, xOperation } = opts
-
-    // load the controller
-    let data = operationsMap.get(operation)
-    if (!data) {
-        debug('Loading controller')
-        const controllerKey = getControllerValue(operation, xController) || ''
-        const operationKey = operation.operationId || operation[xOperation] || ''
-        const controllerPath = controllerKey ? path.resolve(dirPath, controllerKey) : ''
-        data = {
-            controllerKey,
-            operationKey,
-            operationHandler: null,
-            path: controllerPath
-        }
-        operationsMap.set(operation, data)
-    }
-
-    // if the operation handler has already been determined then return it
-    if (data.operationHandler) return data.operationHandler
-
-    // if the operation does not define a controller or an operation then we assume it shouldn't map to a controller
-    const opPath = operation.enforcerData.parent && operation.enforcerData.parent.key
-    const opMethod = operation.enforcerData.key
-    if (!data.controllerKey) {
-        if (!data.operationKey) {
-            emit('warning', new ErrorCode('Operation at "' + opMethod.toUpperCase() + ' ' + opPath + '" not mapped because no ' + xController + ' and no ' + xOperation + ' (nor operationId) has been defined.', 'ENFORCER_MIDDLEWARE_ROUTE_NO_MAPPING'))
-        } else {
-            emit('warning', new ErrorCode('Operation at "' + opMethod.toUpperCase() + ' ' + opPath + '" not mapped because no ' + xController + ' has been defined.', 'ENFORCER_MIDDLEWARE_ROUTE_NO_MAPPING'))
-        }
-        return data.operationHandler = noop
-    } else if (!data.operationKey) {
-        emit('warning', new ErrorCode('Operation at "' + opMethod.toUpperCase() + ' ' + opPath + '" not mapped because no ' + xOperation + ' (nor operationId) has been defined.', 'ENFORCER_MIDDLEWARE_ROUTE_NO_MAPPING'))
-        return data.operationHandler = noop
-    }
-
-    // get controller specific dependencies
-    const controllerKey = data.controllerKey
-    const dependencies = opts.dependencies
-    let specificDeps: any[]
-    if (Array.isArray(dependencies)) {
-        specificDeps = dependencies
-    } else {
-        specificDeps = []
-        if (dependencies[controllerKey]) specificDeps.push(...dependencies[controllerKey])
-        if (dependencies[commonDependencyKey]) specificDeps.push(...dependencies[commonDependencyKey])
-    }
-
-    let controller: any
-    if (controllersInput && controllerKey in controllersInput) {
-        const directive = controllersInput[controllerKey]
-        if (typeof directive === 'function') {
-            debug('Controller loaded by provided function')
-            controller = directive
-        } else if (directive instanceof Promise) {
-            debug('Controller loading from ES import')
-            const loaded = await directive
-            controller = loaded.default(...specificDeps)
-        }
-    } else {
-        debug('Loading controller with dynamic import: ' + data.path)
-        controller = await importController(controllersMap, data.path, specificDeps)
-    }
-    if (!controller) return data.operationHandler = noop
-
-    // check if the operation is defined in the controller
-    const op: Function = controller[data.operationKey]
-    if (!op) {
-        emit('error', new ErrorCode('Controller at ' + data.path + ' missing operation: ' + data.operationKey, 'ENFORCER_MIDDLEWARE_ROUTE_NO_OP'))
-        return data.operationHandler = noop
-    } else {
-        return data.operationHandler = op
-    }
-}
-
-async function importController (controllersMap: Map<string, ControllerData>, filePath: string, dependencies: any[]) {
-    let data = controllersMap.get(filePath)
-    if (!data) {
-        data = {
-            controller: null,
-            hasError: false,
-            promise: Promise.resolve()
-        }
-        controllersMap.set(filePath, data)
-
-        // attempt to load the controller file
-        let factory: any
-        try {
-            data.promise = import(filePath)
-            factory = await data.promise
-        } catch (err) {
-            if (err.code === 'MODULE_NOT_FOUND') {
-                emit('error', new ErrorCode('Controller file not found: ' + filePath, 'ENFORCER_MIDDLEWARE_ROUTE_CONTROLLER'))
-            } else {
-                emit('error', err)
-            }
-            return data.controller = null
-        }
-
-        // if the controller file loaded then make sure it exported a function
-        if (typeof factory !== 'function' && typeof factory.default === 'function') factory = factory.default
-        if (typeof factory !== 'function') {
-            emit('error', new ErrorCode('Controller file must export a function: ' + filePath + '. If using ES imports export the function as default.', 'ENFORCER_MIDDLEWARE_ROUTE_FACTORY'))
-            return data.controller = null
-        }
-
-        // call the controller factory with dependencies injected to get back the controller
-        try {
-            data.controller = factory(...dependencies)
-            return data.controller
-        } catch (err) {
-            emit('error', err)
-            return data.controller = null
-        }
-    } else {
-        await data.promise
-        return data.controller
-    }
 }
 
 function noop (_req: Express.Request, _res: Express.Response, next: Express.NextFunction) {

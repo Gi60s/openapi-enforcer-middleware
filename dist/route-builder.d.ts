@@ -1,8 +1,6 @@
 import Express from 'express';
 import * as I from "./interfaces";
-export declare type ControllerReference = any;
-export declare type IDependencies = Array<any> | DependencyMap;
-export interface DependencyMap {
-    [key: string]: Array<any>;
-}
-export declare function routeBuilder(enforcerPromise: Promise<any>, controllers: string | Record<string, ControllerReference>, dependencies?: IDependencies, options?: I.RouteBuilderOptions): (req: Express.Request, res: Express.Response, next: Express.NextFunction) => void;
+export declare type Controllers = Record<string, ControllersMap>;
+export declare type ControllersMap = Record<string, Route>;
+export declare type Route = (req: Express.Request, res: Express.Response, next: Express.NextFunction) => any;
+export declare function routeBuilder(openapi: any, controllers: Controllers, options?: I.RouteBuilderOptions): (req: Express.Request, res: Express.Response, next: Express.NextFunction) => void;

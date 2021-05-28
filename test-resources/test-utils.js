@@ -53,7 +53,7 @@ exports.spec = {
 }
 
 exports.test = async function (options, handler) {
-  const server = exports.server(options)
+  const server = await exports.server(options)
   await server.start()
   await handler(server.request, server)
   server.stop()
@@ -69,7 +69,7 @@ exports.test = async function (options, handler) {
  * @param {function} [options.routeHook]
  * @returns {{ app: Express, enforcerPromise: Promise, enforcerMiddleware: *, request: function, stop: function, start: function }}
  */
-exports.server = function (options) {
+exports.server = async function (options) {
   const app = express()
   let listener
 
@@ -77,8 +77,8 @@ exports.server = function (options) {
   if (!options.doc) throw Error('Missing require options.doc property')
   if (!options.hasOwnProperty('initEnforcer') || options.initEnforcer === true) options.initEnforcer = {}
 
-  const enforcerPromise = Enforcer(options.doc)
-  const mw = Middleware(enforcerPromise)
+  const openapi = await Enforcer(options.doc)
+  const mw = Middleware(openapi)
 
   app.use(express.text())
   app.use(express.json())
@@ -87,9 +87,7 @@ exports.server = function (options) {
   })
   if (options.initEnforcer) app.use(mw.init(options.initEnforcer))
   if (options.routeBuilder) {
-    const controllerDirectory = path.resolve(__dirname, 'controllers')
-    const dependecies = options.routeBuilder.dependencies
-    app.use(mw.route(controllerDirectory, dependecies, options.routeBuilder))
+    app.use(mw.route(options.routeBuilder.controllers, options.routeBuilder.options || {}))
   }
   if (options.routeHook) options.routeHook(app, mw)
   if (options.fallbackMocking) app.use(mw.mock())
@@ -177,7 +175,6 @@ exports.server = function (options) {
 
   return {
     app,
-    enforcerPromise,
     enforcerMiddleware: mw,
     request,
     start,

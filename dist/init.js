@@ -8,7 +8,6 @@ const debug_1 = __importDefault(require("debug"));
 const util2_1 = require("./util2");
 const mock_1 = require("./mock");
 const cookie_store_1 = __importDefault(require("./cookie-store"));
-const events_1 = require("./events");
 const { validatorBoolean, validatorString, validatorNonEmptyString, validatorQueryParams } = util2_1.optionValidators;
 const activeRequestMap = new WeakMap();
 const debug = debug_1.default('openapi-enforcer-middleware:init');
@@ -21,7 +20,7 @@ function getInitStatus(req) {
     };
 }
 exports.getInitStatus = getInitStatus;
-function init(enforcerPromise, options) {
+function init(openapi, options) {
     const opts = util2_1.normalizeOptions(options, {
         defaults: {
             allowOtherQueryParameters: false,
@@ -59,96 +58,85 @@ function init(enforcerPromise, options) {
         }
     });
     debug('Initialized with options: ' + JSON.stringify(opts, null, 2));
-    enforcerPromise.catch((err) => {
-        if (!err.code)
-            err.code = 'ENFORCER_MIDDLEWARE_LOAD_ERROR';
-        events_1.emit('error', err);
-    });
     return function (req, res, next) {
-        enforcerPromise
-            .then(openapi => {
-            const baseUrl = typeof opts.baseUrl === 'string' ? opts.baseUrl : req.baseUrl;
-            debug('Register request base URL: ' + baseUrl);
-            activeRequestMap.set(req, baseUrl);
-            const relativePath = ('/' + req.originalUrl.substring(baseUrl.length)).replace(/^\/{2}/, '/');
-            const hasBody = util2_1.reqHasBody(req);
-            const requestObj = {
-                headers: req.headers,
-                method: req.method,
-                path: relativePath
+        const baseUrl = typeof opts.baseUrl === 'string' ? opts.baseUrl : req.baseUrl;
+        debug('Register request base URL: ' + baseUrl);
+        activeRequestMap.set(req, baseUrl);
+        const relativePath = ('/' + req.originalUrl.substring(baseUrl.length)).replace(/^\/{2}/, '/');
+        const hasBody = util2_1.reqHasBody(req);
+        const requestObj = {
+            headers: req.headers,
+            method: req.method,
+            path: relativePath
+        };
+        if (hasBody)
+            requestObj.body = req.body;
+        if (opts.allowOtherQueryParameters === false)
+            opts.allowOtherQueryParameters = [];
+        if (opts.allowOtherQueryParameters !== true && opts.mockQuery)
+            opts.allowOtherQueryParameters.push(opts.mockQuery);
+        const [request, error] = openapi.request(requestObj, { allowOtherQueryParameters: opts.allowOtherQueryParameters });
+        if (request) {
+            if (req.cookies)
+                mergeNewProperties(req.cookies, request.cookie);
+            mergeNewProperties(req.headers, request.headers);
+            mergeNewProperties(req.query, request.query);
+        }
+        if (error) {
+            util2_1.handleRequestError(opts, error, res, next);
+            debug('Request failed validation', error);
+        }
+        else {
+            debug('Request valid');
+            const { body, cookie, headers, operation, path, query, response } = request;
+            req.enforcer = {
+                accepts(responseCode) {
+                    return operation.getResponseContentTypeMatches(responseCode, headers.accept || '*/*');
+                },
+                cookies: cookie,
+                headers,
+                openapi,
+                operation,
+                options: opts,
+                params: path,
+                response,
+                query
             };
             if (hasBody)
-                requestObj.body = req.body;
-            if (opts.allowOtherQueryParameters === false)
-                opts.allowOtherQueryParameters = [];
-            if (opts.allowOtherQueryParameters !== true && opts.mockQuery)
-                opts.allowOtherQueryParameters.push(opts.mockQuery);
-            const [request, error] = openapi.request(requestObj, { allowOtherQueryParameters: opts.allowOtherQueryParameters });
-            if (request) {
-                if (req.cookies)
-                    mergeNewProperties(req.cookies, request.cookie);
-                mergeNewProperties(req.headers, request.headers);
-                mergeNewProperties(req.query, request.query);
-            }
-            if (error) {
-                util2_1.handleRequestError(opts, error, res, next);
-                debug('Request failed validation', error);
-            }
-            else {
-                debug('Request valid');
-                const { body, cookie, headers, operation, path, query, response } = request;
-                req.enforcer = {
-                    accepts(responseCode) {
-                        return operation.getResponseContentTypeMatches(responseCode, headers.accept || '*/*');
-                    },
-                    cookies: cookie,
-                    headers,
-                    openapi,
-                    operation,
-                    options: opts,
-                    params: path,
-                    response,
-                    query
-                };
-                if (hasBody)
-                    req.enforcer.body = body;
-                res.enforcer = {
-                    send: util2_1.sender(opts, req, res, next),
-                    status(code) {
-                        res.status(code);
-                        return this;
-                    }
-                };
-                const mockMode = mock_1.getMockMode(req);
-                if (mockMode) {
-                    const mockStore = opts.mockStore;
-                    debug('Request is for mocked data');
-                    req.enforcer.mockMode = mockMode;
-                    req.enforcer.mockStore = {
-                        get(key) {
-                            return mockStore.get(req, res, key);
-                        },
-                        set(key, value) {
-                            return mockStore.set(req, res, key, value);
-                        }
-                    };
-                    if (hasImplementedMock(opts.xMockImplemented, operation) && (mockMode.source === 'implemented' || mockMode.source === '')) {
-                        debug('Request has implemented mock');
-                        next();
-                    }
-                    else {
-                        debug('Request being auto mocked');
-                        mock_1.mockHandler(req, res, next, mockMode);
-                    }
+                req.enforcer.body = body;
+            res.enforcer = {
+                send: util2_1.sender(opts, req, res, next),
+                status(code) {
+                    res.status(code);
+                    return this;
                 }
-                else {
+            };
+            const mockMode = mock_1.getMockMode(req);
+            if (mockMode) {
+                const mockStore = opts.mockStore;
+                debug('Request is for mocked data');
+                req.enforcer.mockMode = mockMode;
+                req.enforcer.mockStore = {
+                    get(key) {
+                        return mockStore.get(req, res, key);
+                    },
+                    set(key, value) {
+                        return mockStore.set(req, res, key, value);
+                    }
+                };
+                if (hasImplementedMock(opts.xMockImplemented, operation) && (mockMode.source === 'implemented' || mockMode.source === '')) {
+                    debug('Request has implemented mock');
                     next();
                 }
+                else {
+                    debug('Request being auto mocked');
+                    mock_1.mockHandler(req, res, next, mockMode);
+                }
             }
-        })
-            .catch(err => {
-            next(err);
-        });
+            else {
+                next();
+            }
+        }
     };
 }
 exports.init = init;

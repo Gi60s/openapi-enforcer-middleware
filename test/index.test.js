@@ -27,6 +27,16 @@ const expect = chai.expect
 chai.use(chaiAsPromised)
 
 const { ok, on, spec, test } = utils
+const controllers = {
+  basic: {
+    myGet (req, res) {
+      res.send('get')
+    },
+    myPost (req, res) {
+      res.send('post')
+    }
+  }
+}
 
 /* global describe it */
 describe('openapi-enforcer-middleware', () => {
@@ -37,7 +47,7 @@ describe('openapi-enforcer-middleware', () => {
         path: '/foo'
       }])
 
-      const { app, enforcerPromise, enforcerMiddleware, request, start, stop } = utils.server({ doc, initEnforcer: false })
+      const { app, enforcerPromise, enforcerMiddleware, request, start, stop } = await utils.server({ doc, initEnforcer: false })
       app.use('/api', enforcerMiddleware.init(enforcerPromise))
 
       app.get('/api/foo', (req, res) => {
@@ -890,7 +900,6 @@ describe('openapi-enforcer-middleware', () => {
   })
 
   describe('route builder', function () {
-    const controllers = path.resolve(resources, 'controllers')
 
     it('will identify missing controller file', async () => {
       const doc = spec.openapi([{
@@ -899,9 +908,9 @@ describe('openapi-enforcer-middleware', () => {
       doc['x-controller'] = 'foo'
       doc.paths['/'].get['x-operation'] = 'bar'
 
-      const promise = Enforcer(doc)
-      const mw = Middleware(promise)
-      mw.route(path.resolve(resources, ))
+      const openapi = await Enforcer(doc)
+      const mw = Middleware(openapi)
+      mw.route({})
       const results = await on(mw, 'error')
       expect(results.length).to.equal(1)
       expect(results[0].code).to.equal('ENFORCER_MIDDLEWARE_ROUTE_CONTROLLER')
@@ -914,59 +923,12 @@ describe('openapi-enforcer-middleware', () => {
       doc['x-controller'] = 'basic'
       doc.paths['/'].get['x-operation'] = 'foo'
 
-      const promise = Enforcer(doc)
-      const mw = Middleware(promise)
+      const openapi = await Enforcer(doc)
+      const mw = Middleware(openapi)
       mw.route(controllers)
       const results = await on(mw, 'error')
       expect(results.length).to.equal(1)
       expect(results[0].code).to.equal('ENFORCER_MIDDLEWARE_ROUTE_NO_OP')
-    })
-
-    it('will require the controller file to export a function', async function () {
-      const doc = spec.openapi([{
-        responses: [{ code: 200, schema: { type: 'number' }}]
-      }])
-      doc['x-controller'] = 'no-function-exported'
-      doc.paths['/'].get['x-operation'] = 'foo'
-
-      const promise = Enforcer(doc)
-      const mw = Middleware(promise)
-      mw.route(controllers)
-      const results = await on(mw, 'error')
-      expect(results.length).to.equal(1)
-      expect(results[0].code).to.equal('ENFORCER_MIDDLEWARE_ROUTE_FACTORY')
-    })
-
-    it('will catch errors outside the factory function', async function () {
-      const doc = spec.openapi([{
-        responses: [{ code: 200, schema: { type: 'number' }}]
-      }])
-      doc['x-controller'] = 'error-outside'
-      doc.paths['/'].get['x-operation'] = 'foo'
-
-      const promise = Enforcer(doc)
-      const mw = Middleware(promise)
-      mw.route(controllers)
-      const results = await on(mw, 'error')
-      expect(results.length).to.equal(1)
-      expect(results[0]).to.be.instanceOf(Error)
-      expect(results[0].message).to.equal('Outside error')
-    })
-
-    it('will catch errors inside the factory function', async function () {
-      const doc = spec.openapi([{
-        responses: [{ code: 200, schema: { type: 'number' }}]
-      }])
-      doc['x-controller'] = 'error-in-factory'
-      doc.paths['/'].get['x-operation'] = 'foo'
-
-      const promise = Enforcer(doc)
-      const mw = Middleware(promise)
-      mw.route(controllers)
-      const results = await on(mw, 'error')
-      expect(results.length).to.equal(1)
-      expect(results[0]).to.be.instanceOf(Error)
-      expect(results[0].message).to.equal('An error')
     })
 
     it('can build a route', async function () {
@@ -978,10 +940,10 @@ describe('openapi-enforcer-middleware', () => {
       doc['x-controller'] = 'basic'
       doc.paths['/'].get['x-operation'] = 'myGet'
 
-      await test({ doc, routeBuilder: {} }, async (request) => {
+      await test({ doc, routeBuilder: { controllers } }, async (request) => {
         let res = await request({ path: '/' })
         expect(res.statusCode).to.equal(200)
-        expect(res.body).to.equal('get: 0')
+        expect(res.body).to.equal('get')
       })
     })
 
@@ -1002,78 +964,14 @@ describe('openapi-enforcer-middleware', () => {
       doc.paths['/'].get['x-operation'] = 'myGet'
       doc.paths['/'].post['x-operation'] = 'myPost'
 
-      await test({ doc, routeBuilder: {} }, async (request) => {
+      await test({ doc, routeBuilder: { controllers } }, async (request) => {
         let res = await request({ path: '/' })
         expect(res.statusCode).to.equal(200)
-        expect(res.body).to.equal('get: 0')
+        expect(res.body).to.equal('get')
 
         res = await request({ method: 'post', path: '/' })
         expect(res.statusCode).to.equal(200)
-        expect(res.body).to.equal('post: 0')
-      })
-    })
-
-    it('can inject dependencies as an array', async function () {
-      const doc = spec.openapi([{
-        path: '/',
-        method: 'get',
-        responses: [{ code: 200, schema: { type: 'string' }}]
-      }])
-      doc['x-controller'] = 'basic'
-      doc.paths['/'].get['x-operation'] = 'myGet'
-
-      await test({ doc, routeBuilder: { dependencies: ['a', 2] } }, async (request) => {
-        let res = await request({ path: '/' })
-        expect(res.statusCode).to.equal(200)
-        expect(res.body).to.equal('get: 2 a,2')
-      })
-    })
-
-    it('can inject dependencies from a map', async function () {
-      const doc = spec.openapi([{
-        path: '/',
-        method: 'get',
-        responses: [{ code: 200, schema: { type: 'string' }}]
-      }])
-      doc['x-controller'] = 'basic'
-      doc.paths['/'].get['x-operation'] = 'myGet'
-
-      await test({ doc, routeBuilder: { dependencies: { basic: ['a', 'b', 'c'], foo: [] } } }, async (request) => {
-        let res = await request({ path: '/' })
-        expect(res.statusCode).to.equal(200)
-        expect(res.body).to.equal('get: 3 a,b,c')
-      })
-    })
-
-    it('can inject common dependencies from a map', async function () {
-      const doc = spec.openapi([{
-        path: '/',
-        method: 'get',
-        responses: [{ code: 200, schema: { type: 'string' }}]
-      }])
-      doc['x-controller'] = 'basic'
-      doc.paths['/'].get['x-operation'] = 'myGet'
-
-      await test({ doc, routeBuilder: { dependencies: { common: ['foo', 'bar'], basic: ['a', 'b', 'c'], foo: [] } } }, async (request) => {
-        let res = await request({ path: '/' })
-        expect(res.statusCode).to.equal(200)
-        expect(res.body).to.equal('get: 5 a,b,c,foo,bar')
-      })
-    })
-
-    it('can inject common dependencies with a different common dependency key from a map', async function () {
-      const doc = spec.openapi([{
-        path: '/',
-        method: 'get',
-        responses: [{ code: 200, schema: { type: 'string' }}]
-      }])
-      doc['x-controller'] = 'basic'
-      doc.paths['/'].get['x-operation'] = 'myGet'
-
-      await test({ doc, routeBuilder: { commonDependencyKey: 'bar', dependencies: { common: ['foo', 'bar'], basic: ['a', 'b', 'c'], bar: ['baz'] } } }, async (request) => {
-        let res = await request({ path: '/' })
-        expect(res.statusCode).to.equal(200)
-        expect(res.body).to.equal('get: 4 a,b,c,baz')
+        expect(res.body).to.equal('post')
       })
     })
 
@@ -1084,9 +982,9 @@ describe('openapi-enforcer-middleware', () => {
       // doc['x-controller'] = 'foo'
       // doc.paths['/'].get['x-operation'] = 'bar'
 
-      const promise = Enforcer(doc)
-      const mw = Middleware(promise)
-      mw.route(path.resolve(resources, 'controllers'))
+      const openapi = await Enforcer(doc)
+      const mw = Middleware(openapi)
+      mw.route(controllers)
       const results = await on(mw, 'warning')
       expect(results.length).to.equal(1)
       expect(results[0].code).to.equal('ENFORCER_MIDDLEWARE_ROUTE_NO_MAPPING')
@@ -1099,9 +997,9 @@ describe('openapi-enforcer-middleware', () => {
       doc['x-controller'] = 'foo'
       // doc.paths['/'].get['x-operation'] = 'bar'
 
-      const promise = Enforcer(doc)
-      const mw = Middleware(promise)
-      mw.route(path.resolve(resources, 'controllers'))
+      const openapi = await Enforcer(doc)
+      const mw = Middleware(openapi)
+      mw.route(controllers)
       const results = await on(mw, 'warning')
       expect(results.length).to.equal(1)
       expect(results[0].code).to.equal('ENFORCER_MIDDLEWARE_ROUTE_NO_MAPPING')

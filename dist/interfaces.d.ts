@@ -12,8 +12,6 @@ declare global {
     }
 }
 export interface RouteBuilderOptions {
-    commonDependencyKey: string;
-    lazyLoad?: boolean;
     xController?: string;
     xOperation?: string;
 }

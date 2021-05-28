@@ -1,5 +1,5 @@
-/// <reference path="../../../src/interfaces.ts" />
 import express from 'express'
+import { RouteControllerMap } from '../../..'
 
 interface User {
   id: string
@@ -7,7 +7,7 @@ interface User {
   email: string
 }
 
-export default function () {
+export default function (): RouteControllerMap {
   return {
     async addUser (req: express.Request, res: express.Response) {
       const { body, mockStore } = req.enforcer!

@@ -16,7 +16,9 @@ export interface DocsOptions {
     title: string // The title to use for the page. Defaults to OpenAPI spec title.
 }
 
-export function docsMiddleware (enforcerPromise: Promise<any>, options?: Partial<DocsOptions>) {
+export type PartialDocsOptions = Partial<DocsOptions>
+
+export function docsMiddleware (openapi: any, options?: Partial<DocsOptions>) {
     const redocPath = getRedocModulePath()
 
     if (options === undefined) options = {}
@@ -35,35 +37,29 @@ export function docsMiddleware (enforcerPromise: Promise<any>, options?: Partial
     if (!('postRedocInitScripts' in options)) options.postRedocInitScripts = []
 
     let indexHTML = ''
-    
+
     debug('Docs middleware initialized')
 
-    // @ts-ignore
-    return function (req: Express.Request, res: Express.Response, next: Express.NextFunction) {
-        // Docs don't require initialization
-        enforcerPromise
-            .then(async openapi => {
-                switch (req.path) {
-                    case '/':
-                        res.set('content-type', 'text/html')
-                        res.status(200)
-                        if (!indexHTML) indexHTML = getIndexHtml(openapi, req.baseUrl, options as DocsOptions)
-                        res.send(indexHTML)
-                        break
-                    case '/openapi.json':
-                        res.set('content-type', 'application/json')
-                        res.status(200)
-                        res.send(await openapi.getBundledDefinition())
-                        break
-                    case '/redoc.js':
-                        const filePath = path.resolve(path.dirname(redocPath), 'redoc.standalone.js')
-                        res.sendFile(filePath)
-                        break
-                    default:
-                        res.sendStatus(404)
-                }
-            })
-            .catch(next)
+    return async function (req: Express.Request, res: Express.Response) {
+        switch (req.path) {
+            case '/':
+                res.set('content-type', 'text/html')
+                res.status(200)
+                if (!indexHTML) indexHTML = getIndexHtml(openapi, req.baseUrl, options as DocsOptions)
+                res.send(indexHTML)
+                break
+            case '/openapi.json':
+                res.set('content-type', 'application/json')
+                res.status(200)
+                res.send(await openapi.getBundledDefinition())
+                break
+            case '/redoc.js':
+                const filePath = path.resolve(path.dirname(redocPath), 'redoc.standalone.js')
+                res.sendFile(filePath)
+                break
+            default:
+                res.sendStatus(404)
+        }
     }
 }
 

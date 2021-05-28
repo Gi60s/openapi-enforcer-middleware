@@ -10,4 +10,5 @@ export interface DocsOptions {
     styleSheets: string[];
     title: string;
 }
-export declare function docsMiddleware(enforcerPromise: Promise<any>, options?: Partial<DocsOptions>): (req: Express.Request, res: Express.Response, next: Express.NextFunction) => void;
+export declare type PartialDocsOptions = Partial<DocsOptions>;
+export declare function docsMiddleware(openapi: any, options?: Partial<DocsOptions>): (req: Express.Request, res: Express.Response) => Promise<void>;

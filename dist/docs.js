@@ -7,7 +7,7 @@ exports.docsMiddleware = void 0;
 const debug_1 = __importDefault(require("debug"));
 const path_1 = __importDefault(require("path"));
 const debug = debug_1.default('openapi-enforcer-middleware:docs');
-function docsMiddleware(enforcerPromise, options) {
+function docsMiddleware(openapi, options) {
     const redocPath = getRedocModulePath();
     if (options === undefined)
         options = {};
@@ -33,31 +33,27 @@ function docsMiddleware(enforcerPromise, options) {
         options.postRedocInitScripts = [];
     let indexHTML = '';
     debug('Docs middleware initialized');
-    return function (req, res, next) {
-        enforcerPromise
-            .then(async (openapi) => {
-            switch (req.path) {
-                case '/':
-                    res.set('content-type', 'text/html');
-                    res.status(200);
-                    if (!indexHTML)
-                        indexHTML = getIndexHtml(openapi, req.baseUrl, options);
-                    res.send(indexHTML);
-                    break;
-                case '/openapi.json':
-                    res.set('content-type', 'application/json');
-                    res.status(200);
-                    res.send(await openapi.getBundledDefinition());
-                    break;
-                case '/redoc.js':
-                    const filePath = path_1.default.resolve(path_1.default.dirname(redocPath), 'redoc.standalone.js');
-                    res.sendFile(filePath);
-                    break;
-                default:
-                    res.sendStatus(404);
-            }
-        })
-            .catch(next);
+    return async function (req, res) {
+        switch (req.path) {
+            case '/':
+                res.set('content-type', 'text/html');
+                res.status(200);
+                if (!indexHTML)
+                    indexHTML = getIndexHtml(openapi, req.baseUrl, options);
+                res.send(indexHTML);
+                break;
+            case '/openapi.json':
+                res.set('content-type', 'application/json');
+                res.status(200);
+                res.send(await openapi.getBundledDefinition());
+                break;
+            case '/redoc.js':
+                const filePath = path_1.default.resolve(path_1.default.dirname(redocPath), 'redoc.standalone.js');
+                res.sendFile(filePath);
+                break;
+            default:
+                res.sendStatus(404);
+        }
     };
 }
 exports.docsMiddleware = docsMiddleware;

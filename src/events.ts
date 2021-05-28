@@ -7,13 +7,13 @@ const handlers: { [key: string]: Array<Function> } = {}
 
 export function emit (type: types, ...args: Array<any>) {
     debug('Event emitted: ' + type, ...args)
-    if (handlers[type]) {
-        process.nextTick(() => {
+    process.nextTick(() => {
+        if (handlers[type]) {
             handlers[type].forEach(f => {
                 f(...args)
             })
-        })
-    }
+        }
+    })
 }
 
 export function on (type: types, handler: Function) {
