@@ -5,7 +5,7 @@ export { Controllers as RouteControllersMap, ControllersMap as RouteControllerMa
 export { RouteBuilderOptions as RouteOptions, MiddlewareOptions as InitOptions } from './interfaces';
 export { PartialDocsOptions as DocsOptions } from './docs';
 export default function OpenAPIEnforcerMiddleware(openapi: any): {
-    docs(options?: Partial<Partial<import("./docs").DocsOptions>> | undefined): (req: import("express").Request<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>>, res: import("express").Response<any, Record<string, any>>) => Promise<void>;
+    docs(options?: Partial<Partial<import("./docs").DocsOptions>> | undefined): (req: import("express").Request<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>>, res: import("express").Response<any, Record<string, any>>, next: import("express").NextFunction) => void;
     init(options?: I.MiddlewareOptions | undefined): I.Middleware;
     mock(): (req: import("express").Request<import("express-serve-static-core").ParamsDictionary, any, any, import("qs").ParsedQs, Record<string, any>>, res: import("express").Response<any, Record<string, any>>, next: import("express").NextFunction) => void;
     on: typeof on;

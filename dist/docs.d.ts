@@ -5,10 +5,10 @@ export interface DocsOptions {
     postRedocInitScripts: string[];
     redoc: {
         cdnVersion?: string;
-        options?: Record<string, unknown>;
+        options?: any;
     };
     styleSheets: string[];
     title: string;
 }
 export declare type PartialDocsOptions = Partial<DocsOptions>;
-export declare function docsMiddleware(openapi: any, options?: Partial<DocsOptions>): (req: Express.Request, res: Express.Response) => Promise<void>;
+export declare function docsMiddleware(openapi: any, options?: Partial<DocsOptions>): (req: Express.Request, res: Express.Response, next: Express.NextFunction) => void;

@@ -33,7 +33,7 @@ function docsMiddleware(openapi, options) {
         options.postRedocInitScripts = [];
     let indexHTML = '';
     debug('Docs middleware initialized');
-    return async function (req, res) {
+    return function (req, res, next) {
         switch (req.path) {
             case '/':
                 res.set('content-type', 'text/html');
@@ -43,9 +43,13 @@ function docsMiddleware(openapi, options) {
                 res.send(indexHTML);
                 break;
             case '/openapi.json':
-                res.set('content-type', 'application/json');
-                res.status(200);
-                res.send(await openapi.getBundledDefinition());
+                openapi.getBundledDefinition()
+                    .then((def) => {
+                    res.set('content-type', 'application/json');
+                    res.status(200);
+                    res.send(def);
+                })
+                    .catch(next);
                 break;
             case '/redoc.js':
                 const filePath = path_1.default.resolve(path_1.default.dirname(redocPath), 'redoc.standalone.js');
