@@ -77,7 +77,10 @@ export function routeBuilder (openapi: any, controllers: Controllers, options?: 
             // load the operation handler
             const handler = operationsMap.get(operation)!
             try {
-                handler(req, res, next)
+                const result = handler(req, res, next)
+                if (result instanceof Promise || result.then === 'function' && result.catch === 'function') {
+                    result.catch(next)
+                }
             } catch(err) {
                 next(err)
             }
