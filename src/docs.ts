@@ -41,7 +41,7 @@ export function docsMiddleware (openapi: any, options?: Partial<DocsOptions>) {
 
     debug('Docs middleware initialized')
 
-    return async function (req: Express.Request, res: Express.Response) {
+    return function (req: Express.Request, res: Express.Response, next: Express.NextFunction) {
         switch (req.path) {
             case '/':
                 res.set('content-type', 'text/html')
@@ -50,9 +50,13 @@ export function docsMiddleware (openapi: any, options?: Partial<DocsOptions>) {
                 res.send(indexHTML)
                 break
             case '/openapi.json':
-                res.set('content-type', 'application/json')
-                res.status(200)
-                res.send(await openapi.getBundledDefinition())
+                openapi.getBundledDefinition()
+                    .then((def: any) => {
+                        res.set('content-type', 'application/json')
+                        res.status(200)
+                        res.send(def)
+                    })
+                    .catch(next)
                 break
             case '/redoc.js':
                 const filePath = path.resolve(path.dirname(redocPath), 'redoc.standalone.js')
