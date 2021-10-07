@@ -78,7 +78,7 @@ export function routeBuilder (openapi: any, controllers: Controllers, options?: 
             const handler = operationsMap.get(operation)!
             try {
                 const result = handler(req, res, next)
-                if (result instanceof Promise || result.then === 'function' && result.catch === 'function') {
+                if (result instanceof Promise || typeof result?.then === 'function' && typeof result?.catch === 'function') {
                     result.catch(next)
                 }
             } catch(err) {
