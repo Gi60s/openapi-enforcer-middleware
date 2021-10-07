@@ -182,6 +182,14 @@ exports.server = async function (options) {
   }
 }
 
+exports.silence = function () {
+  const e = console.error
+  console.error = () => {}
+  return function restore () {
+    console.error = e
+  }
+}
+
 
 
 function buildPaths (doc, opts, version) {
