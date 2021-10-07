@@ -1,53 +1,25 @@
 {
-  "name": "openapi-enforcer-middleware",
-  "version": "1.2.4",
-  "description": "An express middleware that makes it easy to write web services that follow an Open API specification.",
-  "main": "index.js",
+  "name": "website",
+  "version": "1.0.0",
+  "private": true,
   "scripts": {
-    "docs:build": "markdown-docs build docs-src docs",
-    "docs:dev": "markdown-docs dev docs-src",
-    "test": "mocha test"
+    "dev": "nuxt",
+    "build": "nuxt build",
+    "start": "nuxt start",
+    "generate": "nuxt generate",
+    "deploy": "push-dir --dir=dist --force --branch=gh-pages --cleanup",
+    "export": "nuxt export",
+    "serve": "nuxt serve"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/byu-oit/openapi-enforcer-middleware.git"
-  },
-  "types": "index.d.ts",
-  "keywords": [
-    "openapi",
-    "swagger",
-    "express",
-    "middleware",
-    "enforcer",
-    "validate",
-    "parse",
-    "format",
-    "openapi-enforcer"
-  ],
-  "author": "James Speirs <james.speirs@gmail.com>",
-  "license": "Apache-2.0",
-  "bugs": {
-    "url": "https://github.com/byu-oit/openapi-enforcer-middleware/issues"
-  },
-  "homepage": "https://github.com/byu-oit/openapi-enforcer-middleware#readme",
   "dependencies": {
-    "debug": "^3.2.6"
+    "@nuxt/content": "^1.13.1",
+    "@nuxtjs/axios": "^5.13.1",
+    "element-ui": "^2.15.0",
+    "nuxt": "^2.15.0",
+    "prism-themes": "^1.5.0",
+    "push-dir": "^0.4.1",
+    "stylus": "^0.54.8",
+    "stylus-loader": "^3.0.2"
   },
-  "peerDependencies": {
-    "openapi-enforcer": ">= 1.2.0"
-  },
-  "devDependencies": {
-    "@gi60s/markdown-docs": "0.0.10",
-    "@types/express": "^4.17.11",
-    "body-parser": "^1.19.0",
-    "chai": "^4.2.0",
-    "chai-as-promised": "^7.1.1",
-    "express": "^4.17.1",
-    "mocha": "^5.2.0",
-    "nyc": "^14.1.1",
-    "openapi-enforcer": "^1.12.6",
-    "request": "^2.88.0",
-    "request-promise-native": "^1.0.7",
-    "standard": "^12.0.1"
-  }
+  "devDependencies": {}
 }

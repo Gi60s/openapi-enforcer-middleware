@@ -1,27 +1,24 @@
-# Open API Enforcer Middleware
+# website
 
-An express middleware that makes it easy to write web services that follow an Open API specification by leveraging the tools provided in the [openapi-enforcer](https://www.npmjs.com/package/openapi-enforcer) package.
-
-## Features
-
-- Supports OpenAPI (Swagger) 2.0 and 3.x
-- Express middleware
-- Automatically link JavaScript functions to path endpoints
-- Parses and validates incoming requests
-- Validates responses prior to sending
-- Automatic response mocking in development
-- Option for manual response mocking in production
-- Highly configurable
-- Accepts middleware plugins
-
-## Installation
-
-This package has [openapi-enforcer](https://www.npmjs.com/package/openapi-enforcer) as a peer dependency, so both must be installed.
+## Build Setup
 
 ```bash
-npm install openapi-enforcer openapi-enforcer-middleware
+# install dependencies
+$ npm install
+
+# serve with hot reload at localhost:3000
+$ npm run dev
+
+# build for production and launch server
+$ npm run build
+$ npm run start
+
+# generate static project
+$ npm run generate
+
+# to deploy
+$ npm run generate
+$ npm run deploy
 ```
 
-## Documentation
-
-https://byu-oit.github.io/openapi-enforcer-middleware/
+For detailed explanation on how things work, check out [Nuxt.js docs](https://nuxtjs.org).

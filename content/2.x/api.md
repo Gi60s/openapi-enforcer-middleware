@@ -190,20 +190,19 @@ Add an event listener. Currently, only the [route](#route) middleware emits even
 
 ## Route
 
-`route (controllersDirectory: string, depdendencies?: Array | Object, options?: RouteOptions`)`
+`route (controllers: Object, options?: RouteOptions`)`
 
-Automatically generate routes based on your OpenAPI document. This is done by specifying an `x-controller` and `x-operation` properties in your OpenAPI document and then telling this route middleware where to look to link those values to executable code.
+Automatically routes requests to functions based on your OpenAPI document. This is done by specifying an `x-controller` and `x-operation` properties in your OpenAPI document and then telling this route middleware where to look to link those values to executable code.
 
 The big advantage of using this middleware is that you don't have to update your express routes manually when your OpenAPI document changes.
 
-To fully understand how this works, check out the [Route Builder](route-builder) documentation.
+For details, check out the [Route Builder](route-builder) documentation.
 
 **Parameters**
 
 | Parameter | Type | Description |
 | --------- | ---- | ----------- |
-| controllersDirectory | `string` | The directory path that contains your controller files. | 
-| dependencies | `Array` or `Object` | Dependencies to inject into your controller factories. Learn more about this on the [Route Builder page](./route-builder#dependency-injection). |
+| controllers | `Object` | The route controller map object. | 
 | options | [Route Options](#route-options) | An optional parameter that can define how the route builder works. |
 
 ###### Route Options
@@ -219,12 +218,13 @@ To fully understand how this works, check out the [Route Builder](route-builder)
 
 **Example**
 
-This example won't make much sense on its own. Check of the [Route Builder](route-builder) documentation for more details.
+Check of the [Route Builder](route-builder) documentation for more details and examples.
 
 ```js
 const Enforcer = require('openapi-enforcer')
 const EnforcerMiddleware = require('openapi-enforcer-middleware')
 const express = require('express')
+const dbClient = require('./db')
 
 const app = express()
 
@@ -234,7 +234,21 @@ const enforcerMiddleware = EnforcerMiddleware(Enforcer('./openapi.yml'))
 app.use(enforcerMiddleware.init())
 
 // add route builder middleware
-app.use(enforcerMiddleware.route('./controllers'))
+app.use(enforcer.route({
+  users: {
+    async listUsers (req, res) {
+      const { rows } = dbClient.query('SELECT * FROM users')
+      const users = rows.map(row => {
+        return {
+          id: row.id,
+          name: row.name,
+          email: row.email
+        }
+      })
+      res.enforcer.send(users)
+    }
+  }
+}))
 
 app.listen(3000)
 ```

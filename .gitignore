@@ -1,7 +1,7 @@
 .idea
 node_modules
-website/.nuxt
-website/dist
+.nuxt
+dist
 
 ### macOS template
 *.DS_Store
