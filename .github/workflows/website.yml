@@ -1,0 +1,36 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches:
+      - website
+  pull_request:
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+          cache: npm
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Static Content
+        run: npm run generate
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.ref == 'refs/heads/website' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./dist
