@@ -7,7 +7,6 @@
     "build": "nuxt build",
     "start": "nuxt start",
     "generate": "nuxt generate",
-    "deploy": "push-dir --dir=dist --force --branch=gh-pages --cleanup",
     "export": "nuxt export",
     "serve": "nuxt serve"
   },
@@ -17,9 +16,7 @@
     "element-ui": "^2.15.0",
     "nuxt": "^2.15.0",
     "prism-themes": "^1.5.0",
-    "push-dir": "^0.4.1",
     "stylus": "^0.54.8",
     "stylus-loader": "^3.0.2"
-  },
-  "devDependencies": {}
+  }
 }
