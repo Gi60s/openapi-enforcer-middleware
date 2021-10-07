@@ -18,8 +18,6 @@ async function server () {
 
   app.use('/api', enforcer.init())
 
-// If using TypeScript you'll want to specify your controllers via an object with imports
-// otherwise the transpiled code may not have access to the controllers.
   app.use('/api', enforcer.route({
     users: users()
   }))
