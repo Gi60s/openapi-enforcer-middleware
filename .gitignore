@@ -1,7 +1,7 @@
 .idea
 node_modules
 .nuxt
-website/dist
+dist
 .nyc_output
 coverage
 
