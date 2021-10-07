@@ -22,7 +22,6 @@ const Middleware = require('../dist')
 const path = require('path')
 const utils = require('../test-resources/test-utils')
 
-const resources = path.resolve(__dirname, '..', 'test-resources')
 const expect = chai.expect
 chai.use(chaiAsPromised)
 
@@ -47,8 +46,8 @@ describe('openapi-enforcer-middleware', () => {
         path: '/foo'
       }])
 
-      const { app, enforcerPromise, enforcerMiddleware, request, start, stop } = await utils.server({ doc, initEnforcer: false })
-      app.use('/api', enforcerMiddleware.init(enforcerPromise))
+      const { app, enforcerMiddleware, request, start, stop } = await utils.server({ doc, initEnforcer: false })
+      app.use('/api', enforcerMiddleware.init())
 
       app.get('/api/foo', (req, res) => {
         res.sendStatus(200)
@@ -317,6 +316,8 @@ describe('openapi-enforcer-middleware', () => {
     })
 
     it('enforces write only properties for response bodies', async () => {
+      const unsilence = utils.silence()
+
       const doc = spec.openapi([{
         method: 'get',
         path: '/',
@@ -334,6 +335,8 @@ describe('openapi-enforcer-middleware', () => {
         let res = await request({ path: '/', method: 'get' })
         expect(res.statusCode).to.equal(500)
       })
+
+      unsilence()
     })
   })
 
@@ -813,6 +816,8 @@ describe('openapi-enforcer-middleware', () => {
   describe('response enforcer', () => {
 
     it('can validate bad responses and automatically send a 500 error', async () => {
+      const unsilence = utils.silence()
+
       const doc = spec.openapi([{
         path: '/',
         parameters: [{ name: 'validate', in: 'query', schema: { type: 'boolean' } }],
@@ -852,6 +857,8 @@ describe('openapi-enforcer-middleware', () => {
         // invalid response not caught
         expect(caughtError).to.equal(false)
       })
+
+      unsilence()
     })
 
     it('can catch bad response if handleBadResponse is false', async () => {
