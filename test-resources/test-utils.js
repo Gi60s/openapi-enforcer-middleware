@@ -67,7 +67,7 @@ exports.test = async function (options, handler) {
  * @param {boolean} [options.fallbackMocking=false]
  * @param {object} [options.routeBuilder]
  * @param {function} [options.routeHook]
- * @returns {{ app: Express, enforcerPromise: Promise, enforcerMiddleware: *, request: function, stop: function, start: function }}
+ * @returns {Promise<{ app: Express, enforcerPromise: Promise, enforcerMiddleware: *, request: function, stop: function, start: function }>}
  */
 exports.server = async function (options) {
   const app = express()
