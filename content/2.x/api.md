@@ -26,8 +26,8 @@ This method is not technically a constructor function because it does not use th
 **Example**
 
 ```js
-const enforcerPromise = Enforcer('./openapi.yml')
-const enforcerMiddleware = EnforcerMiddleware(enforcerPromise)
+const enforcer = await Enforcer('./openapi.yml')
+const enforcerMiddleware = EnforcerMiddleware(enforcer)
 ```
 
 ## Docs
@@ -62,22 +62,27 @@ const Enforcer = require('openapi-enforcer')
 const EnforcerMiddleware = require('openapi-enforcer-middleware')
 const express = require('express')
 
-const app = express()
+async function run () {
+  const app = express()
 
-const enforcerMiddleware = EnforcerMiddleware(Enforcer('./openapi.yml'))
+  const enforcerMiddleware = EnforcerMiddleware(await Enforcer('./openapi.yml'))
 
-// visiting http://<your-server.com>/docs will show the docs
-app.use('/docs', enforcerMiddleware.docs({
-  padding: 0,
-  preRedocInitScripts: ['/before-init.js'],
-  postRedocInitScripts: ['/after-init.js'],
-  redoc: {
-    cdnVersion: 'next',
-    options: {}
-  },
-  styleSheets: ['/my-css.css'],
-  title: 'My API'
-}))
+  // visiting http://<your-server.com>/docs will show the docs
+  app.use('/docs', enforcerMiddleware.docs({
+    padding: 0,
+    preRedocInitScripts: ['/before-init.js'],
+    postRedocInitScripts: ['/after-init.js'],
+    redoc: {
+      cdnVersion: 'next',
+      options: {}
+    },
+    styleSheets: ['/my-css.css'],
+    title: 'My API'
+  }))
+
+}
+
+run().catch(console.error)
 ```
 
 ## Init
@@ -117,21 +122,25 @@ const express = require('express')
 
 const app = express()
 
-const enforcerMiddleware = EnforcerMiddleware(Enforcer('./openapi.yml'))
-const initOptions = {
-  allowOtherQueryParameters: false,
-  handleBadRequest: true,
-  handleBadResponse: true,
-  handleNotFound: true,
-  handleMethodNotAllowed: true,
-  mockHeader: 'x-mock',
-  mockQuery: 'x-mock',
-  mockStore: cookieStore,
-  xMockImplemented: 'x-mock-implemented'
-}
-app.use(enforcerMiddleware.init(initOptions))
+async function run () {
+  const enforcerMiddleware = EnforcerMiddleware(await Enforcer('./openapi.yml'))
+  const initOptions = {
+    allowOtherQueryParameters: false,
+    handleBadRequest: true,
+    handleBadResponse: true,
+    handleNotFound: true,
+    handleMethodNotAllowed: true,
+    mockHeader: 'x-mock',
+    mockQuery: 'x-mock',
+    mockStore: cookieStore,
+    xMockImplemented: 'x-mock-implemented'
+  }
+  app.use(enforcerMiddleware.init(initOptions))
 
-// add paths and start server listening...
+  // add paths and start server listening...
+}
+
+run().catch(console.error)
 ```
 
 ## Mock
@@ -155,22 +164,26 @@ const Enforcer = require('openapi-enforcer')
 const EnforcerMiddleware = require('openapi-enforcer-middleware')
 const express = require('express')
 
-const app = express()
+async function run () {
+  const app = express()
+  
+  const enforcerMiddleware = EnforcerMiddleware(await Enforcer('./openapi.yml'))
+  
+  // initialize enforcer middleware
+  app.use(enforcerMiddleware.init())
+  
+  // add your implemented routes here
+  app.get('/', (req, res) => {
+    res.enforcer.send('OK')
+  })
+  
+  // add fallback mocking middleware here
+  app.use(enforcerMiddleware.mock())
+  
+  app.listen(3000)
+}
 
-const enforcerMiddleware = EnforcerMiddleware(Enforcer('./openapi.yml'))
-
-// initialize enforcer middleware
-app.use(enforcerMiddleware.init())
-
-// add your implemented routes here
-app.get('/', (req, res) => {
-  res.enforcer.send('OK')
-})
-
-// add fallback mocking middleware here
-app.use(enforcerMiddleware.mock())
-
-app.listen(3000)
+run().catch(console.error)
 ``` 
 
 ## On
@@ -226,29 +239,33 @@ const EnforcerMiddleware = require('openapi-enforcer-middleware')
 const express = require('express')
 const dbClient = require('./db')
 
-const app = express()
-
-const enforcerMiddleware = EnforcerMiddleware(Enforcer('./openapi.yml'))
-
-// initialize enforcer middleware
-app.use(enforcerMiddleware.init())
-
-// add route builder middleware
-app.use(enforcer.route({
-  users: {
-    async listUsers (req, res) {
-      const { rows } = dbClient.query('SELECT * FROM users')
-      const users = rows.map(row => {
-        return {
-          id: row.id,
-          name: row.name,
-          email: row.email
-        }
-      })
-      res.enforcer.send(users)
+async function run () {
+  const app = express()
+  
+  const enforcerMiddleware = EnforcerMiddleware(await Enforcer('./openapi.yml'))
+  
+  // initialize enforcer middleware
+  app.use(enforcerMiddleware.init())
+  
+  // add route builder middleware
+  app.use(enforcer.route({
+    users: {
+      async listUsers (req, res) {
+        const { rows } = dbClient.query('SELECT * FROM users')
+        const users = rows.map(row => {
+          return {
+            id: row.id,
+            name: row.name,
+            email: row.email
+          }
+        })
+        res.enforcer.send(users)
+      }
     }
-  }
-}))
+  }))
+  
+  app.listen(3000)
+}
 
-app.listen(3000)
+run().catch(console.error)
 ```

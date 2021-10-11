@@ -45,37 +45,41 @@ const express = require('express')
 const Enforcer = require('openapi-enforcer')
 const EnforcerMiddleware = require('openapi-enforcer-middleware')
 
-// Create the express app
-const app = express()
+async function run() {
+  // Create the express app
+  const app = express()
 
-// Specify the OpenAPI specification to enforce.
-const enforcer = Enforcer('./openapi.yml')
+  // Specify the OpenAPI specification to enforce.
+  const enforcer = await Enforcer('./openapi.yml')
 
-// Add the OpenAPI Enforcer Middleware to the Express app. 
-app.use(EnforcerMiddleware.init(enforcer))
+  // Add the OpenAPI Enforcer Middleware to the Express app. 
+  app.use(EnforcerMiddleware.init(enforcer))
 
-// Create an express route.
-// Because of the Enforcer middleware we know this route will only 
-// be executed if the request is valid.
-app.get('/', async (req, res) => {
-  
-  // We know the query's limit property will be a valid number
-  // from 1 to 100. We also know that limit will always have a
-  // value because we set a default value.
-  const limit = req.enforcer.query.limit
-  const results = await loadItems(limit)
+  // Create an express route.
+  // Because of the Enforcer middleware we know this route will only 
+  // be executed if the request is valid.
+  app.get('/', async (req, res) => {
 
-  // Here we also validate that we're sending a valid response.
-  // We don't want to break the contract that our OpenAPI document
-  // has defined.
-  res.enforcer.send(result)
-})
+    // We know the query's limit property will be a valid number
+    // from 1 to 100. We also know that limit will always have a
+    // value because we set a default value.
+    const limit = req.enforcer.query.limit
+    const results = await loadItems(limit)
 
-// Start the server listening
-app.listen(3000, (err) => {
-  if (err) return console.error(err.stack)
-  console.log('Listening on port 3000')
-})
+    // Here we also validate that we're sending a valid response.
+    // We don't want to break the contract that our OpenAPI document
+    // has defined.
+    res.enforcer.send(result)
+  })
+
+  // Start the server listening
+  app.listen(3000, (err) => {
+    if (err) return console.error(err.stack)
+    console.log('Listening on port 3000')
+  })
+} 
+
+run().catch(console.error)
 ```
 
 **Mock with Sessions**

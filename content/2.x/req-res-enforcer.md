@@ -12,25 +12,29 @@ const Enforcer = require('openapi-enforcer')
 const EnforcerMiddleware = require('openapi-enforcer-middleware')
 const express = require('express')
 
-const app = express()
+async function run () {
+  const app = express()
+  
+  const enforcerMiddleware = EnforcerMiddleware(await Enforcer('./openapi.yml'))
+  
+  // initialize enforcer middleware
+  app.use(enforcerMiddleware.init())
+  
+  // add a route
+  app.get('/', (req, res) => {
+    // get the limit query parameter that has been validated and deserialized
+    const limit = req.enforcer.query.limit
+  
+    // ... do some processing
+  
+    // send back a validated and serialized response
+    res.enforcer.send([])
+  })
+  
+  app.listen(3000)
+}
 
-const enforcerMiddleware = EnforcerMiddleware(Enforcer('./openapi.yml'))
-
-// initialize enforcer middleware
-app.use(enforcerMiddleware.init())
-
-// add a route
-app.get('/', (req, res) => {
-  // get the limit query parameter that has been validated and deserialized
-  const limit = req.enforcer.query.limit
-
-  // ... do some processing
-
-  // send back a validated and serialized response
-  res.enforcer.send([])
-})
-
-app.listen(3000)
+run().catch(console.error)
 ```
 
 ## Request Enforcer Object

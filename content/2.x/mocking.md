@@ -60,22 +60,26 @@ const express = require('express')
 const Enforcer = require('openapi-enforcer')
 const EnforcerMiddleware = require('openapi-enforcer-middleware')
 
-const enforcerMiddleware = EnforcerMiddleware(Enforcer('./openapi.yml'))
-app.use(enforcerMiddleware.init())
+async function run () {
+  const enforcerMiddleware = EnforcerMiddleware(await Enforcer('./openapi.yml'))
+  app.use(enforcerMiddleware.init())
+  
+  app.get('/api/users', (req, res) => {
+    if (req.enforcer.mockStore) {
+      // if the request is for a mocked implemented request then we'll get here
+      // ... do some processing
+      res.enforcer.send([])  
+  
+    } else {
+      // ... run non-mocked processing here
+      res.enforcer.send([])
+    }
+  })
+  
+  app.listen(3000)
+}
 
-app.get('/api/users', (req, res) => {
-  if (req.enforcer.mockStore) {
-    // if the request is for a mocked implemented request then we'll get here
-    // ... do some processing
-    res.enforcer.send([])  
-
-  } else {
-    // ... run non-mocked processing here
-    res.enforcer.send([])
-  }
-})
-
-app.listen(3000)
+run().catch(console.error)
 ```
 
 ### Mock from Example
@@ -118,40 +122,44 @@ const express = require('express')
 const Enforcer = require('openapi-enforcer')
 const EnforcerMiddleware = require('openapi-enforcer-middleware')
 
-const enforcerMiddleware = EnforcerMiddleware(Enforcer('./openapi.yml'))
-app.use(enforcerMiddleware.init())
+async function run () {
+  const enforcerMiddleware = EnforcerMiddleware(await Enforcer('./openapi.yml'))
+  app.use(enforcerMiddleware.init())
+  
+  app.get('/api/users', async (req, res) => {
+    const { mockStore } = req.enforcer
+  
+    // this request is a request for a mocked response
+    if (mockStore) {
+      const users = (await mockStore.get('users')) || []
+      res.enforcer.send(users)  
+  
+    } else {
+      // ... run non-mocked processing here
+      res.enforcer.send([])
+    }
+  })
+  
+  app.post('/api/users', async (req, res) => {
+    const { body, mockStore } = req.enforcer
+  
+    // this request is a request for a mocked response
+    if (mockStore) {
+      const users = (await mockStore.get('users')) || []
+      users.push(body)
+      await mockStore.set('users', users)
+      res.enforcer.send(users)  
+  
+    } else {
+      // ... run non-mocked processing here
+      res.enforcer.send([])
+    }
+  })
+  
+  app.listen(3000)
+}
 
-app.get('/api/users', async (req, res) => {
-  const { mockStore } = req.enforcer
-
-  // this request is a request for a mocked response
-  if (mockStore) {
-    const users = (await mockStore.get('users')) || []
-    res.enforcer.send(users)  
-
-  } else {
-    // ... run non-mocked processing here
-    res.enforcer.send([])
-  }
-})
-
-app.post('/api/users', async (req, res) => {
-  const { body, mockStore } = req.enforcer
-
-  // this request is a request for a mocked response
-  if (mockStore) {
-    const users = (await mockStore.get('users')) || []
-    users.push(body)
-    await mockStore.set('users', users)
-    res.enforcer.send(users)  
-
-  } else {
-    // ... run non-mocked processing here
-    res.enforcer.send([])
-  }
-})
-
-app.listen(3000)
+run().catch(console.error)
 ```
 
 ### Default Mock Store
@@ -227,15 +235,19 @@ const EnforcerMiddleware = require('openapi-enforcer-middleware')
 const MyCustomMockStore = require('./my-custom-mock-store')
 const express = require('express')
 
-const app = express()
-
-const enforcerMiddleware = EnforcerMiddleware(Enforcer('./openapi.yml'))
-const initOptions = {
-  mockStore: MyCustomMockStore()
+async function run () {
+  const app = express()
+  
+  const enforcerMiddleware = EnforcerMiddleware(await Enforcer('./openapi.yml'))
+  const initOptions = {
+    mockStore: MyCustomMockStore()
+  }
+  app.use(enforcerMiddleware.init(initOptions))
+  
+  // add routes here...
+  
+  app.listen(3000)
 }
-app.use(enforcerMiddleware.init(initOptions))
 
-// add routes here...
-
-app.listen(3000)
+run().catch(console.error)
 ```
