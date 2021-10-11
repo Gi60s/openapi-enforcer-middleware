@@ -248,7 +248,7 @@ export function mockMiddleware () {
     }
 }
 
-function deserializeExample (exception: Enforcer.Exception, example: any, schema: any, unableToMock: (message: string, status: number) => void, callback: (example: any) => void): void {
+function deserializeExample (exception: any, example: any, schema: any, unableToMock: (message: string, status: number) => void, callback: (example: any) => void): void {
     if (isWithinVersion('', '1.1.4')) {
         example = copy(example)
         if (schema) {
