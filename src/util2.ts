@@ -34,34 +34,44 @@ export function findEnforcerParentComponent(current: any, name: string): any {
     }
 }
 
-export function handleRequestError (opts: I.MiddlewareOptions, error: I.StatusError, res: Express.Response, next: Express.NextFunction) {
+export function handleRequestError (opts: I.MiddlewareOptions, error: I.StatusError, req: Express.Request, res: Express.Response, next: Express.NextFunction) {
     const statusCode = error.statusCode
+    const err = errorFromException(error)
     if (statusCode === 404) {
+        req.clientError = err
         if (opts.handleNotFound) {
             res.status(404)
             res.set('content-type', 'text/plain')
             res.send(error.toString())
+        } else if (opts.ignoreRequestErrors === false) {
+            next(err)
         } else {
             next()
         }
     } else if (statusCode === 405) {
+        req.clientError = error
         if (opts.handleMethodNotAllowed) {
             res.status(405)
             res.set('content-type', 'text/plain')
             res.send(error.toString())
+        } else if (opts.ignoreRequestErrors === false) {
+            next(err)
         } else {
             next()
         }
     } else if (!statusCode || statusCode < 500) {
+        req.clientError = error
         if (opts.handleBadRequest) {
             res.status(statusCode || 400)
             res.set('content-type', 'text/plain')
             res.send(error.toString())
+        } else if (opts.ignoreRequestErrors === false) {
+            next(err)
         } else {
             next()
         }
     } else {
-        next(errorFromException(error))
+        next(err)
     }
 }
 
