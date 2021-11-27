@@ -4,6 +4,7 @@ import { IncomingHttpHeaders } from "http";
 declare global {
     namespace Express {
         export interface Request {
+            clientError?: StatusError
             enforcer?: MiddlewareRequestData
         }
 
@@ -82,6 +83,7 @@ export interface MiddlewareOptions {
     handleBadResponse?: boolean                     // if true, a 500 response is sent back automatically, if false the next middleware is called with the error
     handleNotFound?: boolean                        // if true, a 404 response is sent back automatically, if false the `enforcer` property is not set on the req and res objects.
     handleMethodNotAllowed?: boolean                // if true, a 405 response is sent back automatically, if false the `enforcer` property is not set on the req and res objects.
+    ignoreRequestErrors?: boolean                   // if true, next middleware called without an error
     mockHeader?: string                             // if true then manual mocking via header is enabled
     mockQuery?: string                              // if true then manual mocking via query is enabled
     mockStore?: MockStore                           // this mock store to use if the request is a mock request
