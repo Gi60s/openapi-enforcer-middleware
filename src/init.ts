@@ -29,6 +29,7 @@ export function init (openapi: any, options?: I.MiddlewareOptions): I.Middleware
             handleBadResponse: true,
             handleNotFound: true,
             handleMethodNotAllowed: true,
+            ignoreRequestErrors: true,
             mockHeader: 'x-mock',
             mockQuery: 'x-mock',
             mockStore: cookieStore(),
@@ -42,6 +43,7 @@ export function init (openapi: any, options?: I.MiddlewareOptions): I.Middleware
             handleBadResponse: validatorBoolean,
             handleNotFound: validatorBoolean,
             handleMethodNotAllowed: validatorBoolean,
+            ignoreRequestErrors: validatorBoolean,
             mockHeader: validatorString,
             mockQuery: validatorString,
             mockStore: (v: any) => {
@@ -83,7 +85,7 @@ export function init (openapi: any, options?: I.MiddlewareOptions): I.Middleware
 
         if (error) {
             // probably a client error
-            handleRequestError(opts, error, res, next)
+            handleRequestError(opts, error, req, res, next)
             debug('Request failed validation', error)
 
         } else {
