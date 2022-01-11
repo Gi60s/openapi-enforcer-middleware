@@ -184,7 +184,7 @@ function copy2 (value: any, map: Map<any, any>): any {
         const result: any = {}
         map.set(value, result)
         Object.keys(value).forEach(key => {
-            result[key] = copy2(value, map)
+            result[key] = copy2(value[key], map)
         })
         return result
     } else {
