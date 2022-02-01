@@ -77,6 +77,7 @@ export interface MockStore {
 }
 
 export interface MiddlewareOptions {
+    allowMockNoResponseSchema?: boolean             // if true and there is no response schema then an empty response is sent back, if false then a 422 response is sent back
     allowOtherQueryParameters?: boolean | string[]
     baseUrl?: string                                // the base URL to use for the enforcer router
     handleBadRequest?: boolean                      // if true, a 400 response is sent back automatically, if false the `enforcer` property is not set on the req and res objects.

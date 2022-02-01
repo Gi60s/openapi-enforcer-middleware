@@ -723,10 +723,22 @@ describe('openapi-enforcer-middleware', () => {
         await test({ doc }, async (request) => {
           // include mock request and route implemented
           let res = await request({ path: '/?x-mock=204' })
-          expect(res.statusCode).to.equal(422)
-          expect(res.body).to.match(/the spec does not define this response code/i)
+          expect(res.statusCode).to.equal(204)
+          expect(res.body).to.equal('')
         })
       })
+
+      // it('will handle un-mockable status codes if not allowed', async () => {
+      //   const doc = spec.openapi([{
+      //     responses: [{ code: 200, type: 'application/json', schema: { type: 'integer' } }]
+      //   }])
+      //   await test({ doc }, async (request) => {
+      //     // include mock request and route implemented
+      //     let res = await request({ path: '/?x-mock=204' })
+      //     expect(res.statusCode).to.equal(422)
+      //     expect(res.body).to.match(/the spec does not define this response code/i)
+      //   })
+      // })
 
       it('will handle un-mockable content-type', async () => {
         const doc = spec.openapi([{
@@ -760,10 +772,22 @@ describe('openapi-enforcer-middleware', () => {
           await test({ doc }, async (request) => {
             // include mock request and route implemented
             let res = await request({ path: '/?x-mock=200,random' })
-            expect(res.statusCode).to.equal(422)
-            expect(res.body).to.match(/unable to generate a random value/i)
+            expect(res.statusCode).to.equal(200)
+            expect(res.body).to.equal('')
           })
         })
+
+        // it('will handle un-mockable random if schema required', async () => {
+        //   const doc = spec.swagger([{
+        //     responses: [{ code: 200, type: 'application/json' }]
+        //   }])
+        //   await test({ doc }, async (request) => {
+        //     // include mock request and route implemented
+        //     let res = await request({ path: '/?x-mock=200,random' })
+        //     expect(res.statusCode).to.equal(422)
+        //     expect(res.body).to.match(/unable to generate a random value/i)
+        //   })
+        // })
 
       })
 
@@ -803,10 +827,22 @@ describe('openapi-enforcer-middleware', () => {
           await test({ doc }, async (request) => {
             // include mock request and route implemented
             let res = await request({ path: '/?x-mock=200,random' })
-            expect(res.statusCode).to.equal(422)
-            expect(res.body).to.match(/no content types are specified/i)
+            expect(res.statusCode).to.equal(200)
+            expect(res.body).to.equal('')
           })
         })
+
+        // it('will handle un-mockable random if schema required', async () => {
+        //   const doc = spec.openapi([{
+        //     responses: [{ code: 200, type: 'application/json' }]
+        //   }])
+        //   await test({ doc }, async (request) => {
+        //     // include mock request and route implemented
+        //     let res = await request({ path: '/?x-mock=200,random' })
+        //     expect(res.statusCode).to.equal(422)
+        //     expect(res.body).to.match(/no content types are specified/i)
+        //   })
+        // })
 
       })
 

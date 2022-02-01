@@ -65,10 +65,17 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
     const [ contentTypes, acceptsError ] = accepts(mock.statusCode)
     if (acceptsError || contentTypes.length === 0) {
         if (acceptsError) {
-            switch (acceptsError.code) {
-                case 'NO_CODE': return unableToMock('Unable to mock response code. The spec does not define this response code: ' + mock.statusCode, 422)
-                case 'NO_MATCH': return unableToMock('Not acceptable', 406)
-                case 'NO_TYPES_SPECIFIED': return unableToMock('Unable to mock response. No content types are specified for response code: ' + mock.statusCode, 422)
+            if (options.allowMockNoResponseSchema && (acceptsError.code === 'NO_CODE' || acceptsError.code === 'NO_TYPES_SPECIFIED')) {
+                return res.status(+mock.statusCode).send()
+            } else {
+                switch (acceptsError.code) {
+                    case 'NO_CODE':
+                        return unableToMock('Unable to mock response code. The spec does not define this response code: ' + mock.statusCode, 422)
+                    case 'NO_MATCH':
+                        return unableToMock('Not acceptable', 406)
+                    case 'NO_TYPES_SPECIFIED':
+                        return unableToMock('Unable to mock response. No content types are specified for response code: ' + mock.statusCode, 422)
+                }
             }
         }
         return unableToMock('Not acceptable', 406)
@@ -129,6 +136,9 @@ export function mockHandler (req: Express.Request, res: Express.Response, next: 
                 res.set('content-type', contentTypes[0])
 
                 return res.enforcer!.send(value)
+            } else if (options.allowMockNoResponseSchema) {
+                res.status(+mock.statusCode)
+                return res.send()
             } else {
                 return unableToMock('Unable to generate a random value when no schema associated with response', 422)
             }

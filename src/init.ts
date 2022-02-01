@@ -23,6 +23,7 @@ export function getInitStatus (req: Express.Request): { initialized: boolean, ba
 export function init (openapi: any, options?: I.MiddlewareOptions): I.Middleware {
     const opts: I.MiddlewareOptions = normalizeOptions(options, {
         defaults: {
+            allowMockNoResponseSchema: true,
             allowOtherQueryParameters: false,
             baseUrl: null,
             handleBadRequest: true,
@@ -37,6 +38,7 @@ export function init (openapi: any, options?: I.MiddlewareOptions): I.Middleware
         },
         required: [],
         validators: {
+            allowMockNoResponseSchema: validatorBoolean,
             allowOtherQueryParameters: validatorQueryParams,
             baseUrl: v => typeof v !== 'string' && v !== null ? 'Expected a string or null' : '',
             handleBadRequest: validatorBoolean,
