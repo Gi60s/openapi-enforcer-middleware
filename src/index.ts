@@ -11,7 +11,7 @@ export { PartialDocsOptions as DocsOptions } from './docs'
 
 export default function OpenAPIEnforcerMiddleware (openapi: any) {
     return {
-        docs(options?: Partial<PartialDocsOptions>) {
+        docs (options?: Partial<PartialDocsOptions>) {
             return docsMiddleware(openapi, options)
         },
         init (options?: I.MiddlewareOptions): I.Middleware {

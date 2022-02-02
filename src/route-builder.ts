@@ -35,37 +35,46 @@ export function routeBuilder (openapi: any, controllers: Controllers, options?: 
     debug('Initialized with options: ' + JSON.stringify(opts, null, 2))
 
     // build all operations
-    Object.keys(openapi.paths)
-        .forEach(path => {
-            Object.keys(openapi.paths[path])
-                .filter(key => methods.includes(key.toLowerCase()))
-                .forEach(method => {
-                    const operation = openapi.paths[path][method]
-                    operationsMap.set(operation, noop)
+    let openapiError: Error
+    Promise.resolve(openapi)
+        .then(openapi => {
+            Object.keys(openapi.paths).forEach(path => {
+                Object.keys(openapi.paths[path])
+                    .filter(key => methods.includes(key.toLowerCase()))
+                    .forEach(method => {
+                        const operation = openapi.paths[path][method]
+                        operationsMap.set(operation, noop)
 
-                    // get the controller id and operation id
-                    const controllerKey = getControllerValue(operation, opts.xController!) || ''
-                    const operationKey = operation.operationId || operation[opts.xOperation!] || ''
+                        // get the controller id and operation id
+                        const controllerKey = getControllerValue(operation, opts.xController!) || ''
+                        const operationKey = operation.operationId || operation[opts.xOperation!] || ''
 
-                    // verify that the controller id and operation id have been defined for this operation
-                    if (!controllerKey) {
-                        emit('warning', new ErrorCode('Operation at "' + method + ' ' + path + '" not mapped because no ' + opts.xController + ' has been defined.', 'ENFORCER_MIDDLEWARE_ROUTE_NO_MAPPING'))
-                    } else if (!operationKey) {
-                        emit('warning', new ErrorCode('Operation at "' + method + ' ' + path + '" not mapped because no ' + opts.xOperation + ' (not operationId) has been defined.', 'ENFORCER_MIDDLEWARE_ROUTE_NO_MAPPING'))
-                    } else if (controllers[controllerKey] === undefined) {
-                        emit('error', new ErrorCode('Controller not defined: ' + controllerKey, 'ENFORCER_MIDDLEWARE_ROUTE_CONTROLLER'))
-                        // @ts-ignore
-                    } else if (controllers[controllerKey][operationKey] === undefined) {
-                        emit('error', new ErrorCode('Controller at ' + path + ' missing operation: ' + operationKey, 'ENFORCER_MIDDLEWARE_ROUTE_NO_OP'))
-                    } else {
-                        // @ts-ignore
-                        operationsMap.set(operation, controllers[controllerKey][operationKey])
-                    }
-                })
+                        // verify that the controller id and operation id have been defined for this operation
+                        if (!controllerKey) {
+                            emit('warning', new ErrorCode('Operation at "' + method + ' ' + path + '" not mapped because no ' + opts.xController + ' has been defined.', 'ENFORCER_MIDDLEWARE_ROUTE_NO_MAPPING'))
+                        } else if (!operationKey) {
+                            emit('warning', new ErrorCode('Operation at "' + method + ' ' + path + '" not mapped because no ' + opts.xOperation + ' (not operationId) has been defined.', 'ENFORCER_MIDDLEWARE_ROUTE_NO_MAPPING'))
+                        } else if (controllers[controllerKey] === undefined) {
+                            emit('error', new ErrorCode('Controller not defined: ' + controllerKey, 'ENFORCER_MIDDLEWARE_ROUTE_CONTROLLER'))
+                            // @ts-ignore
+                        } else if (controllers[controllerKey][operationKey] === undefined) {
+                            emit('error', new ErrorCode('Controller at ' + path + ' missing operation: ' + operationKey, 'ENFORCER_MIDDLEWARE_ROUTE_NO_OP'))
+                        } else {
+                            // @ts-ignore
+                            operationsMap.set(operation, controllers[controllerKey][operationKey])
+                        }
+                    })
+            })
         })
+        .catch(e => {
+            openapiError = e
+        })
+
 
     // return the express middleware
     return function (req: Express.Request, res: Express.Response, next: Express.NextFunction) {
+        if (openapiError !== undefined) return next(openapiError)
+
         const { initialized, basePathMatch } = getInitStatus(req)
         if (!basePathMatch) {
             debug('Base path does not match registered base path')

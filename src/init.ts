@@ -61,93 +61,97 @@ export function init (openapi: any, options?: I.MiddlewareOptions): I.Middleware
     debug('Initialized with options: ' + JSON.stringify(opts, null, 2))
 
     return function (req: Express.Request, res: Express.Response, next: Express.NextFunction) {
-        const baseUrl = typeof opts.baseUrl === 'string' ? opts.baseUrl : req.baseUrl
-        debug('Register request base URL: ' + baseUrl)
-        activeRequestMap.set(req, baseUrl)
+        Promise.resolve(openapi)
+            .then(openapi => {
+                const baseUrl = typeof opts.baseUrl === 'string' ? opts.baseUrl : req.baseUrl
+                debug('Register request base URL: ' + baseUrl)
+                activeRequestMap.set(req, baseUrl)
 
-        // convert express request into OpenAPI Enforcer request
-        const relativePath = ('/' + req.originalUrl.substring(baseUrl.length)).replace(/^\/{2}/, '/')
-        const hasBody = reqHasBody(req)
-        const requestObj: I.IEnforcer.RequestInput = {
-            headers: req.headers,
-            method: req.method,
-            path: relativePath // takes in and processes query parameters here
-        }
-        if (hasBody) requestObj.body = req.body
-        if (opts.allowOtherQueryParameters === false) opts.allowOtherQueryParameters = []
-        if (opts.allowOtherQueryParameters !== true && opts.mockQuery) opts.allowOtherQueryParameters!.push(opts.mockQuery)
-        const [ request, error ] = openapi.request(requestObj, { allowOtherQueryParameters: opts.allowOtherQueryParameters })
-
-        // merge unvalidated and unserialized values into validated and serialized objects
-        if (request) {
-            if (req.cookies) mergeNewProperties(req.cookies, request.cookie)
-            mergeNewProperties(req.headers, request.headers)
-            mergeNewProperties(req.query, request.query)
-        }
-
-        if (error) {
-            // probably a client error
-            handleRequestError(opts, error, req, res, next)
-            debug('Request failed validation', error)
-
-        } else {
-            // request match found
-            debug('Request valid')
-            const { body, cookie, headers, operation, path, query, response } = request
-
-            // make deserialized request values accessible along with openapi, operation, and a response function
-            req.enforcer = {
-                accepts (responseCode: number | string): { next (): IteratorResult<string[] | void, any>, [Symbol.iterator] (): any } {
-                    return operation.getResponseContentTypeMatches(responseCode, headers.accept || '*/*')
-                },
-                cookies: cookie,
-                headers,
-                openapi,
-                operation,
-                options: opts,
-                params: path,
-                response,
-                query
-            }
-            if (hasBody) req.enforcer.body = body
-
-            // make response data object
-            res.enforcer = {
-                send: sender(opts, req, res, next),
-                status (code: number) {
-                    res.status(code)
-                    return this
+                // convert express request into OpenAPI Enforcer request
+                const relativePath = ('/' + req.originalUrl.substring(baseUrl.length)).replace(/^\/{2}/, '/')
+                const hasBody = reqHasBody(req)
+                const requestObj: I.IEnforcer.RequestInput = {
+                    headers: req.headers,
+                    method: req.method,
+                    path: relativePath // takes in and processes query parameters here
                 }
-            }
+                if (hasBody) requestObj.body = req.body
+                if (opts.allowOtherQueryParameters === false) opts.allowOtherQueryParameters = []
+                if (opts.allowOtherQueryParameters !== true && opts.mockQuery) opts.allowOtherQueryParameters!.push(opts.mockQuery)
+                const [ request, error ] = openapi.request(requestObj, { allowOtherQueryParameters: opts.allowOtherQueryParameters })
 
-            const mockMode = getMockMode(req)
-            if (mockMode) {
-                const mockStore = opts.mockStore!
-                debug('Request is for mocked data')
+                // merge unvalidated and unserialized values into validated and serialized objects
+                if (request) {
+                    if (req.cookies) mergeNewProperties(req.cookies, request.cookie)
+                    mergeNewProperties(req.headers, request.headers)
+                    mergeNewProperties(req.query, request.query)
+                }
 
-                // store mock data
-                req.enforcer.mockMode = mockMode
-                req.enforcer.mockStore = {
-                    get (key: string): Promise<any> {
-                        return mockStore.get(req, res, key)
-                    },
-                    set (key: string, value: any): Promise<void> {
-                        return mockStore.set(req, res, key, value)
+                if (error) {
+                    // probably a client error
+                    handleRequestError(opts, error, req, res, next)
+                    debug('Request failed validation', error)
+
+                } else {
+                    // request match found
+                    debug('Request valid')
+                    const { body, cookie, headers, operation, path, query, response } = request
+
+                    // make deserialized request values accessible along with openapi, operation, and a response function
+                    req.enforcer = {
+                        accepts (responseCode: number | string): { next (): IteratorResult<string[] | void, any>, [Symbol.iterator] (): any } {
+                            return operation.getResponseContentTypeMatches(responseCode, headers.accept || '*/*')
+                        },
+                        cookies: cookie,
+                        headers,
+                        openapi,
+                        operation,
+                        options: opts,
+                        params: path,
+                        response,
+                        query
+                    }
+                    if (hasBody) req.enforcer.body = body
+
+                    // make response data object
+                    res.enforcer = {
+                        send: sender(opts, req, res, next),
+                        status (code: number) {
+                            res.status(code)
+                            return this
+                        }
+                    }
+
+                    const mockMode = getMockMode(req)
+                    if (mockMode) {
+                        const mockStore = opts.mockStore!
+                        debug('Request is for mocked data')
+
+                        // store mock data
+                        req.enforcer.mockMode = mockMode
+                        req.enforcer.mockStore = {
+                            get (key: string): Promise<any> {
+                                return mockStore.get(req, res, key)
+                            },
+                            set (key: string, value: any): Promise<void> {
+                                return mockStore.set(req, res, key, value)
+                            }
+                        }
+
+                        // if operation identifies as having operable mock code to execute then don't run auto mock response handler
+                        if (hasImplementedMock(opts.xMockImplemented!, operation) && (mockMode.source === 'implemented' || mockMode.source === '')) {
+                            debug('Request has implemented mock')
+                            next()
+                        } else {
+                            debug('Request being auto mocked')
+                            mockHandler(req, res, next, mockMode)
+                        }
+                    } else {
+                        next()
                     }
                 }
-
-                // if operation identifies as having operable mock code to execute then don't run auto mock response handler
-                if (hasImplementedMock(opts.xMockImplemented!, operation) && (mockMode.source === 'implemented' || mockMode.source === '')) {
-                    debug('Request has implemented mock')
-                    next()
-                } else {
-                    debug('Request being auto mocked')
-                    mockHandler(req, res, next, mockMode)
-                }
-            } else {
-                next()
-            }
-        }
+            })
+            .catch(next)
     }
 }
 

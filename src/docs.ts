@@ -41,29 +41,33 @@ export function docsMiddleware (openapi: any, options?: Partial<DocsOptions>) {
     debug('Docs middleware initialized')
 
     return function (req: Express.Request, res: Express.Response, next: Express.NextFunction) {
-        switch (req.path) {
-            case '/':
-                res.set('content-type', 'text/html')
-                res.status(200)
-                if (!indexHTML) indexHTML = getIndexHtml(openapi, req.baseUrl, options as DocsOptions)
-                res.send(indexHTML)
-                break
-            case '/openapi.json':
-                openapi.getBundledDefinition()
-                    .then((def: any) => {
-                        res.set('content-type', 'application/json')
+        Promise.resolve(openapi)
+            .then(openapi => {
+                switch (req.path) {
+                    case '/':
+                        res.set('content-type', 'text/html')
                         res.status(200)
-                        res.send(def)
-                    })
-                    .catch(next)
-                break
-            case '/redoc.js':
-                const filePath = path.resolve(path.dirname(redocPath), 'redoc.standalone.js')
-                res.sendFile(filePath)
-                break
-            default:
-                res.sendStatus(404)
-        }
+                        if (!indexHTML) indexHTML = getIndexHtml(openapi, req.baseUrl, options as DocsOptions)
+                        res.send(indexHTML)
+                        break
+                    case '/openapi.json':
+                        openapi.getBundledDefinition()
+                            .then((def: any) => {
+                                res.set('content-type', 'application/json')
+                                res.status(200)
+                                res.send(def)
+                            })
+                            .catch(next)
+                        break
+                    case '/redoc.js':
+                        const filePath = path.resolve(path.dirname(redocPath), 'redoc.standalone.js')
+                        res.sendFile(filePath)
+                        break
+                    default:
+                        res.sendStatus(404)
+                }
+            })
+            .catch(next)
     }
 }
 
