@@ -9,7 +9,7 @@
   "author": "James Speirs <james.speirs@gmail.com>",
   "license": "Apache-2.0",
   "dependencies": {
-    "express": "^4.16.4",
+    "express": "^4.18.2",
     "openapi-enforcer": "^1.1.11",
     "openapi-enforcer-middleware": "^1.0.5",
     "pg": "^7.8.0"
