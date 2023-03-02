@@ -43,7 +43,7 @@
     "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
     "express": "^4.17.1",
-    "mocha": "^5.2.0",
+    "mocha": "^10.2.0",
     "nyc": "^14.1.1",
     "openapi-enforcer": "^1.12.6",
     "request": "^2.88.0",
